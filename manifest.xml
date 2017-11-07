@@ -1,0 +1,15 @@
+<package>
+  <description brief="ay_py">
+
+     ay_py
+
+  </description>
+  <author>Akihiko Yamaguchi</author>
+  <license>Not decided</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://akihikoy.net</url>
+  <depend package="rospy"/>
+
+</package>
+
+

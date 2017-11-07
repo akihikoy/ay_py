@@ -1,0 +1,19 @@
+*~
+*.d
+*.o
+*.lo
+*.a
+*.so
+*.so.*
+*.out
+*.pyc
+*.kate-swp
+*.directory
+# core
+
+build
+data_gen
+bin
+lib
+msg_gen
+srv_gen
