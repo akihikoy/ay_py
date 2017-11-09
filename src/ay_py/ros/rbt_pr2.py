@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 #Robot controller for PR2.
 from const import *
-if ROS_ROBOT not in ('PR2','PR2_SIM'):
+if ROS_ROBOT not in ('ANY','PR2','PR2_SIM'):
   raise ImportError('Stop importing: ROS_ROBOT is not PR2')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
@@ -60,6 +60,9 @@ class TRobotPR2(TDualArmRobot):
     self.links['r_gripper']= ['r_gripper_palm_link', 'r_gripper_l_finger_link', 'r_gripper_l_finger_tip_link', 'r_gripper_motor_accelerometer_link', 'r_gripper_r_finger_link', 'r_gripper_r_finger_tip_link']
     self.links['robot']= self.links['base'] + self.links['torso'] + self.links['head'] + self.links['l_arm'] + self.links['l_gripper'] + self.links['laser_mount'] + self.links['r_arm'] + self.links['r_gripper']
 
+    #Grippers
+    self.grippers= [TPR2Gripper('right','left')]
+
     #Mannequin controller:
     self.mann_ctrl= TPR2Mannequin()
 
@@ -94,10 +97,8 @@ class TRobotPR2(TDualArmRobot):
     ra(self.AddActC('l_traj', '/l_arm_controller/joint_trajectory_action',
                     pr2_controllers_msgs.msg.JointTrajectoryAction, time_out=3.0))
 
-    ra(self.AddActC('r_grip', '/r_gripper_controller/gripper_action',
-                    pr2_controllers_msgs.msg.Pr2GripperCommandAction, time_out=3.0))
-    ra(self.AddActC('l_grip', '/l_gripper_controller/gripper_action',
-                    pr2_controllers_msgs.msg.Pr2GripperCommandAction, time_out=3.0))
+    ra(self.grippers[RIGHT])
+    ra(self.grippers[LEFT])
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
@@ -158,6 +159,12 @@ class TRobotPR2(TDualArmRobot):
     with self.sensor_locker:
       self.curr_pos[arm]= msg.actual.positions
       self.curr_vel[arm]= msg.actual.velocities
+
+
+  '''End effector of an arm.'''
+  def EndEff(self, arm):
+    if arm is None:  arm= self.Arm
+    return self.grippers[arm]
 
 
   '''Return joint angles of an arm.
@@ -279,14 +286,8 @@ class TRobotPR2(TDualArmRobot):
   def MoveGripper(self, pos, max_effort, arm=None, blocking=False):
     if arm is None:  arm= self.Arm
 
-    goal= pr2_controllers_msgs.msg.Pr2GripperCommandGoal()
-    goal.command.position= pos
-    goal.command.max_effort= max_effort
-
     with self.control_locker:
-      actc= self.actc.r_grip if arm==RIGHT else self.actc.l_grip
-      actc.send_goal(goal)
-      BlockAction(actc, blocking=blocking, duration=0.0)
+      self.grippers[arm].Move(pos, max_effort, blocking=blocking)
 
   '''Control the head.
     pan, tilt: target angles.
@@ -302,6 +303,77 @@ class TRobotPR2(TDualArmRobot):
     traj.points.append(jp)
     traj.header.stamp= rospy.Time.now()
     self.pub.head_ctrl.publish(traj)
+
+
+
+'''PR2 Gripper'''
+class TPR2Gripper(TGripper2F1):
+  def __init__(self, arm='right'):
+    super(TPR2Gripper,self).__init__()
+    self.arm= arm
+
+  '''Initialize (e.g. establish ROS connection).'''
+  def Init(self):
+    self._is_initialized= False
+    res= []
+    ra= lambda r: res.append(r)
+
+    if self.arm=='right':
+      ra(self.AddActC('grip', '/r_gripper_controller/gripper_action',
+                      pr2_controllers_msgs.msg.Pr2GripperCommandAction, time_out=3.0))
+    elif self.arm=='left':
+      ra(self.AddActC('grip', '/l_gripper_controller/gripper_action',
+                      pr2_controllers_msgs.msg.Pr2GripperCommandAction, time_out=3.0))
+
+    if False not in res:  self._is_initialized= True
+    return self._is_initialized
+
+  '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+  def Is(self, q):
+    if q in ('PR2Gripper',):  return True
+    return super(TPR2Gripper,self).Is(q)
+
+  '''Get current position.'''
+  def Position(self):
+    pass  #NOT_IMPLEMENTED
+
+  '''Activate gripper (torque is enabled).
+    Return success or not.'''
+  def Activate(self):
+    return True  #PR2Gripper is enabled when the body is on.
+
+  '''Deactivate gripper (torque is disabled).
+    Return success or not.'''
+  def Deactivate(self):
+    return False  #PR2Gripper is disabled when the body is off.
+
+  '''Open a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Open(self, blocking=False):
+    self.Move(pos=0.09, max_effort=50.0, blocking=blocking)
+
+  '''Close a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Close(self, blocking=False):
+    self.Move(pos=0.00, max_effort=50.0, blocking=blocking)
+
+  '''Control a gripper.
+    pos: target position; 0.09 (open), 0.0 (close).
+    max_effort: maximum effort to control; 12~15 (weak), 50 (strong), -1 (maximum).
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Move(self, pos, max_effort=50.0, blocking=False):
+    goal= pr2_controllers_msgs.msg.Pr2GripperCommandGoal()
+    goal.command.position= pos
+    goal.command.max_effort= max_effort
+
+    actc= self.actc.grip
+    actc.send_goal(goal)
+    BlockAction(actc, blocking=blocking, duration=0.0)
+
+  '''Stop the gripper motion. '''
+  def Stop(self):
+    pass  #Do nothing.
+
 
 
 

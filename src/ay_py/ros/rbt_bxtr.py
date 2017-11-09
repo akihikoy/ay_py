@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 #Robot controller for Baxter.
 from const import *
-if ROS_ROBOT not in ('Baxter','Baxter_SIM','BaxterN','RobotiqNB'):
+if ROS_ROBOT not in ('ANY','Baxter','Baxter_SIM','BaxterN','RobotiqNB'):
   raise ImportError('Stop importing: ROS_ROBOT is not Baxter')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
@@ -87,14 +87,14 @@ class TRobotBaxter(TDualArmRobot):
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
     self.robotiq= TRobotiq()  #Robotiq controller
-    self.epgripper= baxter_interface.Gripper('right', baxter_interface.CHECK_VERSION)
+    self.epgripper= TBaxterEPG('right')
     self.grippers= [self.epgripper, self.robotiq]
 
     print 'Enabling the robot...'
     baxter_interface.RobotEnable(baxter_interface.CHECK_VERSION).enable()
 
     print 'Calibrating electric parallel gripper...'
-    ra(self.epgripper.calibrate())
+    ra(self.epgripper.Init())
 
     print 'Initializing and activating Robotiq gripper...'
     ra(self.robotiq.Init())
@@ -153,9 +153,13 @@ class TRobotBaxter(TDualArmRobot):
   def GripperRange(self, arm=None):
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
-    if isinstance(gripper, baxter_interface.Gripper):  return self.epg_range
-    elif isinstance(gripper, TRobotiq):  return self.rqg_range
+    if gripper.Is('BaxterEPG'):  return self.epg_range
+    elif gripper.Is('Robotiq'):  return self.rqg_range
 
+  '''End effector of an arm.'''
+  def EndEff(self, arm):
+    if arm is None:  arm= self.Arm
+    return self.grippers[arm]
 
   '''Return joint angles of an arm.
     arm: LEFT, RIGHT, or None (==currarm). '''
@@ -281,22 +285,17 @@ class TRobotBaxter(TDualArmRobot):
     if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    if isinstance(gripper, baxter_interface.Gripper):
-      clip= lambda c: max(0.0,min(100.0,c))
-      cmd= clip(self.epg_pos2cmd(pos))
+    if gripper.Is('BaxterEPG'):
+      cmd= self.epg_pos2cmd(pos)
       with self.control_locker:
-        gripper.set_velocity(clip(speed))
-        gripper.set_moving_force(clip(max_effort))
-        gripper.set_holding_force(clip(max_effort))
-        gripper.command_position(cmd,block=blocking)
-
-    elif isinstance(gripper, TRobotiq):
+        gripper.Move(cmd, max_effort, speed, blocking=blocking)
+    elif gripper.Is('Robotiq'):
       clip= lambda c: max(0.0,min(255.0,c))
       cmd= clip(self.rqg_pos2cmd(pos))
       max_effort= clip(max_effort*(255.0/100.0))
       speed= clip(speed*(255.0/100.0))
       with self.control_locker:
-        gripper.MoveGripper(cmd, max_effort, speed, blocking=blocking)
+        gripper.Move(cmd, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.
     arm: LEFT, RIGHT, or None (==currarm). '''
@@ -305,11 +304,11 @@ class TRobotBaxter(TDualArmRobot):
     if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    if isinstance(gripper, baxter_interface.Gripper):
+    if gripper.Is('BaxterEPG'):
       with self.sensor_locker:
-        pos= self.epg_cmd2pos(gripper.position())
+        pos= self.epg_cmd2pos(gripper.Position())
       return pos
-    elif isinstance(gripper, TRobotiq):
+    elif gripper.Is('Robotiq'):
       with self.sensor_locker:
         pos= self.rqg_cmd2pos(gripper.Position())
       return pos
@@ -322,9 +321,9 @@ class TRobotBaxter(TDualArmRobot):
   def FingertipOffset(self, pos=None, arm=None):
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
-    if isinstance(gripper, baxter_interface.Gripper):
+    if gripper.Is('BaxterEPG'):
       return 0.0  #If gripper is EPG, it is completely flat.
-    elif isinstance(gripper, TRobotiq):
+    elif gripper.Is('Robotiq'):
       if pos is None:  pos= self.GripperPos(arm)
       return -0.701*pos**3 - 2.229*pos**2 + 0.03*pos + 0.128 - 0.113
 
@@ -352,7 +351,7 @@ try:
   import robotiq_c_model_control.msg as robotiq_msgs
 
   '''Robotiq Gripper utility class'''
-  class TRobotiq(TROSUtil):
+  class TRobotiq(TGripper2F1):
     def __init__(self, cmd_topic='/rq1/command', st_topic='/rq1/status'):
       super(TRobotiq,self).__init__()
       self.status= None
@@ -380,6 +379,11 @@ try:
       self.Deactivate()
       super(TRobotiq,self).Cleanup()
 
+    '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+    def Is(self, q):
+      if q in ('Robotiq',):  return True
+      return super(TRobotiq,self).Is(q)
+
     def SensorHandler(self,msg):
       self.status= msg
       if self.SensorCallback is not None:
@@ -392,11 +396,16 @@ try:
 
     def Status(self):
       return self.status
+
+    '''Get current position.'''
     def Position(self):
       return self.status.gPO
+
     def Current(self):
       return self.status.gCU
 
+    '''Activate gripper (torque is enabled).
+      Return success or not.'''
     def Activate(self):
       cmd= robotiq_msgs.CModel_robot_output();
       cmd.rACT= 1
@@ -405,6 +414,8 @@ try:
       cmd.rFR= 150  #FoRce
       self.pub.grip.publish(cmd)
 
+    '''Deactivate gripper (torque is disabled).
+      Return success or not.'''
     def Deactivate(self):
       cmd= robotiq_msgs.CModel_robot_output();
       cmd.rACT= 0
@@ -412,20 +423,20 @@ try:
 
     '''Open a gripper.
       blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-    def OpenGripper(self, blocking=False):
-      self.MoveGripper(pos=0, max_effort=100, blocking=blocking)
+    def Open(self, blocking=False):
+      self.Move(pos=0, max_effort=100, blocking=blocking)
 
     '''Close a gripper.
       blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-    def CloseGripper(self, blocking=False):
-      self.MoveGripper(pos=255, max_effort=100, blocking=blocking)
+    def Close(self, blocking=False):
+      self.Move(pos=255, max_effort=100, blocking=blocking)
 
     '''Control a gripper.
       pos: target position; 0 (open), 255 (close).
       max_effort: maximum effort to control; 0~50 (weak), 200 (strong), 255 (maximum).
       speed: speed of the movement; 0 (minimum), 255 (maximum).
       blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-    def MoveGripper(self, pos, max_effort, speed=255, blocking=False):
+    def Move(self, pos, max_effort, speed=255, blocking=False):
       pos= max(0,min(255,int(pos)))
       cmd= robotiq_msgs.CModel_robot_output();
       cmd.rACT= 1
@@ -448,10 +459,10 @@ try:
           if counter==0:  break
           prev_PO= self.status.gPO
           rospy.sleep(0.001)
-        #self.StopGripper()
+        #self.Stop()
 
     '''Stop the gripper motion. '''
-    def StopGripper(self):
+    def Stop(self):
       cmd= robotiq_msgs.CModel_robot_output();
       cmd.rACT= 1
       cmd.rGTO= 0
@@ -464,7 +475,7 @@ except ImportError:
 finally:
   #Define TRobotiq for class structure.
   if 'TRobotiq' not in globals():
-    class TRobotiq(TROSUtil):
+    class TRobotiq(TGripper2F1):
       pass
 
 
@@ -504,20 +515,23 @@ class TRobotiqN(TRobotiq):
 
   def Status(self):
     return self.status
+
+  '''Get current position.'''
   def Position(self):
     return self.status['pos']
+
   def Current(self):
     return self.status['curr']
 
   '''Open a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def OpenGripper(self, blocking=False):
-    self.MoveGripper(pos=0, max_effort=100, blocking=blocking)
+  def Open(self, blocking=False):
+    self.Move(pos=0, max_effort=100, blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def CloseGripper(self, blocking=False):
-    self.MoveGripper(pos=255, max_effort=100, blocking=blocking)
+  def Close(self, blocking=False):
+    self.Move(pos=255, max_effort=100, blocking=blocking)
 
   '''Control a gripper.
     pos: target position; 0 (open), 255 (close).
@@ -525,7 +539,7 @@ class TRobotiqN(TRobotiq):
     speed: speed of the movement; 0 (minimum), 255 (maximum).
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
       WARNING: max_effort is not implemented.  '''
-  def MoveGripper(self, pos, max_effort=None, speed=255, blocking=False):
+  def Move(self, pos, max_effort=None, speed=255, blocking=False):
     pos= max(0,min(255,int(pos)))
     self.pub.cmd_pos.publish(std_msgs.msg.Int32(pos))
     if blocking:
@@ -539,3 +553,67 @@ class TRobotiqN(TRobotiq):
         if counter==0:  break
         prev_PO= self.status['pos']
         rospy.sleep(0.001)
+
+
+'''Baxter Electric Parallel Gripper'''
+class TBaxterEPG(TGripper2F1):
+  def __init__(self, arm='right'):
+    super(TBaxterEPG,self).__init__()
+    self.epgripper= baxter_interface.Gripper(arm, baxter_interface.CHECK_VERSION)
+
+  '''Initialize (e.g. establish ROS connection).'''
+  def Init(self):
+    self._is_initialized= False
+    res= []
+    ra= lambda r: res.append(r)
+
+    ra(self.epgripper.calibrate())
+
+    if False not in res:  self._is_initialized= True
+    return self._is_initialized
+
+  '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+  def Is(self, q):
+    if q in ('BaxterEPG',):  return True
+    return super(TBaxterEPG,self).Is(q)
+
+  '''Get current position.'''
+  def Position(self):
+    return self.epgripper.position()
+
+  '''Activate gripper (torque is enabled).
+    Return success or not.'''
+  def Activate(self):
+    return True  #BaxterEPG is on after calibration.
+
+  '''Deactivate gripper (torque is disabled).
+    Return success or not.'''
+  def Deactivate(self):
+    return False  #No way to disable BaxterEPG...?
+
+  '''Open a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Open(self, blocking=False):
+    self.Move(100.0, blocking=blocking)
+
+  '''Close a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Close(self, blocking=False):
+    self.Move(0.0, blocking=blocking)
+
+  '''Control a gripper.
+    pos: target position; 0 (close), 100 (open).
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum).
+    blocking: False: move background, True: wait until motion ends.  '''
+  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
+    clip= lambda c: max(0.0,min(100.0,c))
+    self.epgripper.set_velocity(clip(speed))
+    self.epgripper.set_moving_force(clip(max_effort))
+    self.epgripper.set_holding_force(clip(max_effort))
+    self.epgripper.command_position(clip(pos),block=blocking)
+
+  '''Stop the gripper motion. '''
+  def Stop(self):
+    pass  #Do nothing.
+

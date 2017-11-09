@@ -613,6 +613,10 @@ class TThreadManager:
       self.thread= None
     def StopRequest(self):
       self.running= False
+    def Join(self):
+      if self.thread and self.thread.is_alive():
+        self.thread.join()
+      self.thread= None
 
   class TThreadInfo:
     def __init__(self):
@@ -690,6 +694,11 @@ class TThreadManager:
       print 'Stop thread %r...' % k,
       del self.thread_list[k]
       print 'ok'
+
+  def Join(self,name):
+    if name in self.thread_list:
+      self.thread_list[name].Join()
+      #del self.thread_list[name]  #After joining the thread, self.thread_list[name] is automatically deleted.
 
 
 '''TSignal class for a thread to send a message to several threads.

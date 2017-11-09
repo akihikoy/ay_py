@@ -73,15 +73,15 @@ class TMultiArmRobot(TROSUtil):
 
   @property
   def ArmStr(self):
-    return 'Arm'+('A','B','C','D','E','F','G')(self.Arm)
+    return 'Arm'+('A','B','C','D','E','F','G')[self.Arm]
 
   @property
   def ArmStrS(self):
-    return ('A','B','C','D','E','F','G')(self.Arm)
+    return ('A','B','C','D','E','F','G')[self.Arm]
 
   @property
   def ArmStrs(self):
-    return ('a','b','c','d','e','f','g')(self.Arm)
+    return ('a','b','c','d','e','f','g')[self.Arm]
 
   @property
   def BaseFrame(self):
@@ -106,6 +106,10 @@ class TMultiArmRobot(TROSUtil):
   '''Return limits of joint angular velocity.
     arm: arm id, or None (==currarm). '''
   def JointVelLimits(self, arm=None):
+    pass
+
+  '''End effector of an arm.'''
+  def EndEff(self, arm):
     pass
 
   '''Return joint angles of an arm.
@@ -243,4 +247,51 @@ class TFakeRobot(TDualArmRobot):
   def __init__(self):
     super(TFakeRobot,self).__init__(name='NoRobot')
 
+
+
+'''2 finger 1 DoF gripper interface'''
+class TGripper2F1(TROSUtil):
+  def __init__(self):
+    super(TGripper2F1,self).__init__()
+
+  '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+  def Is(self, q):
+    if q in ('Gripper','Gripper2F1'):  return True
+    return False
+
+  '''Get current position.'''
+  def Position(self):
+    return None
+
+  '''Activate gripper (torque is enabled).
+    Return success or not.'''
+  def Activate(self):
+    return False
+
+  '''Deactivate gripper (torque is disabled).
+    Return success or not.'''
+  def Deactivate(self):
+    return False
+
+  '''Open a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Open(self, blocking=False):
+    pass
+
+  '''Close a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Close(self, blocking=False):
+    pass
+
+  '''Control a gripper.
+    pos: target position.
+    max_effort: maximum effort to control.
+    speed: speed of the movement.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Move(self, pos, max_effort=None, speed=None, blocking=False):
+    pass
+
+  '''Stop the gripper motion. '''
+  def Stop(self):
+    pass
 
