@@ -40,6 +40,7 @@ class TStateValidityCheckerMI(TROSUtil):
     res= []
     ra= lambda r: res.append(r)
 
+    self.c= self.TConfig(num_arms=robot.NumArms)
     robot.ConfigureSVC(self.c)
 
     ra(self.AddSrvP('set_scene_client', '/state_validity_checker/set_planning_scene_diff',

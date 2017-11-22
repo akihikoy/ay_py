@@ -61,6 +61,10 @@ class TMultiArmRobot(TROSUtil):
     return self._name
 
   @property
+  def NumArms(self):
+    return 0
+
+  @property
   def Arm(self):
     with self.currarm_locker:
       arm= self.currarm
@@ -115,6 +119,11 @@ class TMultiArmRobot(TROSUtil):
   '''Return joint angles of an arm.
     arm: arm id, or None (==currarm). '''
   def Q(self, arm=None):
+    pass
+
+  '''Return joint velocities of an arm.
+    arm: arm id, or None (==currarm). '''
+  def DQ(self, arm=None):
     pass
 
   '''Compute a forward kinematics of an arm.
@@ -229,6 +238,10 @@ class TMultiArmRobot(TROSUtil):
 class TDualArmRobot(TMultiArmRobot):
   def __init__(self, name):
     super(TDualArmRobot,self).__init__(name)
+
+  @property
+  def NumArms(self):
+    return 2
 
   @property
   def ArmStr(self):

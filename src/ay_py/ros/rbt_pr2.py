@@ -175,6 +175,11 @@ class TRobotPR2(TDualArmRobot):
       q= copy.deepcopy(self.curr_pos[arm])
     return q
 
+  '''Return joint velocities of an arm.
+    arm: LEFT, RIGHT, or None (==currarm). '''
+  def DQ(self, arm=None):
+    raise NotImplemented('TRobotPR2.DQ')
+
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
     return: x, res;  x: pose (None if failure), res: FK status.

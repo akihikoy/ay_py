@@ -5,7 +5,8 @@ if ROS_ROBOT not in ('ANY','RobotiqNB'):
   raise ImportError('Stop importing: ROS_ROBOT is not RobotiqNB')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
-from rbt_bxtr import TMultiArmRobot, TRobotiq
+from robot import TMultiArmRobot
+from rbt_rq import TRobotiq
 
 '''Robot control class for RobotiqNB.
   This is defined as a subclass of TMultiArmRobot,

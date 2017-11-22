@@ -20,6 +20,7 @@ import cv2
 import cv_bridge
 
 from robot import *
+from rbt_rq import TRobotiq
 from kdl_kin import *
 
 '''Robot control class for Baxter.'''
@@ -169,6 +170,16 @@ class TRobotBaxter(TDualArmRobot):
       angles= self.limbs[arm].joint_angles()
       q= [angles[joint] for joint in self.joint_names[arm]]  #Serialize
     return q
+
+  '''Return joint velocities of an arm.
+    arm: LEFT, RIGHT, or None (==currarm). '''
+  def DQ(self, arm=None):
+    if arm is None:  arm= self.Arm
+    with self.sensor_locker:
+      velocities= self.limbs[arm].joint_velocities()
+      dq= [velocities[joint] for joint in self.joint_names[arm]]  #Serialize
+    #return dq
+    raise NotImplemented('TRobotBaxter.DQ(not tested)')
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
@@ -345,214 +356,6 @@ class TRobotBaxter(TDualArmRobot):
     pub= rospy.Publisher('/robot/xdisplay', sensor_msgs.msg.Image, latch=True, queue_size=1)
     pub.publish(msg)
 
-
-try:
-  roslib.load_manifest('robotiq_c_model_control')
-  import robotiq_c_model_control.msg as robotiq_msgs
-
-  '''Robotiq Gripper utility class'''
-  class TRobotiq(TGripper2F1):
-    def __init__(self, cmd_topic='/rq1/command', st_topic='/rq1/status'):
-      super(TRobotiq,self).__init__()
-      self.status= None
-      self.SensorCallback= None
-      self.CmdTopic= cmd_topic
-      self.StTopic= st_topic
-
-    '''Initialize (e.g. establish ROS connection).'''
-    def Init(self):
-      self._is_initialized= False
-      res= []
-      ra= lambda r: res.append(r)
-
-      ra(self.AddPub('grip', self.CmdTopic, robotiq_msgs.CModel_robot_output))
-      ra(self.AddSub('grip', self.StTopic, robotiq_msgs.CModel_robot_input, self.SensorHandler))
-
-      rospy.sleep(0.2)
-      self.Activate()
-
-      if False not in res:  self._is_initialized= True
-      return self._is_initialized
-
-    def Cleanup(self):
-      #NOTE: cleaning-up order is important. consider dependency
-      self.Deactivate()
-      super(TRobotiq,self).Cleanup()
-
-    '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
-    def Is(self, q):
-      if q in ('Robotiq',):  return True
-      return super(TRobotiq,self).Is(q)
-
-    def SensorHandler(self,msg):
-      self.status= msg
-      if self.SensorCallback is not None:
-        self.SensorCallback(self.status)
-
-    @staticmethod
-    def PrintStatus(st):
-      print 'Flags(ACT,GTO,STA,OBJ,FLT):',st.gACT,st.gGTO,st.gSTA,st.gOBJ,st.gFLT,
-      print 'State(PR,PO,CU):',st.gPR,st.gPO,st.gCU
-
-    def Status(self):
-      return self.status
-
-    '''Get current position.'''
-    def Position(self):
-      return self.status.gPO
-
-    def Current(self):
-      return self.status.gCU
-
-    '''Activate gripper (torque is enabled).
-      Return success or not.'''
-    def Activate(self):
-      cmd= robotiq_msgs.CModel_robot_output();
-      cmd.rACT= 1
-      cmd.rGTO= 1
-      cmd.rSP= 255  #SPeed
-      cmd.rFR= 150  #FoRce
-      self.pub.grip.publish(cmd)
-
-    '''Deactivate gripper (torque is disabled).
-      Return success or not.'''
-    def Deactivate(self):
-      cmd= robotiq_msgs.CModel_robot_output();
-      cmd.rACT= 0
-      self.pub.grip.publish(cmd)
-
-    '''Open a gripper.
-      blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-    def Open(self, blocking=False):
-      self.Move(pos=0, max_effort=100, blocking=blocking)
-
-    '''Close a gripper.
-      blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-    def Close(self, blocking=False):
-      self.Move(pos=255, max_effort=100, blocking=blocking)
-
-    '''Control a gripper.
-      pos: target position; 0 (open), 255 (close).
-      max_effort: maximum effort to control; 0~50 (weak), 200 (strong), 255 (maximum).
-      speed: speed of the movement; 0 (minimum), 255 (maximum).
-      blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-    def Move(self, pos, max_effort, speed=255, blocking=False):
-      pos= max(0,min(255,int(pos)))
-      cmd= robotiq_msgs.CModel_robot_output();
-      cmd.rACT= 1
-      cmd.rGTO= 1
-      cmd.rPR= pos  #Position Request
-      cmd.rSP= speed
-      cmd.rFR= max_effort
-      self.pub.grip.publish(cmd)
-      if blocking:
-        while pos!=self.status.gPR and not rospy.is_shutdown():
-          #self.PrintStatus(self.status)
-          rospy.sleep(0.001)
-        prev_PO= None
-        CMAX= 500
-        counter= CMAX
-        while not (self.status.gGTO==0 or self.status.gOBJ==3) and not rospy.is_shutdown():
-          #self.PrintStatus(self.status)
-          if self.status.gPO==prev_PO:  counter-= 1
-          else:  counter= CMAX
-          if counter==0:  break
-          prev_PO= self.status.gPO
-          rospy.sleep(0.001)
-        #self.Stop()
-
-    '''Stop the gripper motion. '''
-    def Stop(self):
-      cmd= robotiq_msgs.CModel_robot_output();
-      cmd.rACT= 1
-      cmd.rGTO= 0
-      self.pub.grip.publish(cmd)
-
-except rospkg.common.ResourceNotFound:
-  print 'Module not found: robotiq_c_model_control'
-except ImportError:
-  print 'Cannot import: robotiq_c_model_control.msg'
-finally:
-  #Define TRobotiq for class structure.
-  if 'TRobotiq' not in globals():
-    class TRobotiq(TGripper2F1):
-      pass
-
-
-'''Robotiq Gripper (NihonBinary package/USB) utility class'''
-class TRobotiqN(TRobotiq):
-  def __init__(self, dev_name='gripper_left'):
-    super(TRobotiqN,self).__init__()
-    self.status= {'pos':None, 'curr':None}
-    self.SensorCallback= None
-    self.DevName= dev_name
-
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self):
-    self._is_initialized= False
-    res= []
-    ra= lambda r: res.append(r)
-
-    for key,topic in (('pos','position'), ('spd','speed'), ('force','force')):
-      ra(self.AddPub('cmd_'+key, '/robotiq/{dev_name}/command/{topic}'.format(dev_name=self.DevName,topic=topic),
-                     std_msgs.msg.Int32))
-
-    for key,topic in (('pos','position'), ('curr','current')):
-      ra(self.AddSub('st_'+key, '/robotiq/{dev_name}/current/{topic}'.format(dev_name=self.DevName,topic=topic),
-                     std_msgs.msg.Int32, lambda msg,key=key:self.SensorHandler(key,msg)))
-
-    if False not in res:  self._is_initialized= True
-    return self._is_initialized
-
-  def Cleanup(self):
-    #NOTE: cleaning-up order is important. consider dependency
-    super(TRobotiqN,self).Cleanup()
-
-  def SensorHandler(self,key,msg):
-    self.status[key]= msg.data
-    if self.SensorCallback is not None:
-      self.SensorCallback(self.status)
-
-  def Status(self):
-    return self.status
-
-  '''Get current position.'''
-  def Position(self):
-    return self.status['pos']
-
-  def Current(self):
-    return self.status['curr']
-
-  '''Open a gripper.
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Open(self, blocking=False):
-    self.Move(pos=0, max_effort=100, blocking=blocking)
-
-  '''Close a gripper.
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Close(self, blocking=False):
-    self.Move(pos=255, max_effort=100, blocking=blocking)
-
-  '''Control a gripper.
-    pos: target position; 0 (open), 255 (close).
-    max_effort: maximum effort to control; 0~50 (weak), 200 (strong), 255 (maximum).
-    speed: speed of the movement; 0 (minimum), 255 (maximum).
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
-      WARNING: max_effort is not implemented.  '''
-  def Move(self, pos, max_effort=None, speed=255, blocking=False):
-    pos= max(0,min(255,int(pos)))
-    self.pub.cmd_pos.publish(std_msgs.msg.Int32(pos))
-    if blocking:
-      prev_PO= None
-      CMAX= 500
-      counter= CMAX
-      tol= 20
-      while abs(pos-self.status['pos'])>tol and not rospy.is_shutdown():
-        if self.status['pos']==prev_PO:  counter-= 1
-        else:  counter= CMAX
-        if counter==0:  break
-        prev_PO= self.status['pos']
-        rospy.sleep(0.001)
 
 
 '''Baxter Electric Parallel Gripper'''

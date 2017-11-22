@@ -26,7 +26,7 @@ class TKinematics(object):
   def __init__(self, base_link=None, end_link=None):
     self._robot = kdl_parser_py.urdf.urdf.URDF.from_parameter_server('robot_description')
     (ok, self._kdl_tree)= kdl_parser_py.urdf.treeFromUrdfModel(self._robot)
-    self._base_link = self._robot.get_root()
+    self._base_link = base_link if base_link is not None else self._robot.get_root()
     self._tip_link = end_link
     self._tip_frame = PyKDL.Frame()
     self._arm_chain = self._kdl_tree.getChain(self._base_link, self._tip_link)
@@ -47,6 +47,7 @@ class TKinematics(object):
     self._dyn_kdl = PyKDL.ChainDynParam(self._arm_chain, PyKDL.Vector.Zero())
 
   def print_robot_description(self):
+    print "URDF root link: %s;" % self._robot.get_root()
     print "URDF non-fixed joints: %d;" % len([joint.type for joint in self._robot.joints if joint.type!='fixed'])
     print "URDF total joints: %d" % len(self._robot.joints)
     print "URDF links: %d" % len(self._robot.links)
