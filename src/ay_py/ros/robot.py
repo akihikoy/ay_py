@@ -75,17 +75,17 @@ class TMultiArmRobot(TROSUtil):
     with self.currarm_locker:
       self.currarm= arm
 
-  @property
-  def ArmStr(self):
-    return 'Arm'+('A','B','C','D','E','F','G')[self.Arm]
+  def ArmStr(self, arm=None):
+    if arm is None:  arm= self.Arm
+    return ('A','B','C','D','E','F','G')[arm]
 
-  @property
-  def ArmStrS(self):
-    return ('A','B','C','D','E','F','G')[self.Arm]
+  def ArmStrS(self, arm=None):
+    if arm is None:  arm= self.Arm
+    return ('A','B','C','D','E','F','G')[arm]
 
-  @property
-  def ArmStrs(self):
-    return ('a','b','c','d','e','f','g')[self.Arm]
+  def ArmStrs(self, arm=None):
+    if arm is None:  arm= self.Arm
+    return ('a','b','c','d','e','f','g')[arm]
 
   @property
   def BaseFrame(self):
@@ -243,17 +243,17 @@ class TDualArmRobot(TMultiArmRobot):
   def NumArms(self):
     return 2
 
-  @property
-  def ArmStr(self):
-    return LRToStr(self.Arm)
+  def ArmStr(self, arm=None):
+    if arm is None:  arm= self.Arm
+    return LRToStr(arm)
 
-  @property
-  def ArmStrS(self):
-    return LRToStrS(self.Arm)
+  def ArmStrS(self, arm=None):
+    if arm is None:  arm= self.Arm
+    return LRToStrS(arm)
 
-  @property
-  def ArmStrs(self):
-    return LRToStrs(self.Arm)
+  def ArmStrs(self, arm=None):
+    if arm is None:  arm= self.Arm
+    return LRToStrs(arm)
 
 
 class TFakeRobot(TDualArmRobot):

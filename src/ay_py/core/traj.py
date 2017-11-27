@@ -44,7 +44,7 @@ def LimitQTrajVel(q_start, q_traj, t_traj, qvel_limits, termlen=9, dv=0.08):
       diff= (qt[1][i]-t_prev)*float(s-1.0)
       t_offset+= diff
       qt[1][i]+= diff
-    CPrint(2,'s=',s,qt[1][i]-t_prev,qd)
+    #CPrint(2,'s=',s,qt[1][i]-t_prev,qd)
     return t_offset, qt[1][i], q
 
   t_offset= 0.0
@@ -130,6 +130,7 @@ def XTrajToQTraj(func_ik, x_traj, start_angles):
   SmoothQTraj(q_traj)
   return q_traj
 
+
 #Generate a cubic Hermite spline from a key points.
 #Key points: [[t0,x0],[t1,x1],[t2,x2],...].
 class TCubicHermiteSpline:
@@ -153,8 +154,9 @@ class TCubicHermiteSpline:
     while idx>=0 and t<self.KeyPts[idx].T:  idx-=1
     return idx
 
-  #Return interpolated value at t
-  def Evaluate(self, t):
+  #Return interpolated value at t.
+  #with_tan: If True, both x and dx/dt are returned.
+  def Evaluate(self, t, with_tan=False):
     idx= self.FindIdx(t,self.idx_prev)
     if abs(t-self.KeyPts[-1].T)<1.0e-6:  idx= len(self.KeyPts)-2
     if idx<0 or idx>=len(self.KeyPts)-1:
@@ -175,7 +177,15 @@ class TCubicHermiteSpline:
     p0= self.KeyPts[idx]
     p1= self.KeyPts[idx+1]
     tr= (t-p0.T) / (p1.T-p0.T)
-    return h00(tr)*p0.X + h10(tr)*(p1.T-p0.T)*p0.M + h01(tr)*p1.X + h11(tr)*(p1.T-p0.T)*p1.M
+    x= h00(tr)*p0.X + h10(tr)*(p1.T-p0.T)*p0.M + h01(tr)*p1.X + h11(tr)*(p1.T-p0.T)*p1.M
+    if not with_tan:  return x
+
+    dh00= lambda t: t*(6.0*t-6.0)
+    dh10= lambda t: t*(3.0*t-4.0)+1.0
+    dh01= lambda t: t*(-6.0*t+6.0)
+    dh11= lambda t: t*(3.0*t-2.0)
+    dx= (dh00(tr)*p0.X + dh10(tr)*(p1.T-p0.T)*p0.M + dh01(tr)*p1.X + dh11(tr)*(p1.T-p0.T)*p1.M) / (p1.T-p0.T)
+    return x,dx
 
   #Compute a phase information (n, tp) for a cyclic spline curve.
   #n:  n-th occurrence of the base wave
@@ -191,12 +201,16 @@ class TCubicHermiteSpline:
 
   #Return interpolated value at t (cyclic version).
   #pi: Phase information.
-  def EvaluateC(self, t, pi=None):
+  #with_tan: If True, both x and dx/dt are returned.
+  def EvaluateC(self, t, pi=None, with_tan=False):
     if pi is None:
       n, tp= self.PhaseInfo(t)
     else:
       n, tp= pi
-    return self.Evaluate(tp) + n*(self.KeyPts[-1].X - self.KeyPts[0].X)
+    if with_tan:  x,dx= self.Evaluate(tp, with_tan=with_tan)
+    else:        x= self.Evaluate(tp)
+    x= x + n*(self.KeyPts[-1].X - self.KeyPts[0].X)
+    return x if not with_tan else (x,dx)
 
   #data= [[t0,x0],[t1,x1],[t2,x2],...]
   FINITE_DIFF=0  #Tangent method: finite difference method
@@ -213,13 +227,13 @@ class TCubicHermiteSpline:
 
     #Store parameters for future use / remind parameters if not given
     if tan_method is None:  tan_method= self.Param.TanMethod
-    else:                 self.Param.TanMethod= tan_method
+    else:                   self.Param.TanMethod= tan_method
     if end_tan is None:  end_tan= self.Param.EndTan
-    else:              self.Param.EndTan= end_tan
+    else:                self.Param.EndTan= end_tan
     if c is None:  c= self.Param.C
-    else:        self.Param.C= c
+    else:          self.Param.C= c
     if m is None:  c= self.Param.M
-    else:        self.Param.M= m
+    else:          self.Param.M= m
 
     grad= lambda idx1,idx2: (self.KeyPts[idx2].X-self.KeyPts[idx1].X)/(self.KeyPts[idx2].T-self.KeyPts[idx1].T)
 
@@ -253,6 +267,29 @@ class TCubicHermiteSpline:
 
   def Update(self):
     self.Initialize(data=None, tan_method=None, end_tan=None, c=None, m=None)
+
+
+
+'''Convert joint angle trajectory to joint velocity trajectory.'''
+def QTrajToDQTraj(q_traj, t_traj):
+  dof= len(q_traj[0])
+
+  #Modeling the trajectory with spline.
+  splines= [TCubicHermiteSpline() for d in range(dof)]
+  for d in range(len(splines)):
+    data_d= [[t,q[d]] for q,t in zip(q_traj,t_traj)]
+    splines[d].Initialize(data_d, tan_method=splines[d].CARDINAL, c=0.0, m=0.0)
+
+  #NOTE: We don't have to make spline models as we just want velocities at key points.
+  #  They can be obtained by computing tan_method, which will be more efficient.
+
+  dq_traj= []
+  for t in t_traj:
+    dq= [splines[d].Evaluate(t,with_tan=True)[1] for d in range(dof)]
+    dq_traj.append(dq)
+  return dq_traj
+
+
 
 #Modify the velocity of a given trajectory (base routine).
 #t0: Current internal time maintaining a playing point of the trajectory

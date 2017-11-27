@@ -32,9 +32,9 @@ except Exception as e:  print 'Could not import rbt_bxtrN as:',type(e),str(e)
 try:  from rbt_dxlg import *
 except ImportError as e:  print str(e)
 except Exception as e:  print 'Could not import rbt_dxlg as:',type(e),str(e)
-#try:  from rbt_moto import *
-#except ImportError as e:  print str(e)
-#except Exception as e:  print 'Could not import rbt_moto as:',type(e),str(e)
+try:  from rbt_moto import *
+except ImportError as e:  print str(e)
+except Exception as e:  print 'Could not import rbt_moto as:',type(e),str(e)
 try:  from rbt_pr2 import *
 except ImportError as e:  print str(e)
 except Exception as e:  print 'Could not import rbt_pr2 as:',type(e),str(e)

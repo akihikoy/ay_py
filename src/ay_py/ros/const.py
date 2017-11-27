@@ -11,6 +11,8 @@ if ROS_ROBOT in ('PR2','PR2_SIM'):
 elif ROS_ROBOT in ('Baxter','Baxter_SIM'):
   ROS_DEFAULT_FRAME= 'torso'
   #ROS_DEFAULT_FRAME= 'base'
+elif ROS_ROBOT in ('Motoman','Motoman_SIM'):
+  ROS_DEFAULT_FRAME= 'base_link'
 else:
   ROS_DEFAULT_FRAME= 'base'
 

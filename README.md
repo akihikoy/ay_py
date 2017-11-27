@@ -63,7 +63,11 @@ from ay_py.ros import *
 
 ay_py.tools
 ------------------------
-Useful tools, such as GUI with Python.  For example, run:
+Useful tools, such as GUI with Python.
+
+Requirements: for tool/py_gui.py: tmux rxvt-unicode-256color
+
+For example, run:
 
 ```
 python src/ay_py/tool/py_gui.py

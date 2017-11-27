@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 #Robot controller for Robotiq.
 from const import *
-if ROS_ROBOT not in ('ANY','Baxter','Baxter_SIM','BaxterN','RobotiqNB','Motoman'):
+if ROS_ROBOT not in ('ANY','Baxter','Baxter_SIM','BaxterN','RobotiqNB','Motoman','Motoman_SIM'):
   raise ImportError('Stop importing: ROS_ROBOT does not have Robotiq')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 try:

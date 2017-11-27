@@ -117,22 +117,29 @@ def GPoseToX(pose):
   return x
 
 
-#Support function to generate trajectory_msgs/JointTrajectoryPoint.
-def ROSGetJTP(q,t):
+'''Support function to generate trajectory_msgs/JointTrajectoryPoint.
+    q: Joint positions, t: Time from start, dq: Joint velocities.'''
+def ROSGetJTP(q,t,dq=None):
   jp= trajectory_msgs.msg.JointTrajectoryPoint()
   jp.positions= q
   jp.time_from_start= rospy.Duration(t)
+  if dq is not None:  jp.velocities= dq
   return jp
 
 '''Get trajectory_msgs/JointTrajectory from a joint angle trajectory.
   joint_names: joint names.
   q_traj: joint angle trajectory [q0,...,qD]*N.
-  t_traj: corresponding times in seconds from start [t1,t2,...,tN]. '''
-def ToROSTrajectory(joint_names, q_traj, t_traj):
+  t_traj: corresponding times in seconds from start [t1,t2,...,tN].
+  dq_traj: corresponding velocity trajectory [dq0,...,dqD]*N. '''
+def ToROSTrajectory(joint_names, q_traj, t_traj, dq_traj=None):
   assert(len(q_traj)==len(t_traj))
+  if dq_traj is not None:  (len(dq_traj)==len(t_traj))
   traj= trajectory_msgs.msg.JointTrajectory()
   traj.joint_names= joint_names
-  traj.points= [ROSGetJTP(q,t) for q,t in zip(q_traj, t_traj)]
+  if dq_traj is not None:
+    traj.points= [ROSGetJTP(q,t,dq) for q,t,dq in zip(q_traj, t_traj, dq_traj)]
+  else:
+    traj.points= [ROSGetJTP(q,t) for q,t in zip(q_traj, t_traj)]
   traj.header.stamp= rospy.Time.now()
   return traj
 

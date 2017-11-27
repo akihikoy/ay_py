@@ -4,6 +4,7 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Sep.10, 2017
+#Requirements: tmux rxvt-unicode-256color
 
 import sys
 from PyQt4 import QtCore,QtGui,QtTest

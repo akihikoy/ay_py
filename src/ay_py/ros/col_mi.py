@@ -21,13 +21,13 @@ from ..core.geom import *
 class TStateValidityCheckerMI(TROSUtil):
   class TConfig:
     def __init__(self, num_arms=2):
-      self.JointNames= [[] for i in num_arms]
+      self.JointNames= [[] for i in range(num_arms)]
       self.Links= {}
       self.PaddingLinks= []
       self.PaddingValues= []
       self.DefaultBaseFrame= None
-      self.HandLinkToGrasp= [[] for i in num_arms]
-      self.IgnoredLinksInGrasp= [[] for i in num_arms]
+      self.HandLinkToGrasp= [[] for i in range(num_arms)]
+      self.IgnoredLinksInGrasp= [[] for i in range(num_arms)]
 
   def __init__(self):
     super(TStateValidityCheckerMI,self).__init__()
