@@ -57,7 +57,7 @@ class TRobotMotoman(TMultiArmRobot):
     self.robotiq= TRobotiq()  #Robotiq controller
     self.grippers= [self.robotiq]
 
-    print 'Enabling the robot...'
+    #print 'Enabling the robot...'
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
@@ -118,7 +118,7 @@ class TRobotMotoman(TMultiArmRobot):
     if gripper.Is('Robotiq'):  return self.rqg_range
 
   '''End effector of an arm.'''
-  def EndEff(self, arm):
+  def EndEff(self, arm=None):
     arm= 0
     return self.grippers[arm]
 

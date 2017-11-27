@@ -12,11 +12,14 @@ __PACKAGES__= [
   'util',
   ]
 
-from dpl4      import *
+try:  from dpl4      import *
+except ImportError as e:  print str(e)
 from geom      import *
-from geom_ex   import *
+try:  from geom_ex   import *
+except ImportError as e:  print str(e)
 from ml        import *
-from ml_dnn    import *
+try:  from ml_dnn    import *
+except ImportError as e:  print str(e)
 from ml_lwr    import *
 from opt       import *
 from sm        import *

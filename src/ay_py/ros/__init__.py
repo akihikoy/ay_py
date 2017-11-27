@@ -17,9 +17,11 @@ __PACKAGES_ROBOT__= [
   ]
 
 from base         import *
-from col_mi       import *
+try:  from col_mi       import *
+except ImportError as e:  print str(e)
 from const        import *
-from kdl_kin      import *
+try:  from kdl_kin      import *
+except ImportError as e:  print str(e)
 from robot        import *
 from viz          import *
 
