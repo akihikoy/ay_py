@@ -3,18 +3,18 @@
 import os
 
 USING_ROS= True if 'ROS_ROOT' in os.environ else False
-ROS_ROBOT= os.environ['ROS_ROBOT'] if 'ROS_ROBOT' in os.environ else None
+#ROS_ROBOT= os.environ['ROS_ROBOT'] if 'ROS_ROBOT' in os.environ else None
 ROS_DISTRO= os.environ['ROS_DISTRO'] if 'ROS_DISTRO' in os.environ else None
 
-if ROS_ROBOT in ('PR2','PR2_SIM'):
-  ROS_DEFAULT_FRAME= 'torso_lift_link'
-elif ROS_ROBOT in ('Baxter','Baxter_SIM'):
-  ROS_DEFAULT_FRAME= 'torso'
+#if ROS_ROBOT in ('PR2','PR2_SIM'):
+  #ROS_DEFAULT_FRAME= 'torso_lift_link'
+#elif ROS_ROBOT in ('Baxter','Baxter_SIM'):
+  #ROS_DEFAULT_FRAME= 'torso'
+  ##ROS_DEFAULT_FRAME= 'base'
+#elif ROS_ROBOT in ('Motoman','Motoman_SIM'):
+  #ROS_DEFAULT_FRAME= 'base_link'
+#else:
   #ROS_DEFAULT_FRAME= 'base'
-elif ROS_ROBOT in ('Motoman','Motoman_SIM'):
-  ROS_DEFAULT_FRAME= 'base_link'
-else:
-  ROS_DEFAULT_FRAME= 'base'
 
 
 #Arm/gripper ID

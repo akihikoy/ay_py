@@ -26,7 +26,7 @@ class TKinematics(object):
   def __init__(self, base_link=None, end_link=None):
     self._robot = kdl_parser_py.urdf.urdf.URDF.from_parameter_server('robot_description')
     (ok, self._kdl_tree)= kdl_parser_py.urdf.treeFromUrdfModel(self._robot)
-    self._base_link = base_link if base_link is not None else self._robot.get_root()
+    self._base_link = self._robot.get_root()
     self._tip_link = end_link
     self._tip_frame = PyKDL.Frame()
     self._arm_chain = self._kdl_tree.getChain(self._base_link, self._tip_link)
@@ -47,12 +47,13 @@ class TKinematics(object):
     self._dyn_kdl = PyKDL.ChainDynParam(self._arm_chain, PyKDL.Vector.Zero())
 
   def print_robot_description(self):
-    print "URDF root link: %s;" % self._robot.get_root()
     print "URDF non-fixed joints: %d;" % len([joint.type for joint in self._robot.joints if joint.type!='fixed'])
     print "URDF total joints: %d" % len(self._robot.joints)
     print "URDF links: %d" % len(self._robot.links)
     print "URDF link names: %s" % [link.name for link in self._robot.links]
     print "URDF joint names: %s" % [joint.name for joint in self._robot.joints]
+    print "URDF Root: %s" % self._robot.get_root()
+
     print "KDL segments: %d" % self._kdl_tree.getNrOfSegments()
     print "KDL joints: %d" % self._kdl_tree.getNrOfJoints()
 
@@ -60,6 +61,7 @@ class TKinematics(object):
     print "KDL-chain joints: %d" % self._arm_chain.getNrOfJoints()
     print "KDL-chain segment names: %s" % [self._arm_chain.getSegment(i).getName() for i in range(self._arm_chain.getNrOfSegments())]
     print "KDL-chain joint names: %s" % [self._arm_chain.getSegment(i).getJoint().getName() for i in range(self._arm_chain.getNrOfSegments())]
+    #print [self._arm_chain.getSegment(i) for i in range(self._arm_chain.getNrOfSegments())]
 
   def get_joint_information(self):
     self._urdf_joints = {joint.name:joint for joint in self._robot.joints if joint.type!='fixed'}

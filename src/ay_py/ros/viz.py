@@ -13,7 +13,7 @@ class TSimpleVisualizer(object):
     self.viz_pub= rospy.Publisher('visualization_marker', visualization_msgs.msg.Marker, queue_size=10)
     self.curr_id= 0
     self.added_ids= set()
-    self.viz_frame= ROS_DEFAULT_FRAME if frame is None else frame
+    self.viz_frame= 'base' if frame is None else frame
     self.viz_ns= name_space
     self.viz_dt= viz_dt
     #self.viz_dt= rospy.Duration()

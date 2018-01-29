@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 #Robot controller for PR2.
 from const import *
-if ROS_ROBOT not in ('ANY','PR2','PR2_SIM'):
-  raise ImportError('Stop importing: ROS_ROBOT is not PR2')
+#if ROS_ROBOT not in ('ANY','PR2','PR2_SIM'):
+  #raise ImportError('Stop importing: ROS_ROBOT is not PR2')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
 import roslib

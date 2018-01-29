@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 #Robot controller for Robotiq-No-Body.
 from const import *
-if ROS_ROBOT not in ('ANY','RobotiqNB'):
-  raise ImportError('Stop importing: ROS_ROBOT is not RobotiqNB')
+#if ROS_ROBOT not in ('ANY','RobotiqNB'):
+  #raise ImportError('Stop importing: ROS_ROBOT is not RobotiqNB')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
 from robot import TMultiArmRobot

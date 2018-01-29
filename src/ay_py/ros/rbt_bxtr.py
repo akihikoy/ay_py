@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 #Robot controller for Baxter.
 from const import *
-if ROS_ROBOT not in ('ANY','Baxter','Baxter_SIM','BaxterN','RobotiqNB'):
-  raise ImportError('Stop importing: ROS_ROBOT is not Baxter')
+#if ROS_ROBOT not in ('ANY','Baxter','Baxter_SIM','BaxterN','RobotiqNB'):
+  #raise ImportError('Stop importing: ROS_ROBOT is not Baxter')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
 import roslib
@@ -27,7 +27,7 @@ from kdl_kin import *
 class TRobotBaxter(TDualArmRobot):
   def __init__(self, name='Baxter'):
     super(TRobotBaxter,self).__init__(name=name)
-    self.is_sim= (ROS_ROBOT=='Baxter_SIM')
+    #self.is_sim= (ROS_ROBOT=='Baxter_SIM')
 
     #Gripper command-position conversions.
     #epg: electric parallel gripper (narrow, pos#4).

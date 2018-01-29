@@ -1,8 +1,8 @@
 #! /usr/bin/env python
 #Robot controller for BaxterN.
 from const import *
-if ROS_ROBOT not in ('ANY','BaxterN'):
-  raise ImportError('Stop importing: ROS_ROBOT is not BaxterN')
+#if ROS_ROBOT not in ('ANY','BaxterN'):
+  #raise ImportError('Stop importing: ROS_ROBOT is not BaxterN')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
 from rbt_bxtr import *
