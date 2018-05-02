@@ -150,13 +150,13 @@ class TMikata(object):
 
   #Move the position to a given value(rad).
   #  target: Target positions {joint_name:position(rad)}
-  #  wait:   True: this function waits the target position is reached.  False: this function returns immediately.
-  def MoveTo(self, target, wait=True, threshold=0.03):
+  #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
+  def MoveTo(self, target, blocking=True, threshold=0.03):
     with self.port_locker:
       for jname,pos in target.iteritems():
-        self.dxl[jname].MoveTo(self.invconv_pos[jname](pos),wait=False)
+        self.dxl[jname].MoveTo(self.invconv_pos[jname](pos),blocking=False)
 
-    while wait:
+    while blocking:
       pos= self.Position(target.keys())
       if None in pos:  return
       #print("[ID:%03d] GoalPos:%03d  PresPos:%03d" % (self.Id, target, pos))
@@ -164,13 +164,13 @@ class TMikata(object):
 
   #Move the position to a given value(rad) with given current(mA).
   #  target: Target positions and currents {joint_name:(position(rad),current(mA))}
-  #  wait:   True: this function waits the target position is reached.  False: this function returns immediately.
-  def MoveToC(self, target, wait=True, threshold=0.03):
+  #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
+  def MoveToC(self, target, blocking=True, threshold=0.03):
     with self.port_locker:
       for jname,(pos,curr) in target.iteritems():
-        self.dxl[jname].MoveToC(self.invconv_pos[jname](pos),self.invconv_curr[jname](curr),wait=False)
+        self.dxl[jname].MoveToC(self.invconv_pos[jname](pos),self.invconv_curr[jname](curr),blocking=False)
 
-    while wait:
+    while blocking:
       pos= self.Position(target.keys())
       if None in pos:  return
       #print("[ID:%03d] GoalPos:%03d  PresPos:%03d" % (self.Id, target, pos))
@@ -208,6 +208,7 @@ class TMikata(object):
   def StartStateObs(self, callback=None):
     self.StopStateObs()
     th_func= lambda:self.StateObserver(callback)
+    self._state_observer_callback= callback  #For future use.
     self.threads['StateObserver']= [True, threading.Thread(name='StateObserver', target=th_func)]
     self.threads['StateObserver'][1].start()
 
@@ -218,16 +219,24 @@ class TMikata(object):
       self.threads['StateObserver'][1].join()
     self.threads['StateObserver']= [False,None]
 
+  #Set rate (Hz) of state observation.
+  #Works anytime.
+  def SetStateObsRate(self, rate):
+    if self.hz_state_obs!=rate:
+      self.hz_state_obs= rate
+      if self.threads['StateObserver'][0]:
+        self.StartStateObs(self._state_observer_callback)
+
   #Follow a trajectory.
   #  joint_names: Names of joints to be controlled.
   #  (q_traj,t_traj): Sequence of (joint positions) and (time from start).
   #  current: Currents of joints (available when the operation mode=CURRPOS).
-  def FollowTrajectory(self, joint_names, q_traj, t_traj, current=None, wait=False):
+  def FollowTrajectory(self, joint_names, q_traj, t_traj, current=None, blocking=False):
     self.StopTrajectory()
     th_func= lambda:self.TrajectoryController(joint_names, q_traj, t_traj, current)
     self.threads['TrajectoryController']= [True, threading.Thread(name='TrajectoryController', target=th_func)]
     self.threads['TrajectoryController'][1].start()
-    if wait:
+    if blocking:
       self.threads['TrajectoryController'][1].join()
       self.StopTrajectory()
 
@@ -237,6 +246,11 @@ class TMikata(object):
       self.threads['TrajectoryController'][0]= False
       self.threads['TrajectoryController'][1].join()
     self.threads['TrajectoryController']= [False,None]
+
+  #Set rate (Hz) of trajectory following controller.
+  def SetTrajectoryCtrlRate(self, rate):
+    if self.hz_traj_ctrl!=rate:
+      self.hz_traj_ctrl= rate
 
   #State observer thread.
   #NOTE: Don't call this function directly.  Use self.StartStateObs and self.State
@@ -285,10 +299,10 @@ class TMikata(object):
       #print t, q
       if current is None:
         with self.port_locker:
-          self.MoveTo({jname:qj for jname,qj in zip(joint_names,q)}, wait=False)
+          self.MoveTo({jname:qj for jname,qj in zip(joint_names,q)}, blocking=False)
       else:
         with self.port_locker:
-          self.MoveToC({jname:(qj,ej) for jname,qj,ej in zip(joint_names,q,current)}, wait=False)
+          self.MoveToC({jname:(qj,ej) for jname,qj,ej in zip(joint_names,q,current)}, blocking=False)
       rate.sleep()
 
     self.threads['TrajectoryController'][0]= False

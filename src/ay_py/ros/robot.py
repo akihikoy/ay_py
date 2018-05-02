@@ -113,7 +113,7 @@ class TMultiArmRobot(TROSUtil):
     pass
 
   '''End effector of an arm.'''
-  def EndEff(self, arm):
+  def EndEff(self, arm=None):
     pass
 
   '''Return joint angles of an arm.
@@ -256,9 +256,14 @@ class TDualArmRobot(TMultiArmRobot):
     return LRToStrs(arm)
 
 
-class TFakeRobot(TDualArmRobot):
+class TFakeRobot(TMultiArmRobot):
   def __init__(self):
     super(TFakeRobot,self).__init__(name='NoRobot')
+
+  '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+  def Is(self, q):
+    if q in ('NoRobot'):  return True
+    return False
 
 
 
@@ -271,6 +276,10 @@ class TGripper2F1(TROSUtil):
   def Is(self, q):
     if q in ('Gripper','Gripper2F1'):  return True
     return False
+
+  '''Range of gripper position.'''
+  def PosRange(self):
+    return None
 
   '''Get current position.'''
   def Position(self):

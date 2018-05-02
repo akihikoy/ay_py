@@ -7,6 +7,7 @@
 from _path import *
 from ay_py.core import *
 from ay_py.ros import *
+from ay_py.ros.rbt_dxlg import *
 
 if __name__=='__main__':
   DXLG_DEV= os.environ['DXLG_DEV'] if 'DXLG_DEV' in os.environ else '/dev/ttyUSB0'

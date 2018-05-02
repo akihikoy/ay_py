@@ -35,6 +35,12 @@ class TRobotiq(TGripper2F1):
     self.CmdTopic= cmd_topic
     self.StTopic= st_topic
 
+    #Gripper command-position conversions.
+    #rqg: Robotiq gripper.
+    self.rqg_cmd2pos= lambda cmd: -0.00041*cmd+0.09249   #effective cmd in [12,230] ([0,255])
+    self.rqg_pos2cmd= lambda pos: -(pos-0.09249)/0.00041 #pos in [0.0,0.0855] meter
+    self.rqg_range= [0.0,0.0855]  #close, open
+
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= False
@@ -60,6 +66,10 @@ class TRobotiq(TGripper2F1):
     if q in ('Robotiq',):  return True
     return super(TRobotiq,self).Is(q)
 
+  '''Range of gripper position.'''
+  def PosRange(self):
+    return self.rqg_range
+
   def SensorHandler(self,msg):
     self.status= msg
     if self.SensorCallback is not None:
@@ -75,7 +85,7 @@ class TRobotiq(TGripper2F1):
 
   '''Get current position.'''
   def Position(self):
-    return self.status.gPO
+    return self.rqg_cmd2pos(self.status.gPO)
 
   def Current(self):
     return self.status.gCU
@@ -108,12 +118,16 @@ class TRobotiq(TGripper2F1):
     self.Move(pos=255, max_effort=100, blocking=blocking)
 
   '''Control a gripper.
-    pos: target position; 0 (open), 255 (close).
-    max_effort: maximum effort to control; 0~50 (weak), 200 (strong), 255 (maximum).
-    speed: speed of the movement; 0 (minimum), 255 (maximum).
+    pos: target position in meter.
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum).
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Move(self, pos, max_effort, speed=255, blocking=False):
-    pos= max(0,min(255,int(pos)))
+  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
+    clip= lambda c: max(0,min(255,int(c)))
+    pos= clip(self.rqg_pos2cmd(pos))
+    max_effort= clip(max_effort*(255.0/100.0))
+    speed= clip(speed*(255.0/100.0))
+
     cmd= robotiq_msgs.CModel_robot_output();
     cmd.rACT= 1
     cmd.rGTO= 1

@@ -11,6 +11,7 @@ $ roslaunch ay_util bx_real.launch
 from _path import *
 from ay_py.core import *
 from ay_py.ros import *
+from ay_py.ros.rbt_bxtr import *
 
 if __name__=='__main__':
   rospy.init_node('ay_py_test')

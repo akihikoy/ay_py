@@ -29,19 +29,6 @@ class TRobotBaxter(TDualArmRobot):
     super(TRobotBaxter,self).__init__(name=name)
     #self.is_sim= (ROS_ROBOT=='Baxter_SIM')
 
-    #Gripper command-position conversions.
-    #epg: electric parallel gripper (narrow, pos#4).
-    #self.epg_cmd2pos= lambda cmd: 0.00042*cmd+0.05317    #effective cmd in [0,100] ([0,100])
-    #self.epg_pos2cmd= lambda pos: (pos-0.05317)/0.00042  #pos in [0.054,0.094] meter
-    #epg: electric parallel gripper (narrow, pos#1).
-    self.epg_cmd2pos= lambda cmd: 0.00037*cmd            #effective cmd in [0,100] ([0,100])
-    self.epg_pos2cmd= lambda pos: (pos)/0.00037          #pos in [0.00,0.037] meter
-    self.epg_range= [0.00,0.037]
-    #rqg: Robotiq gripper.
-    self.rqg_cmd2pos= lambda cmd: -0.00041*cmd+0.09249   #effective cmd in [12,230] ([0,255])
-    self.rqg_pos2cmd= lambda pos: -(pos-0.09249)/0.00041 #pos in [0.0,0.0855] meter
-    self.rqg_range= [0.0,0.0855]
-
     self.joint_names= [[],[]]
     self.joint_names[RIGHT]= ['right_'+joint for joint in ['s0', 's1', 'e0', 'e1', 'w0', 'w1', 'w2']]
     self.joint_names[LEFT]=  ['left_' +joint for joint in ['s0', 's1', 'e0', 'e1', 'w0', 'w1', 'w2']]
@@ -154,8 +141,8 @@ class TRobotBaxter(TDualArmRobot):
   def GripperRange(self, arm=None):
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
-    if gripper.Is('BaxterEPG'):  return self.epg_range
-    elif gripper.Is('Robotiq'):  return self.rqg_range
+    if gripper.Is('BaxterEPG'):  return gripper.PosRange()
+    elif gripper.Is('Robotiq'):  return gripper.PosRange()
 
   '''End effector of an arm.'''
   def EndEff(self, arm):
@@ -240,10 +227,10 @@ class TRobotBaxter(TDualArmRobot):
     xw_trg= x_trg if x_ext is None else TransformRightInv(x_trg,x_ext)
 
     with self.sensor_locker:
-      q= self.kin[arm].inverse_kinematics(xw_trg[:3], xw_trg[3:], seed=start_angles, maxiter=1000, eps=1.0e-6)
+      res,q= self.kin[arm].inverse_kinematics(xw_trg[:3], xw_trg[3:], seed=start_angles, maxiter=1000, eps=1.0e-6, with_st=True)
 
-    if q is not None:  return (q, True) if with_st else q
-    else:  return (None, False) if with_st else None
+    if res:  return (q, True) if with_st else q
+    else:  return (q, False) if with_st else None
 
 
   '''Follow a joint angle trajectory.
@@ -297,16 +284,11 @@ class TRobotBaxter(TDualArmRobot):
 
     gripper= self.grippers[arm]
     if gripper.Is('BaxterEPG'):
-      cmd= self.epg_pos2cmd(pos)
       with self.control_locker:
-        gripper.Move(cmd, max_effort, speed, blocking=blocking)
+        gripper.Move(pos, max_effort, speed, blocking=blocking)
     elif gripper.Is('Robotiq'):
-      clip= lambda c: max(0.0,min(255.0,c))
-      cmd= clip(self.rqg_pos2cmd(pos))
-      max_effort= clip(max_effort*(255.0/100.0))
-      speed= clip(speed*(255.0/100.0))
       with self.control_locker:
-        gripper.Move(cmd, max_effort, speed, blocking=blocking)
+        gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.
     arm: LEFT, RIGHT, or None (==currarm). '''
@@ -317,11 +299,11 @@ class TRobotBaxter(TDualArmRobot):
     gripper= self.grippers[arm]
     if gripper.Is('BaxterEPG'):
       with self.sensor_locker:
-        pos= self.epg_cmd2pos(gripper.Position())
+        pos= gripper.Position()
       return pos
     elif gripper.Is('Robotiq'):
       with self.sensor_locker:
-        pos= self.rqg_cmd2pos(gripper.Position())
+        pos= gripper.Position()
       return pos
 
   '''Get fingertip offset in meter.
@@ -364,6 +346,15 @@ class TBaxterEPG(TGripper2F1):
     super(TBaxterEPG,self).__init__()
     self.epgripper= baxter_interface.Gripper(arm, baxter_interface.CHECK_VERSION)
 
+    #Gripper command-position conversions.
+    #epg: electric parallel gripper (narrow, pos#4).
+    #self.epg_cmd2pos= lambda cmd: 0.00042*cmd+0.05317    #effective cmd in [0,100] ([0,100])
+    #self.epg_pos2cmd= lambda pos: (pos-0.05317)/0.00042  #pos in [0.054,0.094] meter
+    #epg: electric parallel gripper (narrow, pos#1).
+    self.epg_cmd2pos= lambda cmd: 0.00037*cmd            #effective cmd in [0,100] ([0,100])
+    self.epg_pos2cmd= lambda pos: (pos)/0.00037          #pos in [0.00,0.037] meter
+    self.epg_range= [0.00,0.037]
+
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= False
@@ -380,9 +371,13 @@ class TBaxterEPG(TGripper2F1):
     if q in ('BaxterEPG',):  return True
     return super(TBaxterEPG,self).Is(q)
 
+  '''Range of gripper position.'''
+  def PosRange(self):
+    return self.epg_range
+
   '''Get current position.'''
   def Position(self):
-    return self.epgripper.position()
+    return self.epg_cmd2pos(self.epgripper.position())
 
   '''Activate gripper (torque is enabled).
     Return success or not.'''
@@ -405,16 +400,17 @@ class TBaxterEPG(TGripper2F1):
     self.Move(0.0, blocking=blocking)
 
   '''Control a gripper.
-    pos: target position; 0 (close), 100 (open).
+    pos: target position in meter.
     max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
     speed: speed of the movement; 0 (minimum), 100 (maximum).
     blocking: False: move background, True: wait until motion ends.  '''
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
     clip= lambda c: max(0.0,min(100.0,c))
+    cmd= self.epg_pos2cmd(pos)
     self.epgripper.set_velocity(clip(speed))
     self.epgripper.set_moving_force(clip(max_effort))
     self.epgripper.set_holding_force(clip(max_effort))
-    self.epgripper.command_position(clip(pos),block=blocking)
+    self.epgripper.command_position(clip(cmd),block=blocking)
 
   '''Stop the gripper motion. '''
   def Stop(self):

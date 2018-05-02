@@ -21,12 +21,6 @@ class TRobotMotoman(TMultiArmRobot):
     super(TRobotMotoman,self).__init__(name=name)
     #self.is_sim= (ROS_ROBOT=='Motoman_SIM')
 
-    #Gripper command-position conversions.
-    #rqg: Robotiq gripper.
-    self.rqg_cmd2pos= lambda cmd: -0.00041*cmd+0.09249   #effective cmd in [12,230] ([0,255])
-    self.rqg_pos2cmd= lambda pos: -(pos-0.09249)/0.00041 #pos in [0.0,0.0855] meter
-    self.rqg_range= [0.0,0.0855]
-
     self.joint_names= [[]]
     self.joint_names[0]= rospy.get_param('controller_joint_names')
     #self.joint_names[0]= ['joint_'+jkey for jkey in ('s','l','e','u','r','b','t')]
@@ -90,11 +84,12 @@ class TRobotMotoman(TMultiArmRobot):
     return 'base_link'
 
   '''End link of an arm.'''
-  def EndLink(self, arm):
+  def EndLink(self, arm=None):
     return 'link_t'
 
   '''Names of joints of an arm.'''
-  def JointNames(self, arm):
+  def JointNames(self, arm=None):
+    arm= 0
     return self.joint_names[arm]
 
   '''Return limits (lower, upper) of joint angles.
@@ -115,7 +110,7 @@ class TRobotMotoman(TMultiArmRobot):
   def GripperRange(self, arm=None):
     arm= 0
     gripper= self.grippers[arm]
-    if gripper.Is('Robotiq'):  return self.rqg_range
+    if gripper.Is('Robotiq'):  return gripper.PosRange()
 
   '''End effector of an arm.'''
   def EndEff(self, arm=None):
@@ -201,10 +196,10 @@ class TRobotMotoman(TMultiArmRobot):
     xw_trg= x_trg if x_ext is None else TransformRightInv(x_trg,x_ext)
 
     with self.sensor_locker:
-      q= self.kin[arm].inverse_kinematics(xw_trg[:3], xw_trg[3:], seed=start_angles, maxiter=1000, eps=1.0e-6)
+      res,q= self.kin[arm].inverse_kinematics(xw_trg[:3], xw_trg[3:], seed=start_angles, maxiter=1000, eps=1.0e-6, with_st=True)
 
-    if q is not None:  return (q, True) if with_st else q
-    else:  return (None, False) if with_st else None
+    if res:  return (q, True) if with_st else q
+    else:  return (q, False) if with_st else None
 
 
   '''Follow a joint angle trajectory.
@@ -255,12 +250,8 @@ class TRobotMotoman(TMultiArmRobot):
 
     gripper= self.grippers[arm]
     if gripper.Is('Robotiq'):
-      clip= lambda c: max(0.0,min(255.0,c))
-      cmd= clip(self.rqg_pos2cmd(pos))
-      max_effort= clip(max_effort*(255.0/100.0))
-      speed= clip(speed*(255.0/100.0))
       with self.control_locker:
-        gripper.Move(cmd, max_effort, speed, blocking=blocking)
+        gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.
     arm: arm id, or None (==currarm). '''
@@ -271,7 +262,7 @@ class TRobotMotoman(TMultiArmRobot):
     gripper= self.grippers[arm]
     if gripper.Is('Robotiq'):
       with self.sensor_locker:
-        pos= self.rqg_cmd2pos(gripper.Position())
+        pos= gripper.Position()
       return pos
 
   '''Get fingertip offset in meter.

@@ -7,6 +7,7 @@ from const import *
 
 from robot import TGripper2F1,TMultiArmRobot
 from ..misc.dxl_util import TDynamixel1
+from ..misc.dxl_holding import TDxlHolding
 import threading
 
 
@@ -14,21 +15,32 @@ import threading
 class TDxlGripper(TGripper2F1):
   def __init__(self, dev='/dev/ttyUSB0'):
     super(TDxlGripper,self).__init__()
-    self.dxl= TDynamixel1('XM430-W350',dev=dev)
+    self.dev= dev
 
     #Thread locker:
     self.port_locker= threading.RLock()
+
+    #Holding controller:
+    self.holding= None
+    self.holding_max_pwm_rate= 0.9
 
     #self.CmdMax= 2382  #Gripper closed.
     self.CmdMax= 2200  #Gripper closed (with FingerVision).
     self.CmdMin= 1200  #Gripper opened widely.
     self.CmdOpen= 1900  #Gripper opened moderately.
 
+    #Gripper command-position conversions.
+    self.dxlg_range= [0.0,0.095]
+    self.dxlg_cmd2pos= lambda cmd: self.dxlg_range[1] + (cmd-self.CmdOpen)*(self.dxlg_range[0]-self.dxlg_range[1])/(self.CmdMax-self.CmdOpen)
+    self.dxlg_pos2cmd= lambda pos: self.CmdOpen + (pos-self.dxlg_range[1])*(self.CmdMax-self.CmdOpen)/(self.dxlg_range[0]-self.dxlg_range[1])
+
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= False
     res= []
     ra= lambda r: res.append(r)
+
+    self.dxl= TDynamixel1('XM430-W350',dev=self.dev)
 
     with self.port_locker:
       ra(self.dxl.Setup())
@@ -54,11 +66,18 @@ class TDxlGripper(TGripper2F1):
     if q in ('DxlGripper',):  return True
     return super(TDxlGripper,self).Is(q)
 
+  '''Range of gripper position.'''
+  def PosRange(self):
+    return self.dxlg_range
+
   '''Get current position.'''
   def Position(self):
     with self.port_locker:
       pos= self.dxl.Position()
-    if pos is None:  print 'DxlGripper: Failed to read position'
+    if pos is None:
+      print 'DxlGripper: Failed to read position'
+      return None
+    pos= self.dxlg_cmd2pos(pos)
     return pos
 
   '''Activate gripper (torque is enabled).
@@ -78,28 +97,73 @@ class TDxlGripper(TGripper2F1):
   '''Open a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
-    self.Move(pos=self.CmdOpen, blocking=blocking)
+    self.Move(pos=self.dxlg_range[1], blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
-    self.Move(pos=self.CmdMax, blocking=blocking)
+    self.Move(pos=self.dxlg_range[0], blocking=blocking)
 
   '''Control a gripper.
-    pos: target position; CmdMin (open widely), CmdOpen (open moderately), CmdMax (close).
-    max_effort: maximum effort to control; NOT_IMPLEMENTED.
-    speed: speed of the movement; NOT_IMPLEMENTED.
+    pos: target position in meter.
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Move(self, pos, max_effort=None, speed=None, blocking=False):
-    pos= max(self.CmdMin,min(self.CmdMax,int(pos)))
-    with self.port_locker:
-      self.dxl.MoveTo(pos, wait=True if blocking else False)
+  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
+    cmd= max(self.CmdMin,min(self.CmdMax,int(self.dxlg_pos2cmd(pos))))
+    max_pwm= self.dxl.InvConvPWM(max_effort)
+    if self.holding is None:
+      with self.port_locker:
+        self.dxl.SetPWM(max_pwm)
+        self.dxl.MoveTo(cmd, blocking=True if blocking else False)
+    else:
+      with self.port_locker:
+        self.dxl.SetPWM(max_pwm)
+      self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
 
   '''Stop the gripper motion. '''
   def Stop(self):
-    with self.port_locker:
-      self.dxl.MoveTo(self.dxl.Position(), wait=False)
+    self.Move(self.Position(), blocking=False)
 
+  ##Low level position control.
+  #def low_move(self, cmd, blocking):
+    #self.dxl.MoveTo(cmd, blocking=blocking)
+  ##Low level pwm control.
+  #def low_set_pwm(self, pwm):
+    #with self.port_locker:
+      #self.dxl.SetPWM(pwm)
+  ##Low level observer.
+  #def low_observe(self):
+    #with self.port_locker:
+      #pos,vel,pwm= self.dxl.Position(), self.dxl.Velocity(), self.dxl.PWM()
+    #return pos,vel,pwm
+
+  #Start holding controller with control rate (Hz).
+  def StartHolding(self, rate=30):
+    self.StopHolding()
+
+    def holding_observer():
+      with self.port_locker:
+        pos,vel,pwm= self.dxl.Position(), self.dxl.Velocity(), self.dxl.PWM()
+      return pos,vel,pwm
+    def holding_controller(target_position):
+      with self.port_locker:
+        self.dxl.MoveTo(target_position, blocking=False)
+
+    with self.port_locker:
+      goal_pos= self.dxl.Read('GOAL_POSITION')
+      max_pwm= self.dxl.Read('GOAL_PWM')
+
+    self.holding= TDxlHolding(rate)
+    self.holding.observer= holding_observer
+    self.holding.controller= holding_controller
+    self.holding.SetTarget(goal_pos, self.holding_max_pwm_rate*max_pwm)
+    self.holding.Start()
+
+  def StopHolding(self):
+    if self.holding is not None:
+      self.holding.Stop()
+    self.holding= None
 
 
 '''Robot control class for DxlGripper.
@@ -124,11 +188,6 @@ class TRobotDxlGripper(TMultiArmRobot):
     print 'Initializing and activating DxlGripper gripper...'
     ra(self.dxl_gripper.Init())
 
-    #Gripper command-position conversions.
-    self.dxlg_range= [0.0,0.095]
-    self.dxlg_cmd2pos= lambda cmd: self.dxlg_range[1] + (cmd-self.dxl_gripper.CmdOpen)*(self.dxlg_range[0]-self.dxlg_range[1])/(self.dxl_gripper.CmdMax-self.dxl_gripper.CmdOpen)
-    self.dxlg_pos2cmd= lambda pos: self.dxl_gripper.CmdOpen + (pos-self.dxlg_range[1])*(self.dxl_gripper.CmdMax-self.dxl_gripper.CmdOpen)/(self.dxlg_range[0]-self.dxlg_range[1])
-
     if False not in res:  self._is_initialized= True
     return self._is_initialized
 
@@ -149,7 +208,8 @@ class TRobotDxlGripper(TMultiArmRobot):
   '''Return range of gripper.
     arm: arm id, or None (==currarm). '''
   def GripperRange(self, arm=None):
-    return self.dxlg_range
+    if arm is None:  arm= self.Arm
+    return self.grippers[arm].PosRange()
 
   '''End effector of an arm.'''
   def EndEff(self, arm):
@@ -165,13 +225,19 @@ class TRobotDxlGripper(TMultiArmRobot):
     arm: arm id, or None (==currarm).
     blocking: False: move background, True: wait until motion ends.  '''
   def OpenGripper(self, arm=None, blocking=False):
-    self.MoveGripper(pos=0.1, arm=arm, blocking=blocking)
+    if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
+    with self.control_locker:
+      gripper.Open(blocking=blocking)
 
   '''Close a gripper.
     arm: arm id, or None (==currarm).
     blocking: False: move background, True: wait until motion ends.  '''
   def CloseGripper(self, arm=None, blocking=False):
-    self.MoveGripper(pos=0.0, arm=arm, blocking=blocking)
+    if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
+    with self.control_locker:
+      gripper.Close(blocking=blocking)
 
   '''High level interface to control a gripper.
     arm: arm id, or None (==currarm).
@@ -183,9 +249,8 @@ class TRobotDxlGripper(TMultiArmRobot):
     if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    cmd= self.dxlg_pos2cmd(pos)
     with self.control_locker:
-      gripper.Move(cmd, blocking=blocking)
+      gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.
     arm: arm id, or None (==currarm). '''
@@ -194,7 +259,7 @@ class TRobotDxlGripper(TMultiArmRobot):
 
     gripper= self.grippers[arm]
     with self.sensor_locker:
-      pos= self.dxlg_cmd2pos(gripper.Position())
+      pos= gripper.Position()
     return pos
 
   '''Get fingertip offset in meter.

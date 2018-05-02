@@ -321,8 +321,8 @@ class TDynamixel1:
 
   #Move the position to a given value.
   #  target: Target position, should be in [self.MIN_POSITION, self.MAX_POSITION]
-  #  wait:   True: this function waits the target position is reached.  False: this function returns immediately.
-  def MoveTo(self, target, wait=True, threshold=20):
+  #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
+  def MoveTo(self, target, blocking=True, threshold=20):
     target = int(target)
     #FIXME: If OpMode allows multi turn, target could vary.
     if target < self.MIN_POSITION:  target = self.MIN_POSITION
@@ -333,7 +333,7 @@ class TDynamixel1:
     #if not self.CheckTxRxResult():  return
     self.CheckTxRxResult()
 
-    while wait:
+    while blocking:
       pos= self.Position()
       if pos is None:  return
       #print("[ID:%03d] GoalPos:%03d  PresPos:%03d" % (self.Id, target, pos))
@@ -342,8 +342,8 @@ class TDynamixel1:
   #Move the position to a given value with given current.
   #  target: Target position, should be in [self.MIN_POSITION, self.MAX_POSITION]
   #  current: Target current, should be in [-self.MAX_CURRENT, self.MAX_CURRENT]
-  #  wait:   True: this function waits the target position is reached.  False: this function returns immediately.
-  def MoveToC(self, target, current, wait=True, threshold=20):
+  #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
+  def MoveToC(self, target, current, blocking=True, threshold=20):
     target = int(target)
     #FIXME: If OpMode allows multi turn, target could vary.
     if target < self.MIN_POSITION:  target = self.MIN_POSITION
@@ -358,7 +358,7 @@ class TDynamixel1:
     #if not self.CheckTxRxResult():  return
     self.CheckTxRxResult()
 
-    while wait:
+    while blocking:
       pos= self.Position()
       if pos is None:  return
       #print("[ID:%03d] GoalPos:%03d  PresPos:%03d" % (self.Id, target, pos))

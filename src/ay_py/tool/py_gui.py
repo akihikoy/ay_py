@@ -7,6 +7,7 @@
 #Requirements: tmux rxvt-unicode-256color
 
 import sys
+import signal
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
@@ -114,7 +115,8 @@ class TTerminalTab(QtGui.QWidget):
           'urxvt',
           ['-embed', str(self.qtterm[term].winId()),
             '-e', 'tmux', 'new', '-s', term])
-      QtTest.QTest.qWait(100)
+      #QtTest.QTest.qWait(100)
+    QtTest.QTest.qWait(200)
     #QtTest.QTest.qWait(200*len(self.Terminals))
     #for r,(term,row) in enumerate(self.Terminals):
       #self.StartProc('tmux', ['send-keys', '-t', term+':0'] + self.InitCommand)
@@ -124,9 +126,11 @@ class TTerminalTab(QtGui.QWidget):
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
       self.StartProc('tmux', ['send-keys', '-t', term+':0'] + self.ExitCommand)
-      QtTest.QTest.qWait(200)
+    QtTest.QTest.qWait(200)
+    for r,(term,row) in enumerate(self.Terminals):
+      self.qttabs.setCurrentIndex(r)
       self.StartProc('tmux', ['send-keys', '-t', term+':0', 'exit', 'Enter'])
-      QtTest.QTest.qWait(100)
+    QtTest.QTest.qWait(100)
 
   # Override closing event
   def closeEvent(self, event):
@@ -142,8 +146,11 @@ class TTerminalTab(QtGui.QWidget):
 def RunTerminalTab(title,terminals,exit_command):
   app= QtGui.QApplication(sys.argv)
   win= TTerminalTab(title,terminals,exit_command)
+  signal.signal(signal.SIGINT, lambda signum,frame,win=win: (win.Exit(),QtGui.QApplication.quit()) )
+  timer= QtCore.QTimer()
+  timer.start(500)  # You may change this if you wish.
+  timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
   sys.exit(app.exec_())
-  print 'bye.'
 
 if __name__=='__main__':
   E= 'Enter'

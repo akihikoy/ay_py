@@ -17,12 +17,6 @@ class TRobotRobotiqNB(TMultiArmRobot):
     super(TRobotRobotiqNB,self).__init__(name=name)
     self.currarm= 0
 
-    #Gripper command-position conversions.
-    #rqg: Robotiq gripper.
-    self.rqg_cmd2pos= lambda cmd: -0.00041*cmd+0.09249   #effective cmd in [12,230] ([0,255])
-    self.rqg_pos2cmd= lambda pos: -(pos-0.09249)/0.00041 #pos in [0.0,0.0855] meter
-    self.rqg_range= [0.0,0.0855]
-
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= False
@@ -54,10 +48,11 @@ class TRobotRobotiqNB(TMultiArmRobot):
   '''Return range of gripper.
     arm: arm id, or None (==currarm). '''
   def GripperRange(self, arm=None):
-    return self.rqg_range
+    if arm is None:  arm= self.Arm
+    return self.grippers[arm].PosRange()
 
   '''End effector of an arm.'''
-  def EndEff(self, arm):
+  def EndEff(self, arm=None):
     if arm is None:  arm= self.Arm
     return self.grippers[arm]
 
@@ -88,13 +83,9 @@ class TRobotRobotiqNB(TMultiArmRobot):
     if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    if isinstance(gripper, TRobotiq):
-      clip= lambda c: max(0.0,min(255.0,c))
-      cmd= clip(self.rqg_pos2cmd(pos))
-      max_effort= clip(max_effort*(255.0/100.0))
-      speed= clip(speed*(255.0/100.0))
+    if gripper.Is('Robotiq'):
       with self.control_locker:
-        gripper.Move(cmd, max_effort, speed, blocking=blocking)
+        gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.
     arm: arm id, or None (==currarm). '''
@@ -102,9 +93,9 @@ class TRobotRobotiqNB(TMultiArmRobot):
     if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    if isinstance(gripper, TRobotiq):
+    if gripper.Is('Robotiq'):
       with self.sensor_locker:
-        pos= self.rqg_cmd2pos(gripper.Position())
+        pos= gripper.Position()
       return pos
 
   '''Get fingertip offset in meter.
