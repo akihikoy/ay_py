@@ -512,7 +512,7 @@ class TContOptNoGrad (TOptimizerInterface):
   #Return the parameter, score.
   def Result(self):
     res= self.es.result()
-    if res[0]<>None and res[1]<>np.inf:
+    if res[0] is not None and res[1]<>np.inf:
       return res[0], -res[1]
     elif len(self.Params['scores'])>0:
       score,params= min(zip(self.Params['scores'],self.Params['solutions']))
