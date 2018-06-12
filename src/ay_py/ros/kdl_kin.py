@@ -6,6 +6,7 @@
 #\version 0.1
 #\date    Oct.23, 2017
 #\date    Feb.5, 2018
+#\date    Jun.12, 2018
 import roslib; roslib.load_manifest('urdfdom_py')
 import rospy
 import kdl_parser_py.urdf
@@ -30,7 +31,7 @@ class TKinematics(object):
   def __init__(self, base_link=None, end_link=None):
     self._robot = kdl_parser_py.urdf.urdf.URDF.from_parameter_server('robot_description')
     (ok, self._kdl_tree)= kdl_parser_py.urdf.treeFromUrdfModel(self._robot)
-    self._base_link = self._robot.get_root()
+    self._base_link = self._robot.get_root() if base_link is None else base_link
     self._tip_link = end_link
     self._tip_frame = PyKDL.Frame()
     self._arm_chain = self._kdl_tree.getChain(self._base_link, self._tip_link)
