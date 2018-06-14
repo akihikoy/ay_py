@@ -25,9 +25,9 @@ from kdl_kin import *
 
 '''Robot control class for Baxter.'''
 class TRobotBaxter(TDualArmRobot):
-  def __init__(self, name='Baxter'):
+  def __init__(self, name='Baxter', is_sim=False):
     super(TRobotBaxter,self).__init__(name=name)
-    #self.is_sim= (ROS_ROBOT=='Baxter_SIM')
+    self.is_sim= is_sim
 
     self.joint_names= [[],[]]
     self.joint_names[RIGHT]= ['right_'+joint for joint in ['s0', 's1', 'e0', 'e1', 'w0', 'w1', 'w2']]

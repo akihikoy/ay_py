@@ -17,9 +17,9 @@ from kdl_kin import *
 
 '''Robot control class for single Motoman SIA10F with a Robotiq gripper.'''
 class TRobotMotoman(TMultiArmRobot):
-  def __init__(self, name='Motoman'):
+  def __init__(self, name='Motoman', is_sim=False):
     super(TRobotMotoman,self).__init__(name=name)
-    #self.is_sim= (ROS_ROBOT=='Motoman_SIM')
+    self.is_sim= is_sim
 
     self.joint_names= [[]]
     self.joint_names[0]= rospy.get_param('controller_joint_names')
@@ -52,6 +52,9 @@ class TRobotMotoman(TMultiArmRobot):
     self.grippers= [self.robotiq]
 
     #print 'Enabling the robot...'
+
+    print 'Initializing and activating Robotiq gripper...'
+    ra(self.robotiq.Init())
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
