@@ -110,12 +110,12 @@ class TRobotiq(TGripper2F1):
   '''Open a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
-    self.Move(pos=0, max_effort=100, blocking=blocking)
+    self.Move(pos=0.1, max_effort=100, blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
-    self.Move(pos=255, max_effort=100, blocking=blocking)
+    self.Move(pos=0.0, max_effort=100, blocking=blocking)
 
   '''Control a gripper.
     pos: target position in meter.
