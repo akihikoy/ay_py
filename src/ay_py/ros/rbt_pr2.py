@@ -61,7 +61,7 @@ class TRobotPR2(TDualArmRobot):
     self.links['robot']= self.links['base'] + self.links['torso'] + self.links['head'] + self.links['l_arm'] + self.links['l_gripper'] + self.links['laser_mount'] + self.links['r_arm'] + self.links['r_gripper']
 
     #Grippers
-    self.grippers= [TPR2Gripper('right','left')]
+    self.grippers= [TPR2Gripper('right'),TPR2Gripper('left')]
 
     #Mannequin controller:
     self.mann_ctrl= TPR2Mannequin()
