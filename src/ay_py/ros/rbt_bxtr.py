@@ -243,7 +243,7 @@ class TRobotBaxter(TDualArmRobot):
     if arm is None:  arm= self.Arm
 
     #Insert current position to beginning.
-    if t_traj[0]>1.0e-2:
+    if t_traj[0]>1.0e-4:
       t_traj.insert(0,0.0)
       q_traj.insert(0,self.Q(arm=arm))
 

@@ -317,3 +317,14 @@ class TGripper2F1(TROSUtil):
   def Stop(self):
     pass
 
+
+'''Fake (dummy) gripper.
+FIXME This class should be defined as a subclass of general (not 2 finger) gripper class.'''
+class TFakeGripper(TGripper2F1):
+  def __init__(self):
+    super(TFakeGripper,self).__init__()
+
+  '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+  def Is(self, q):
+    if q in ('NoGripper'):  return True
+    return False
