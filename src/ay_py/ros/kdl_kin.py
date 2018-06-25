@@ -37,7 +37,7 @@ class TKinematics(object):
     self._arm_chain = self._kdl_tree.getChain(self._base_link, self._tip_link)
 
     #self.joint_names = [joint.name for joint in self._robot.joints if joint.type!='fixed']
-    self.joint_names = [self._arm_chain.getSegment(i).getJoint().getName() for i in range(self._arm_chain.getNrOfSegments())]
+    self.joint_names = [self._arm_chain.getSegment(i).getJoint().getName() for i in range(self._arm_chain.getNrOfSegments()) if self._arm_chain.getSegment(i).getJoint().getType()!=PyKDL.Joint.None]
     self._num_jnts = len(self.joint_names)
 
     # Store joint information for future use
@@ -66,6 +66,7 @@ class TKinematics(object):
     print "KDL-chain joints: %d" % self._arm_chain.getNrOfJoints()
     print "KDL-chain segment names: %s" % [self._arm_chain.getSegment(i).getName() for i in range(self._arm_chain.getNrOfSegments())]
     print "KDL-chain joint names: %s" % [self._arm_chain.getSegment(i).getJoint().getName() for i in range(self._arm_chain.getNrOfSegments())]
+    print "KDL-chain joint types: %s" % [self._arm_chain.getSegment(i).getJoint().getType() for i in range(self._arm_chain.getNrOfSegments())]
     #print [self._arm_chain.getSegment(i) for i in range(self._arm_chain.getNrOfSegments())]
 
   def get_joint_information(self):

@@ -40,7 +40,7 @@ class TRobotUR(TMultiArmRobot):
     ra= lambda r: res.append(r)
 
     self.kin= [None]
-    self.kin[0]= TKinematics(base_link='base_link',end_link='wrist_3_link')
+    self.kin[0]= TKinematics(base_link='base_link',end_link='tool0')
 
     #ra(self.AddPub('joint_path_command', '/joint_path_command', trajectory_msgs.msg.JointTrajectory))
 
@@ -75,7 +75,7 @@ class TRobotUR(TMultiArmRobot):
     c.PaddingLinks= []
     c.PaddingValues= [0.002]*len(c.PaddingLinks)
     c.DefaultBaseFrame= 'base_link'
-    c.HandLinkToGrasp[0]= 'wrist_3_link'
+    c.HandLinkToGrasp[0]= 'tool0'
     c.IgnoredLinksInGrasp[0]= []
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
@@ -93,7 +93,7 @@ class TRobotUR(TMultiArmRobot):
 
   '''End link of an arm.'''
   def EndLink(self, arm=None):
-    return 'wrist_3_link'
+    return 'tool0'
 
   '''Names of joints of an arm.'''
   def JointNames(self, arm=None):

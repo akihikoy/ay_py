@@ -73,7 +73,7 @@ def Mat(x):
 #Return row vector of np.matrix.
 def MRVec(x):
   if x is None:  return np.mat([])
-  elif isinstance(x,list):  return np.mat(x).ravel()
+  elif isinstance(x,(list,tuple)):  return np.mat(x).ravel()
   elif isinstance(x,(np.ndarray,np.matrix)):  return np.mat(x.ravel())
   raise Exception('Len: Impossible to serialize:',x)
 
