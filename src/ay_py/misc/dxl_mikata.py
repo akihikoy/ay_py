@@ -197,7 +197,8 @@ class TMikata(object):
       for jname,pwm_ in pwm.iteritems():
         self.dxl[jname].SetPWM(self.invconv_pwm[jname](pwm_))
 
-  #Get current state saved in memory (no port access).
+  #Get current state saved in memory (no port access when running this function).
+  #Run StartStateObs before using this.
   def State(self):
     with self.state_locker:
       state= copy.deepcopy(self.state)

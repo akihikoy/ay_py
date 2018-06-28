@@ -110,6 +110,8 @@ class TDynamixel1:
     self.Shutdown= 0x04+0x10+0x20  #Default
     #self.Shutdown= 0x04+0x10  #Ignoring Overload Error (DANGER mode but more powerful)
 
+    self.GoalThreshold= 20
+
     # Status variables
     self.port_num = None
 
@@ -125,33 +127,41 @@ class TDynamixel1:
     return int(value*self.MAX_PWM/100.0)
 
   #Conversion from Dynamixel current value to current(mA).
-  def ConvCurr(self,value):
+  @staticmethod
+  def ConvCurr(value):
     return value*2.69
   #Conversion from current(mA) to Dynamixel current value.
-  def InvConvCurr(self,value):
+  @staticmethod
+  def InvConvCurr(value):
     return int(value/2.69)
 
   #Conversion from Dynamixel velocity value to velocity(rad/s).
-  def ConvVel(self,value):
+  @staticmethod
+  def ConvVel(value):
     #return value*0.229*(2*math.pi)/60.0
     return value*0.023980824
   #Conversion from velocity(rad/s) to Dynamixel velocity value.
-  def InvConvVel(self,value):
+  @staticmethod
+  def InvConvVel(value):
     return int(value/0.023980824)
 
   #Conversion from Dynamixel position value to position(rad).
-  def ConvPos(self,value):
+  @staticmethod
+  def ConvPos(value):
     #return (value-2048.0)/2048.0*math.pi
     return (value-2048.0)*0.0015339808
   #Conversion from position(rad) to Dynamixel position value.
-  def InvConvPos(self,value):
+  @staticmethod
+  def InvConvPos(value):
     return int(value*651.8986469+2047.0)
 
   #Conversion from Dynamixel temperature value to temperature(deg of Celsius).
-  def ConvTemp(self,value):
+  @staticmethod
+  def ConvTemp(value):
     return value
   #Conversion from temperature(deg of Celsius) to Dynamixel temperature value.
-  def InvConvTemp(self,value):
+  @staticmethod
+  def InvConvTemp(value):
     return int(value)
 
 
@@ -322,7 +332,7 @@ class TDynamixel1:
   #Move the position to a given value.
   #  target: Target position, should be in [self.MIN_POSITION, self.MAX_POSITION]
   #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
-  def MoveTo(self, target, blocking=True, threshold=20):
+  def MoveTo(self, target, blocking=True):
     target = int(target)
     #FIXME: If OpMode allows multi turn, target could vary.
     if target < self.MIN_POSITION:  target = self.MIN_POSITION
@@ -337,13 +347,13 @@ class TDynamixel1:
       pos= self.Position()
       if pos is None:  return
       #print("[ID:%03d] GoalPos:%03d  PresPos:%03d" % (self.Id, target, pos))
-      if not (abs(target - pos) > threshold):  break
+      if not (abs(target - pos) > self.GoalThreshold):  break
 
   #Move the position to a given value with given current.
   #  target: Target position, should be in [self.MIN_POSITION, self.MAX_POSITION]
   #  current: Target current, should be in [-self.MAX_CURRENT, self.MAX_CURRENT]
   #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
-  def MoveToC(self, target, current, blocking=True, threshold=20):
+  def MoveToC(self, target, current, blocking=True):
     target = int(target)
     #FIXME: If OpMode allows multi turn, target could vary.
     if target < self.MIN_POSITION:  target = self.MIN_POSITION
@@ -362,7 +372,7 @@ class TDynamixel1:
       pos= self.Position()
       if pos is None:  return
       #print("[ID:%03d] GoalPos:%03d  PresPos:%03d" % (self.Id, target, pos))
-      if not (abs(target - pos) > threshold):  break
+      if not (abs(target - pos) > self.GoalThreshold):  break
 
   #Set current
   def SetCurrent(self, current):

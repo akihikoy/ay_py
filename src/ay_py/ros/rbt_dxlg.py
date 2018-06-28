@@ -21,22 +21,28 @@ class TDxlGripper(TGripper2F1):
     self.dxlg.CmdOpen= 1900  #Gripper opened moderately.
 
     self.PosRange     = self.dxlg.PosRange
-    self.Position     = self.dxlg.Position
     self.Activate     = self.dxlg.Activate
     self.Deactivate   = self.dxlg.Deactivate
     self.Open         = self.dxlg.Open
     self.Close        = self.dxlg.Close
-    self.Move         = self.dxlg.Move
-    self.Stop         = self.dxlg.Stop
+    self.Move         = self.dxlg.MoveTh
+    self.Stop         = self.dxlg.StopMoveTh
     self.StartHolding = self.dxlg.StartHolding
     self.StopHolding  = self.dxlg.StopHolding
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= self.dxlg.Init()
+
+    if self._is_initialized:
+      self.dxlg.StartStateObs()
+      self.dxlg.StartMoveTh()
+
     return self._is_initialized
 
   def Cleanup(self):
+    self.dxlg.StopMoveTh()
+    self.dxlg.StopStateObs()
     self.dxlg.Cleanup()
     super(TDxlGripper,self).Cleanup()
 
@@ -44,6 +50,10 @@ class TDxlGripper(TGripper2F1):
   def Is(self, q):
     if q in ('DxlGripper',):  return True
     return super(TDxlGripper,self).Is(q)
+
+  '''Get current position.'''
+  def Position(self):
+    return self.dxlg.State()['position']
 
 
 '''Robot control class for DxlGripper.
