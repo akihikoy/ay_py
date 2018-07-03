@@ -43,7 +43,7 @@ class TMikataGripper(TDxlGripper):
   '''Get current position.'''
   def Position(self):
     pos= self.mikata.State()['position'][-1]
-    pos= self.dxlg_cmd2pos(self.mikata.invconv_pos['gripper_joint_5'](pos))
+    pos= self.dxlg.dxlg_cmd2pos(self.mikata.invconv_pos['gripper_joint_5'](pos))
     return pos
 
   '''Activate gripper (torque is enabled).
@@ -64,8 +64,8 @@ class TMikataGripper(TDxlGripper):
     speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    cmd= max(self.CmdMin,min(self.CmdMax,int(self.dxlg_pos2cmd(pos))))
-    if self.holding is None:
+    cmd= max(self.dxlg.CmdMin,min(self.dxlg.CmdMax,int(self.dxlg.dxlg_pos2cmd(pos))))
+    if self.dxlg.holding is None:
       with self.mikata.port_locker:
         self.mikata.SetPWM({'gripper_joint_5':max_effort})
         self.mikata.MoveTo({'gripper_joint_5':self.mikata.conv_pos['gripper_joint_5'](cmd)}, blocking=(blocking==True))
@@ -73,7 +73,7 @@ class TMikataGripper(TDxlGripper):
       with self.mikata.port_locker:
         self.mikata.SetPWM({'gripper_joint_5':max_effort})
       max_pwm= self.mikata.invconv_pos['gripper_joint_5'](max_effort)
-      self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
+      self.dxlg.holding.SetTarget(cmd, self.dxlg.holding_max_pwm_rate*max_pwm)
 
   #Start holding controller with control rate (Hz).
   def StartHolding(self, rate=30):
@@ -92,16 +92,16 @@ class TMikataGripper(TDxlGripper):
       goal_pos= self.mikata.dxl['gripper_joint_5'].Read('GOAL_POSITION')
       max_pwm= self.mikata.dxl['gripper_joint_5'].Read('GOAL_PWM')
 
-    self.holding= TDxlHolding(rate)
-    self.holding.observer= holding_observer
-    self.holding.controller= holding_controller
-    self.holding.SetTarget(goal_pos, self.holding_max_pwm_rate*max_pwm)
-    self.holding.Start()
+    self.dxlg.holding= TDxlHolding(rate)
+    self.dxlg.holding.observer= holding_observer
+    self.dxlg.holding.controller= holding_controller
+    self.dxlg.holding.SetTarget(goal_pos, self.dxlg.holding_max_pwm_rate*max_pwm)
+    self.dxlg.holding.Start()
 
   def StopHolding(self):
-    if self.holding is not None:
-      self.holding.Stop()
-    self.holding= None
+    if self.dxlg.holding is not None:
+      self.dxlg.holding.Stop()
+    self.dxlg.holding= None
 
 
 '''Interface of dummy Mikata robot.'''
@@ -112,6 +112,8 @@ class TDummyMikata(TROSUtil):
 
     self.control_locker= threading.RLock()
     self.sensor_locker= threading.RLock()
+
+    self.gripper_pos= None
 
   def __del__(self):
     self.Cleanup()
@@ -175,10 +177,12 @@ class TDummyMikata(TROSUtil):
   #  current: Currents of joints (available when the operation mode=CURRPOS). (IGNORED)
   def FollowTrajectory(self, joint_names, q_traj, t_traj, current=None, blocking=False):
     curr_pos= self.State()['position']
+    if self.gripper_pos is None:  self.gripper_pos= curr_pos[-1]
 
     if len(q_traj[0])==4:
-      q_traj= [list(q)+[curr_pos[-1]] for q in q_traj]
+      q_traj= [list(q)+[self.gripper_pos] for q in q_traj]
     elif len(q_traj[0])==1:
+      self.gripper_pos= q_traj[-1][0]
       q_traj= [list(curr_pos[:-1])+list(q) for q in q_traj]
 
     #Insert current position to beginning.
@@ -204,9 +208,9 @@ class TDummyMikataGripper(TDxlGripper):
     super(TDummyMikataGripper,self).__init__(dev=None)
 
     conv_pos= lambda value: (value-2048.0)*0.0015339808
-    self.CmdMax= conv_pos(2200)  #Gripper closed (with FingerVision).
-    self.CmdMin= conv_pos(1200)  #Gripper opened widely.
-    self.CmdOpen= conv_pos(1900)  #Gripper opened moderately.
+    self.dxlg.CmdMax= conv_pos(2200)  #Gripper closed (with FingerVision).
+    self.dxlg.CmdMin= conv_pos(1200)  #Gripper opened widely.
+    self.dxlg.CmdOpen= conv_pos(1900)  #Gripper opened moderately.
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self, mikata):
@@ -219,7 +223,7 @@ class TDummyMikataGripper(TDxlGripper):
   '''Get current position.'''
   def Position(self):
     pos= self.mikata.State()['position'][-1]
-    pos= self.dxlg_cmd2pos(pos)
+    pos= self.dxlg.dxlg_cmd2pos(pos)
     return pos
 
   '''Activate gripper (torque is enabled).
@@ -238,7 +242,7 @@ class TDummyMikataGripper(TDxlGripper):
     speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    cmd= max(self.CmdMin,min(self.CmdMax,(self.dxlg_pos2cmd(pos))))
+    cmd= max(self.dxlg.CmdMin,min(self.dxlg.CmdMax,(self.dxlg.dxlg_pos2cmd(pos))))
     self.mikata.FollowTrajectory(['gripper_joint_5'], [[cmd]], [0.2*110.0/(speed+10.0)], blocking=blocking)
 
   def StartHolding(self, rate=30):

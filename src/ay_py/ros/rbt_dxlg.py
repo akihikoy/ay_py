@@ -20,15 +20,15 @@ class TDxlGripper(TGripper2F1):
     self.dxlg.CmdMin= 1200  #Gripper opened widely.
     self.dxlg.CmdOpen= 1900  #Gripper opened moderately.
 
-    self.PosRange     = self.dxlg.PosRange
-    self.Activate     = self.dxlg.Activate
-    self.Deactivate   = self.dxlg.Deactivate
-    self.Open         = self.dxlg.Open
-    self.Close        = self.dxlg.Close
-    self.Move         = self.dxlg.MoveTh
-    self.Stop         = self.dxlg.StopMoveTh
-    self.StartHolding = self.dxlg.StartHolding
-    self.StopHolding  = self.dxlg.StopHolding
+    #self.PosRange     = self.dxlg.PosRange
+    #self.Activate     = self.dxlg.Activate
+    #self.Deactivate   = self.dxlg.Deactivate
+    #self.Open         = self.dxlg.Open
+    #self.Close        = self.dxlg.Close
+    #self.Move         = self.dxlg.MoveTh
+    #self.Stop         = self.dxlg.StopMoveTh
+    #self.StartHolding = self.dxlg.StartHolding
+    #self.StopHolding  = self.dxlg.StopHolding
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -54,6 +54,25 @@ class TDxlGripper(TGripper2F1):
   '''Get current position.'''
   def Position(self):
     return self.dxlg.State()['position']
+
+  def PosRange(self):
+    return self.dxlg.PosRange()
+  def Activate(self):
+    return self.dxlg.Activate()
+  def Deactivate(self):
+    return self.dxlg.Deactivate()
+  def Open(self, blocking=False):
+    self.Move(pos=self.dxlg.dxlg_range[1], blocking=blocking)
+  def Close(self, blocking=False):
+    self.Move(pos=self.dxlg.dxlg_range[0], blocking=blocking)
+  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
+    self.dxlg.MoveTh(pos, max_effort, speed, blocking)
+  def Stop(self):
+    self.dxlg.StopMoveTh()
+  def StartHolding(self, rate=30):
+    self.dxlg.StartHolding(rate)
+  def StopHolding(self):
+    self.dxlg.StopHolding()
 
 
 '''Robot control class for DxlGripper.

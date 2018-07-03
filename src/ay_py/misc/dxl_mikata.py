@@ -270,6 +270,7 @@ class TMikata(object):
         self.state= state
       if callback is not None:
         callback(state)
+      #print state['position']
       rate.sleep()
     self.threads['StateObserver'][0]= False
 
