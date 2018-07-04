@@ -85,7 +85,8 @@ def MatchPolygons(points, points_ref, axes, bounds, maxeval=1000):
     maxeval-= 1
     print r,f_obj(r)
   if f_obj(r)==0.0:  return None, points
-  res= scipy_minimize(f_obj, r, bounds=bounds, options={'maxiter':maxeval})
+  bounds2= [[xmin,xmax] for xmin,xmax in zip(bounds[0],bounds[1])]
+  res= scipy_minimize(f_obj, r, bounds=bounds2, options={'maxiter':maxeval})
   print res
   r= res['x']
   points_mv= points+np.dot(r,axes)
