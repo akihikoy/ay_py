@@ -160,6 +160,18 @@ class TMultiArmRobot(TROSUtil):
   def IK(self, x_trg, x_ext=None, start_angles=None, arm=None, with_st=False):
     pass
 
+  '''Transform a Cartesian trajectory to joint angle trajectory.
+    x_traj: pose sequence [x1, x2, ...].
+    start_angles: joint angles used for initial pose of first IK.  '''
+  def XTrajToQTraj(self, x_traj, x_ext=None, start_angles=None, arm=None):
+    if arm is None:  arm= self.Arm
+    if start_angles is None:  start_angles= self.Q(arm)
+    q_traj= XTrajToQTraj(lambda x,q_start: self.IK(x, x_ext=x_ext, start_angles=q_start, arm=arm),
+                         x_traj, start_angles=start_angles)
+    if q_traj is None:
+      raise ROSError('ik','XTrajToQTraj: IK failed')
+    return q_traj
+
   '''Follow a joint angle trajectory.
     arm: arm id, or None (==currarm).
     q_traj: joint angle trajectory [q0,...,qD]*N.
@@ -177,13 +189,7 @@ class TMultiArmRobot(TROSUtil):
       If not None, the final joint angles q satisfies self.FK(q,x_ext,arm)==x_trg. '''
   def FollowXTraj(self, x_traj, t_traj, x_ext=None, arm=None, blocking=False):
     if arm is None:  arm= self.Arm
-
-    q_curr= self.Q(arm)
-    q_traj= XTrajToQTraj(lambda x,q_start: self.IK(x, x_ext=x_ext, start_angles=q_start, arm=arm),
-                         x_traj, start_angles=q_curr)
-    if q_traj is None:
-      raise ROSError('ik','FollowXTraj: IK failed')
-
+    q_traj= self.XTrajToQTraj(x_traj, x_ext=x_ext, arm=arm)
     self.FollowQTraj(q_traj, t_traj, arm=arm, blocking=blocking)
 
   '''Control an arm to the target joint angles.
@@ -207,19 +213,27 @@ class TMultiArmRobot(TROSUtil):
   '''Control an arm to the target self.EndLink(arm) pose with a linearly interpolated trajectory.
     arm: arm id, or None (==currarm).
     x_trg: target pose.
-    dt: duration time in seconds.
+    dt: duration time in seconds (this is modified when limit_vel=True and acc_phase>1).
     inum: number of interpolation points.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
     x_ext: a local pose on the self.EndLink(arm) frame.
-      If not None, the final joint angles q satisfies self.FK(q,x_ext,arm)==x_trg. '''
-  def MoveToXI(self, x_trg, dt=4.0, x_ext=None, inum=30, arm=None, blocking=False):
+      If not None, the final joint angles q satisfies self.FK(q,x_ext,arm)==x_trg.
+    limit_vel: If True, joint angular velocities are limited to JointVelLimits.
+    acc_phase: Number of points in the acceleration and deceleration phases (>=1). '''
+  def MoveToXI(self, x_trg, dt=4.0, x_ext=None, inum=30, arm=None, blocking=False, limit_vel=True, acc_phase=9):
     if arm is None:  arm= self.Arm
 
     x_curr= self.FK(q=None, x_ext=x_ext, arm=arm)
     x_traj= XInterpolation(x_curr,x_trg,inum)
     t_traj= TimeTraj(dt,inum)
 
-    self.FollowXTraj(x_traj, t_traj, x_ext=x_ext, arm=arm, blocking=blocking)
+    #self.FollowXTraj(x_traj, t_traj, x_ext=x_ext, arm=arm, blocking=blocking)
+    q_curr= self.Q(arm)
+    q_traj= self.XTrajToQTraj(x_traj, x_ext=x_ext, start_angles=q_curr, arm=arm)
+    if limit_vel:
+      LimitQTrajVel(q_start=q_curr, q_traj=q_traj, t_traj=t_traj, qvel_limits=self.JointVelLimits(arm), acc_phase=acc_phase)
+    self.FollowQTraj(q_traj, t_traj, arm=arm, blocking=blocking)
+
 
   '''Open a gripper.
     arm: arm id, or None (==currarm).

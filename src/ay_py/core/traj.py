@@ -25,13 +25,16 @@ def SmoothQTraj(q_traj):
     q_prev= copy.deepcopy(q)
     q[:]= q+q_offset*2.0*math.pi
 
-'''Limit joint velocities.
+'''Limit joint velocities with acceleration and deceleration phases.
 Sequence of times t_traj will be directly modified.
   q_start: joint angles at t=0.
   q_traj: joint angle trajectory [q0,...,qD]*N.
   t_traj: corresponding times in seconds from start [t1,t2,...,tN].
-  qvel_limits: limit velocities. '''
-def LimitQTrajVel(q_start, q_traj, t_traj, qvel_limits, termlen=9, dv=0.08):
+  qvel_limits: limit of velocities.
+  acc_phase: number of points in acceleration and deceleration phases (acc_phase>=1).
+  Note: limit of velocities at i-th point in the acceleration phase are given by:
+    qvel_limits*i/acc_phase '''
+def LimitQTrajVel(q_start, q_traj, t_traj, qvel_limits, acc_phase=9):
   assert(len(q_traj)==len(t_traj))
   if len(q_traj)==0:  return
 
@@ -50,18 +53,21 @@ def LimitQTrajVel(q_start, q_traj, t_traj, qvel_limits, termlen=9, dv=0.08):
   t_offset= 0.0
   t_prev= 0.0
   q_prev= q_start
+  i_start= 0
+  if t_traj[0]<1.0e-6 and Dist(q_start,q_traj[0])<1.0e-6:
+    i_start= 1
   qt= (q_traj,t_traj)
 
-  offset=0
-  i_term= termlen if len(q_traj)>2*termlen else len(q_traj)/2
+  i_term= acc_phase if len(q_traj)>2*acc_phase else len(q_traj)/2
   i_middle= len(q_traj)-2*i_term
-  for i in range(i_term):
-    vel_limits= [v*dv*float(i+1+offset) for v in qvel_limits]
+  dv= 1.0/float(i_term)
+  for i in range(i_start,i_term):
+    vel_limits= [v*dv*float(i+1) for v in qvel_limits]
     t_offset,t_prev,q_prev= sub_proc(qt, i, t_offset, t_prev, q_prev, vel_limits)
   for i in range(i_middle):
     t_offset,t_prev,q_prev= sub_proc(qt, i_term+i, t_offset, t_prev, q_prev, qvel_limits)
   for i in range(i_term):
-    vel_limits= [v*dv*float(i_term-i+offset) for v in qvel_limits]
+    vel_limits= [v*dv*float(i_term-i) for v in qvel_limits]
     t_offset,t_prev,q_prev= sub_proc(qt, i_term+i_middle+i, t_offset, t_prev, q_prev, vel_limits)
 
 #Check the velocity consistency between x_traj and q_traj

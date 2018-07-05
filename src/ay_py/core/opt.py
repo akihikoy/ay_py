@@ -546,7 +546,7 @@ class TContOptNoGrad (TOptimizerInterface):
   def UpdateWith(self,param,score):
     if self.es is None:  self.lazy_es_gen()
     self.fevals-= 1
-    if score<>None and param<>None:
+    if score is not None and param is not None:
       self.Params['solutions'].append(param)
       self.Params['scores'].append(-score)
       if len(self.Params['scores'])>=self.es.popsize:
