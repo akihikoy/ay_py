@@ -8,6 +8,7 @@ import actionlib
 import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
+import ur_modern_driver.msg
 import copy
 
 from robot import *
@@ -32,6 +33,9 @@ class TRobotUR(TMultiArmRobot):
     self.links['base']= ['base_link']
     self.links['r_arm']= ['shoulder_link', 'upper_arm_link', 'forearm_link', 'wrist_1_link', 'wrist_2_link', 'wrist_3_link']
     self.links['robot']= self.links['base'] + self.links['r_arm']
+
+    #Thread locker for robot_mode_state:
+    self.robotmodestate_locker= threading.RLock()
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -70,6 +74,9 @@ class TRobotUR(TMultiArmRobot):
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
+    if not self.is_sim:
+      ra(self.AddSub('robot_mode_state', '/ur_driver/robot_mode_state', ur_modern_driver.msg.RobotModeDataMsg, self.RobotModeStateCallback))
+
     #self.robotiq= TRobotiq()  #Robotiq controller
     #self.grippers= [self.robotiq]
     self.grippers= [TFakeGripper()]
@@ -100,6 +107,12 @@ class TRobotUR(TMultiArmRobot):
   def Is(self, q):
     if q in ('UR','UR_SIM','UR3'):  return True
     return super(TRobotUR,self).Is(q)
+
+  #Check if the robot is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    if self.is_sim:  return True
+    with self.robotmodestate_locker:
+      return all((self.robot_mode_state.is_ready, not self.robot_mode_state.is_emergency_stopped, not self.robot_mode_state.is_protective_stopped))
 
   @property
   def NumArms(self):
@@ -150,6 +163,10 @@ class TRobotUR(TMultiArmRobot):
       self.x_curr= msg
       self.q_curr= self.x_curr.position
       self.dq_curr= self.x_curr.velocity
+
+  def RobotModeStateCallback(self, msg):
+    with self.robotmodestate_locker:
+      self.robot_mode_state= msg
 
   '''Return joint angles of an arm.
     arm: arm id, or None (==currarm). '''
@@ -238,6 +255,9 @@ class TRobotUR(TMultiArmRobot):
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
     assert(len(q_traj)==len(t_traj))
     arm= 0
+
+    if not self.IsNormal():
+      raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
     #Insert current position to beginning.
     if t_traj[0]>1.0e-4:
