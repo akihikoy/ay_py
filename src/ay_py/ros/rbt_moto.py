@@ -130,14 +130,14 @@ class TRobotMotoman(TMultiArmRobot):
   def Q(self, arm=None):
     with self.sensor_locker:
       q= self.q_curr
-    return q
+    return list(q)
 
   '''Return joint velocities of an arm.
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
       dq= self.dq_curr
-    return dq
+    return list(dq)
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.

@@ -212,14 +212,14 @@ class TROSUtil(object):
   def IsInitialized(self):
     return self._is_initialized
 
-  def AddSub(self, name, port_name, port_type, call_back):
+  def AddSub(self, name, port_name, port_type, call_back, callback_args=None, queue_size=None, buff_size=65536, tcp_nodelay=False):
     if name not in self.sub:
-      self.sub[name]= rospy.Subscriber(port_name, port_type, call_back)
+      self.sub[name]= rospy.Subscriber(port_name, port_type, call_back, callback_args, queue_size, buff_size, tcp_nodelay)
     return True
 
-  def AddPub(self, name, port_name, port_type, queue_size=10):
+  def AddPub(self, name, port_name, port_type, subscriber_listener=None, tcp_nodelay=False, latch=False, headers=None, queue_size=10):
     if name not in self.pub:
-      self.pub[name]= rospy.Publisher(port_name, port_type, queue_size=queue_size)
+      self.pub[name]= rospy.Publisher(port_name, port_type, subscriber_listener, tcp_nodelay, latch, headers, queue_size)
     return True
 
   def AddSrvP(self, name, port_name, port_type, persistent=False, time_out=None):

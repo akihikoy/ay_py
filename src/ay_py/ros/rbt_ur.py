@@ -39,6 +39,24 @@ class TRobotUR(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
+    #Check the validity of joint positions:
+    try:
+      x_curr= rospy.wait_for_message('/joint_states', sensor_msgs.msg.JointState, 3.0)
+      if not all([-1.25*math.pi<q and q<1.25*math.pi for q in x_curr.position]):
+        CPrint(4,'''Warning: some joint angles exceed the expected range.
+  Joint angles = {q}
+  Running without notifying is very dangerous.
+  Manually moving joints to proper range (-1.25*math.pi, 1.25*math.pi)
+  is highly recommended.
+  Hint: Use the Freedrive mode with observing the /joint_states topic by:
+    $ rostopic echo '/joint_states/position[5]'
+
+  Will you abort setting up the robot? (Recommended: Y)'''.format(q=x_curr.position))
+        if AskYesNo():  return False
+    except (rospy.ROSException, rospy.ROSInterruptException):
+      CPrint(4,'Cannot get data from /joint_states')
+      return False
+
     self.kin= [None]
     self.kin[0]= TKinematics(base_link='base_link',end_link='tool0')
 
@@ -138,14 +156,14 @@ class TRobotUR(TMultiArmRobot):
   def Q(self, arm=None):
     with self.sensor_locker:
       q= self.q_curr
-    return q
+    return list(q)
 
   '''Return joint velocities of an arm.
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
       dq= self.dq_curr
-    return dq
+    return list(dq)
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.

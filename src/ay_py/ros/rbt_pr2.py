@@ -173,7 +173,7 @@ class TRobotPR2(TDualArmRobot):
     if arm is None:  arm= self.Arm
     with self.sensor_locker:
       q= copy.deepcopy(self.curr_pos[arm])
-    return q
+    return list(q)
 
   '''Return joint velocities of an arm.
     arm: LEFT, RIGHT, or None (==currarm). '''
