@@ -24,7 +24,7 @@ class TDynamixelGripper(object):
     self.state= {'stamp':0.0, 'position':None, 'velocity':None, 'effort':None}
     self.moveth_cmd= {'pos':None,'max_effort':None}
     self.hz_state_obs= 40  #State observation rate (Hz).
-    self.hz_moveth_ctrl= 100  #MoveTh control rate (Hz).
+    self.hz_moveth_ctrl= 60  #MoveTh control rate (Hz).
     self.threads= {  #ThreadName:[IsActive,ThreadObject]
       'StateObserver':[False,None],
       'MoveThController':[False,None],}
@@ -192,7 +192,7 @@ class TDynamixelGripper(object):
     if self.holding is None:
       with self.moveth_locker:
         self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
-      rate= TRate(self.hz_state_obs)
+      rate= TRate(self.hz_moveth_ctrl)
       while blocking:
         p= self.State()['position']
         if p is None:  return
@@ -298,6 +298,7 @@ class TDynamixelGripper(object):
           self.dxl.SetPWM(max_pwm)
         #self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
 
+      #print 'dxl_gripper:MoveThController:rate.remaining:',rate.remaining()
       rate.sleep()
     self.threads['MoveThController'][0]= False
 

@@ -90,7 +90,9 @@ class TDxlHolding(object):
       elif abs(self.trg_pos-pos)>self.th_p and abs(vel)<self.th_v and abs(pwm)<self.max_pwm:
         self.trg_offset= self.trg_offset + self.ostep*sign(self.trg_pos-pos)
 
+      #print 'dxl_holding:Loop:',int(self.trg_pos+self.trg_offset)
       self.controller(int(self.trg_pos+self.trg_offset))
 
       rate.sleep()
+      #print 'dxl_holding:Loop:rate.remaining:',rate.remaining()
 

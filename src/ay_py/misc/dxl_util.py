@@ -342,6 +342,7 @@ class TDynamixel1:
     self.Write('GOAL_POSITION', target)
     #if not self.CheckTxRxResult():  return
     self.CheckTxRxResult()
+    #print 'debug:TDynamixel1:MoveTo:',target
 
     while blocking:
       pos= self.Position()
