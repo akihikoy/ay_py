@@ -259,6 +259,8 @@ class TRobotUR(TMultiArmRobot):
     if not self.IsNormal():
       raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
+    self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
+
     #Insert current position to beginning.
     if t_traj[0]>1.0e-4:
       t_traj.insert(0,0.0)
@@ -273,9 +275,17 @@ class TRobotUR(TMultiArmRobot):
     goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
 
     with self.control_locker:
-      actc= self.actc.traj
-      actc.send_goal(goal)
-      BlockAction(actc, blocking=blocking, duration=t_traj[-1])
+      self.actc.traj.send_goal(goal)
+      BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
+
+  '''Stop motion such as FollowQTraj.
+    arm: arm id, or None (==currarm). '''
+  def StopMotion(self, arm=None):
+    arm= 0
+
+    with self.control_locker:
+      self.actc.traj.cancel_goal()
+      BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
 
 
   '''Open a gripper.

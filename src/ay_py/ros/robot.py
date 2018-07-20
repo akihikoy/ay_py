@@ -178,7 +178,7 @@ class TMultiArmRobot(TROSUtil):
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
-    pass
+    raise NotImplementedError('FollowQTraj is not implemented for:',self.Name)
 
   '''Follow a self.EndLink(arm)-pose trajectory.
     arm: arm id, or None (==currarm).
@@ -233,6 +233,11 @@ class TMultiArmRobot(TROSUtil):
     if limit_vel:
       LimitQTrajVel(q_start=q_curr, q_traj=q_traj, t_traj=t_traj, qvel_limits=self.JointVelLimits(arm), acc_phase=acc_phase)
     self.FollowQTraj(q_traj, t_traj, arm=arm, blocking=blocking)
+
+  '''Stop motion such as FollowQTraj.
+    arm: arm id, or None (==currarm). '''
+  def StopMotion(self, arm=None):
+    raise NotImplementedError('StopMotion is not implemented for:',self.Name)
 
 
   '''Open a gripper.
