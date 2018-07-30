@@ -7,6 +7,8 @@ from const import *
 
 import roslib
 import rospy
+import actionlib
+import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
 import copy
@@ -41,7 +43,8 @@ class TRobotMotoman(TMultiArmRobot):
     self.kin= [None]
     self.kin[0]= TKinematics(base_link='base_link',end_link='link_t')
 
-    ra(self.AddPub('joint_path_command', '/joint_path_command', trajectory_msgs.msg.JointTrajectory))
+    ra(self.AddActC('traj', '/joint_trajectory_action',
+                    control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
     #if self.is_sim:
       #ra(self.AddPub('joint_states', '/joint_states', sensor_msgs.msg.JointState))
@@ -213,19 +216,33 @@ class TRobotMotoman(TMultiArmRobot):
     assert(len(q_traj)==len(t_traj))
     arm= 0
 
+    self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
+
     #Insert current position to beginning.
     if t_traj[0]>1.0e-4:
       t_traj.insert(0,0.0)
       q_traj.insert(0,self.Q(arm=arm))
 
     dq_traj= QTrajToDQTraj(q_traj, t_traj)
-    traj= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
+
+    #copy q_traj, t_traj to goal
+    goal= control_msgs.msg.FollowJointTrajectoryGoal()
+    goal.goal_time_tolerance= rospy.Time(0.1)
+    goal.trajectory.joint_names= self.joint_names[arm]
+    goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
 
     with self.control_locker:
-      self.pub.joint_path_command.publish(traj)
+      self.actc.traj.send_goal(goal)
+      BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
 
-      if blocking != False:
-        rospy.sleep(t_traj[-1])  #Just sleep.
+  '''Stop motion such as FollowQTraj.
+    arm: arm id, or None (==currarm). '''
+  def StopMotion(self, arm=None):
+    arm= 0
+
+    with self.control_locker:
+      self.actc.traj.cancel_goal()
+      BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
 
 
   '''Open a gripper.
