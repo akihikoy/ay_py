@@ -116,6 +116,10 @@ def GPoseToX(pose):
   x[6]= pose.orientation.w
   return x
 
+#Assign v (list of 3 elements) to [d.x,d.y,d.z]
+def VecToXYZ(v, d):
+  d.x,d.y,d.z= v
+
 
 '''Support function to generate trajectory_msgs/JointTrajectoryPoint.
     q: Joint positions, t: Time from start, dq: Joint velocities.'''

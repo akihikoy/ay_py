@@ -77,15 +77,15 @@ class TMultiArmRobot(TROSUtil):
 
   def ArmStr(self, arm=None):
     if arm is None:  arm= self.Arm
-    return ('A','B','C','D','E','F','G')[arm]
+    return IDToStr(arm)
 
   def ArmStrS(self, arm=None):
     if arm is None:  arm= self.Arm
-    return ('A','B','C','D','E','F','G')[arm]
+    return IDToStr(arm)
 
   def ArmStrs(self, arm=None):
     if arm is None:  arm= self.Arm
-    return ('a','b','c','d','e','f','g')[arm]
+    return IDTostr(arm)
 
   @property
   def BaseFrame(self):

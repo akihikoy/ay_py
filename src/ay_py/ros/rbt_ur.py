@@ -55,8 +55,8 @@ class TRobotUR(TMultiArmRobot):
   Hint: Use the Freedrive mode with observing the /joint_states topic by:
     $ rostopic echo '/joint_states/position[5]'
 
-  Will you abort setting up the robot? (Recommended: Y)'''.format(q=x_curr.position))
-        if AskYesNo():  return False
+  Will you continue to set up the robot? (Recommended: N)'''.format(q=x_curr.position))
+        if not AskYesNo():  return False
     except (rospy.ROSException, rospy.ROSInterruptException):
       CPrint(4,'Cannot get data from /joint_states')
       return False

@@ -17,10 +17,6 @@ ROS_DISTRO= os.environ['ROS_DISTRO'] if 'ROS_DISTRO' in os.environ else None
   #ROS_DEFAULT_FRAME= 'base'
 
 
-#Arm/gripper ID
-RIGHT=0
-LEFT=1
-
 #Attribute key for the current (temporary) situation
 CURR='*'
 
@@ -41,28 +37,45 @@ DATABASE_FILE= '.database.yaml'
 #Memory file name
 MEMORY_FILE= '.memory.yaml'
 
+#Arm/gripper ID
+RIGHT=0
+LEFT=1
+ID_A=0
+ID_B=1
+ID_C=2
+ID_D=3
+ID_E=4
+ID_F=5
+ID_G=6
+
 def LRToStr(whicharm):
-  if whicharm==RIGHT: return 'Right'
-  if whicharm==LEFT:  return 'Left'
-  return None
+  return ('Right','Left')[whicharm]
 
 def LRTostr(whicharm):
-  if whicharm==RIGHT: return 'right'
-  if whicharm==LEFT:  return 'left'
-  return None
+  return ('right','left')[whicharm]
 
 def LRToStrS(whicharm):
-  if whicharm==RIGHT: return 'R'
-  if whicharm==LEFT:  return 'L'
-  return None
+  return ('R','L')[whicharm]
 
 def LRToStrs(whicharm):
-  if whicharm==RIGHT: return 'r'
-  if whicharm==LEFT:  return 'l'
-  return None
+  return ('r','l')[whicharm]
 
 def StrToLR(whicharm_str):
-  if whicharm_str in ('r','R','right','Right','RIGHT'):  return RIGHT
-  if whicharm_str in ('l','L','left','Left','LEFT'):  return LEFT
-  return None
+  try:
+    return {'r':RIGHT,'R':RIGHT,'right':RIGHT,'Right':RIGHT,'RIGHT':RIGHT,
+            'l':LEFT,'L':LEFT,'left':LEFT,'Left':LEFT,'LEFT':LEFT}[whicharm_str]
+  except KeyError:
+    return None
 
+def IDToStr(whicharm):
+  return ('A','B','C','D','E','F','G')[whicharm]
+
+def IDTostr(whicharm):
+  return ('a','b','c','d','e','f','g')[whicharm]
+
+def StrToID(whicharm_str):
+  try:
+    return {'A':ID_A,'B':ID_B,'C':ID_C,'D':ID_D,'E':ID_E,'F':ID_F,'G':ID_G,
+            'a':ID_A,'b':ID_B,'c':ID_C,'d':ID_D,'e':ID_E,'f':ID_F,'g':ID_G}[whicharm_str]
+  except KeyError:
+    return None
