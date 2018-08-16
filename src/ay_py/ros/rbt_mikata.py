@@ -390,23 +390,23 @@ class TRobotMikata(TMultiArmRobot):
     self.js.effort= state['effort']
     self.pub.joint_states.publish(self.js)
 
-  '''Return joint angles of an arm.
+  '''Return joint angles of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def Q(self, arm=None):
     with self.sensor_locker:
       q= self.mikata.State()['position'][:4]
-    return q
+    return list(q)
 
-  '''Return joint velocities of an arm.
+  '''Return joint velocities of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
       dq= self.mikata.State()['velocity'][:4]
-    return dq
+    return list(dq)
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
-    return: x, res;  x: pose (None if failure), res: FK status.
+    return: x, res;  x: pose (list of floats; None if failure), res: FK status.
     arm: arm id, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -420,12 +420,12 @@ class TRobotMikata(TMultiArmRobot):
     with self.sensor_locker:
       x= self.kin[arm].forward_position_kinematics(joint_values=angles)
 
-    x_res= x if x_ext is None else Transform(x,x_ext)
+    x_res= list(x if x_ext is None else Transform(x,x_ext))
     return (x_res, True) if with_st else x_res
 
   '''Compute a Jacobian matrix of an arm.
   Return J of self.EndLink(arm).
-    return: J, res;  J: Jacobian (None if failure), res: status.
+    return: J, res;  J: Jacobian (numpy.matrix; None if failure), res: status.
     arm: arm id, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose (i.e. offset) on self.EndLink(arm) frame.
@@ -448,7 +448,7 @@ class TRobotMikata(TMultiArmRobot):
 
   '''Compute an inverse kinematics of an arm.
   Return joint angles for a target self.EndLink(arm) pose on self.BaseFrame.
-    return: q, res;  q: joint angles (None if failure), res: IK status.
+    return: q, res;  q: joint angles (list of floats; None if failure), res: IK status.
     arm: arm id, or None (==currarm).
     x_trg: target pose.
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -474,9 +474,10 @@ class TRobotMikata(TMultiArmRobot):
           xw_trg[:3], xw_trg[3:], seed=start_angles,
           maxiter=1000, eps=1.0e-4, with_st=True)
       if not res and q is not None:
-        p_err= la.norm(xw_trg[:3]-self.FK(q, arm=arm)[:3])
+        p_err= la.norm(np.array(xw_trg[:3])-self.FK(q, arm=arm)[:3])
         if p_err<1.0e-3:  res= True
         else: print 'IK error:',p_err,xw_trg[:3]-self.FK(q, arm=arm)[:3]
+    if q is not None:  q= list(q)
 
     if res:  return (q, True) if with_st else q
     else:  return (q, False) if with_st else None

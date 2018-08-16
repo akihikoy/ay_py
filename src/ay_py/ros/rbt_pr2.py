@@ -141,12 +141,14 @@ class TRobotPR2(TDualArmRobot):
     return 'torso_lift_link'
 
   '''End link of an arm.'''
-  def EndLink(self, arm):
+  def EndLink(self, arm=None):
+    if arm is None:  arm= self.Arm
     if   arm==RIGHT:  return 'r_wrist_roll_link'
     elif arm==LEFT:   return 'l_wrist_roll_link'
 
   '''Names of joints of an arm.'''
-  def JointNames(self, arm):
+  def JointNames(self, arm=None):
+    if arm is None:  arm= self.Arm
     return self.joint_names[arm]
 
   '''Return limits of joint angular velocity.
@@ -167,7 +169,7 @@ class TRobotPR2(TDualArmRobot):
     return self.grippers[arm]
 
 
-  '''Return joint angles of an arm.
+  '''Return joint angles of an arm (list of floats).
     arm: LEFT, RIGHT, or None (==currarm). '''
   def Q(self, arm=None):
     if arm is None:  arm= self.Arm
@@ -175,14 +177,14 @@ class TRobotPR2(TDualArmRobot):
       q= copy.deepcopy(self.curr_pos[arm])
     return list(q)
 
-  '''Return joint velocities of an arm.
+  '''Return joint velocities of an arm (list of floats).
     arm: LEFT, RIGHT, or None (==currarm). '''
   def DQ(self, arm=None):
     raise NotImplemented('TRobotPR2.DQ')
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
-    return: x, res;  x: pose (None if failure), res: FK status.
+    return: x, res;  x: pose (list of floats; None if failure), res: FK status.
     arm: LEFT, RIGHT, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -209,13 +211,13 @@ class TRobotPR2(TDualArmRobot):
       raise ROSError('fk',str(e))  #Forward the exception
 
     x= GPoseToX(res.pose_stamped[0].pose)
-    x_res= x if x_ext is None else Transform(x,x_ext)
+    x_res= list(x if x_ext is None else Transform(x,x_ext))
     if res.error_code.val==1:  return (x_res, res) if with_st else x_res
     else:  return (None, res) if with_st else None
 
   '''Compute an inverse kinematics of an arm.
   Return joint angles for a target self.EndLink(arm) pose on self.BaseFrame.
-    return: q, res;  q: joint angles (None if failure), res: IK status.
+    return: q, res;  q: joint angles (list of floats; None if failure), res: IK status.
     arm: LEFT, RIGHT, or None (==currarm).
     x_trg: target pose.
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -248,6 +250,7 @@ class TRobotPR2(TDualArmRobot):
       raise ROSError('ik',str(e))  #Forward the exception
 
     q= res.solution.joint_state.position
+    if q is not None:  q= list(q)
     if res.error_code.val==1:  return (q, res) if with_st else q
     else:  return (None, res) if with_st else None
 

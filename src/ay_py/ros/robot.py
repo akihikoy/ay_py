@@ -92,11 +92,11 @@ class TMultiArmRobot(TROSUtil):
     pass
 
   '''End link of an arm.'''
-  def EndLink(self, arm):
+  def EndLink(self, arm=None):
     pass
 
   '''Names of joints of an arm.'''
-  def JointNames(self, arm):
+  def JointNames(self, arm=None):
     pass
 
   def DoF(self, arm=None):
@@ -116,19 +116,19 @@ class TMultiArmRobot(TROSUtil):
   def EndEff(self, arm=None):
     pass
 
-  '''Return joint angles of an arm.
+  '''Return joint angles of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def Q(self, arm=None):
     pass
 
-  '''Return joint velocities of an arm.
+  '''Return joint velocities of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     pass
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
-    return: x, res;  x: pose (None if failure), res: FK status.
+    return: x, res;  x: pose (list of floats; None if failure), res: FK status.
     arm: arm id, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -139,7 +139,7 @@ class TMultiArmRobot(TROSUtil):
 
   '''Compute a Jacobian matrix of an arm.
   Return J of self.EndLink(arm).
-    return: J, res;  J: Jacobian (None if failure), res: status.
+    return: J, res;  J: Jacobian (numpy.matrix; None if failure), res: status.
     arm: arm id, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose (i.e. offset) on self.EndLink(arm) frame.
@@ -150,7 +150,7 @@ class TMultiArmRobot(TROSUtil):
 
   '''Compute an inverse kinematics of an arm.
   Return joint angles for a target self.EndLink(arm) pose on self.BaseFrame.
-    return: q, res;  q: joint angles (None if failure), res: IK status.
+    return: q, res;  q: joint angles (list of floats; None if failure), res: IK status.
     arm: arm id, or None (==currarm).
     x_trg: target pose.
     x_ext: a local pose on self.EndLink(arm) frame.

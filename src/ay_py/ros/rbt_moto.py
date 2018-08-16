@@ -128,14 +128,14 @@ class TRobotMotoman(TMultiArmRobot):
       self.q_curr= self.x_curr.position
       self.dq_curr= self.x_curr.velocity
 
-  '''Return joint angles of an arm.
+  '''Return joint angles of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def Q(self, arm=None):
     with self.sensor_locker:
       q= self.q_curr
     return list(q)
 
-  '''Return joint velocities of an arm.
+  '''Return joint velocities of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
@@ -144,7 +144,7 @@ class TRobotMotoman(TMultiArmRobot):
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
-    return: x, res;  x: pose (None if failure), res: FK status.
+    return: x, res;  x: pose (list of floats; None if failure), res: FK status.
     arm: arm id, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -158,12 +158,12 @@ class TRobotMotoman(TMultiArmRobot):
     with self.sensor_locker:
       x= self.kin[arm].forward_position_kinematics(joint_values=angles)
 
-    x_res= x if x_ext is None else Transform(x,x_ext)
+    x_res= list(x if x_ext is None else Transform(x,x_ext))
     return (x_res, True) if with_st else x_res
 
   '''Compute a Jacobian matrix of an arm.
   Return J of self.EndLink(arm).
-    return: J, res;  J: Jacobian (None if failure), res: status.
+    return: J, res;  J: Jacobian (numpy.matrix; None if failure), res: status.
     arm: arm id, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose (i.e. offset) on self.EndLink(arm) frame.
@@ -186,7 +186,7 @@ class TRobotMotoman(TMultiArmRobot):
 
   '''Compute an inverse kinematics of an arm.
   Return joint angles for a target self.EndLink(arm) pose on self.BaseFrame.
-    return: q, res;  q: joint angles (None if failure), res: IK status.
+    return: q, res;  q: joint angles (list of floats; None if failure), res: IK status.
     arm: arm id, or None (==currarm).
     x_trg: target pose.
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -202,6 +202,7 @@ class TRobotMotoman(TMultiArmRobot):
 
     with self.sensor_locker:
       res,q= self.kin[arm].inverse_kinematics(xw_trg[:3], xw_trg[3:], seed=start_angles, maxiter=1000, eps=1.0e-6, with_st=True)
+    if q is not None:  q= list(q)
 
     if res:  return (q, True) if with_st else q
     else:  return (q, False) if with_st else None

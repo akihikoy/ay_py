@@ -116,12 +116,14 @@ class TRobotBaxter(TDualArmRobot):
     return 'torso'
 
   '''End link of an arm.'''
-  def EndLink(self, arm):
+  def EndLink(self, arm=None):
+    if arm is None:  arm= self.Arm
     if   arm==RIGHT:  return 'right_gripper'
     elif arm==LEFT:   return 'left_gripper'
 
   '''Names of joints of an arm.'''
-  def JointNames(self, arm):
+  def JointNames(self, arm=None):
+    if arm is None:  arm= self.Arm
     return self.joint_names[arm]
 
   '''Return limits (lower, upper) of joint angles.
@@ -149,7 +151,7 @@ class TRobotBaxter(TDualArmRobot):
     if arm is None:  arm= self.Arm
     return self.grippers[arm]
 
-  '''Return joint angles of an arm.
+  '''Return joint angles of an arm (list of floats).
     arm: LEFT, RIGHT, or None (==currarm). '''
   def Q(self, arm=None):
     if arm is None:  arm= self.Arm
@@ -158,7 +160,7 @@ class TRobotBaxter(TDualArmRobot):
       q= [angles[joint] for joint in self.joint_names[arm]]  #Serialize
     return q
 
-  '''Return joint velocities of an arm.
+  '''Return joint velocities of an arm (list of floats).
     arm: LEFT, RIGHT, or None (==currarm). '''
   def DQ(self, arm=None):
     if arm is None:  arm= self.Arm
@@ -170,7 +172,7 @@ class TRobotBaxter(TDualArmRobot):
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
-    return: x, res;  x: pose (None if failure), res: FK status.
+    return: x, res;  x: pose (list of floats; None if failure), res: FK status.
     arm: LEFT, RIGHT, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -184,12 +186,12 @@ class TRobotBaxter(TDualArmRobot):
     with self.sensor_locker:
       x= self.kin[arm].forward_position_kinematics(joint_values=angles)
 
-    x_res= x if x_ext is None else Transform(x,x_ext)
+    x_res= list(x if x_ext is None else Transform(x,x_ext))
     return (x_res, True) if with_st else x_res
 
   '''Compute a Jacobian matrix of an arm.
   Return J of self.EndLink(arm).
-    return: J, res;  J: Jacobian (None if failure), res: status.
+    return: J, res;  J: Jacobian (numpy.matrix; None if failure), res: status.
     arm: LEFT, RIGHT, or None (==currarm).
     q: list of joint angles, or None (==self.Q(arm)).
     x_ext: a local pose (i.e. offset) on self.EndLink(arm) frame.
@@ -212,7 +214,7 @@ class TRobotBaxter(TDualArmRobot):
 
   '''Compute an inverse kinematics of an arm.
   Return joint angles for a target self.EndLink(arm) pose on self.BaseFrame.
-    return: q, res;  q: joint angles (None if failure), res: IK status.
+    return: q, res;  q: joint angles (list of floats; None if failure), res: IK status.
     arm: LEFT, RIGHT, or None (==currarm).
     x_trg: target pose.
     x_ext: a local pose on self.EndLink(arm) frame.
@@ -228,6 +230,7 @@ class TRobotBaxter(TDualArmRobot):
 
     with self.sensor_locker:
       res,q= self.kin[arm].inverse_kinematics(xw_trg[:3], xw_trg[3:], seed=start_angles, maxiter=1000, eps=1.0e-6, with_st=True)
+    if q is not None:  q= list(q)
 
     if res:  return (q, True) if with_st else q
     else:  return (q, False) if with_st else None
