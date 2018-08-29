@@ -153,16 +153,19 @@ class TROSUtil(object):
   def __init__(self):
     self._is_initialized= False
 
+    debug= False
     #Container for Publishers
-    self.pub= TContainer(debug=True)
+    self.pub= TContainer(debug=debug)
     #Container for Subscribers
-    self.sub= TContainer(debug=True)
+    self.sub= TContainer(debug=debug)
     #Container for Service proxies
-    self.srvp= TContainer(debug=True)
+    self.srvp= TContainer(debug=debug)
     #Container for SimpleActionClient
-    self.actc= TContainer(debug=True)
+    self.actc= TContainer(debug=debug)
+    #Container for SimpleActionServer
+    self.acts= TContainer(debug=debug)
     #Container for dynamic reconfigure client
-    self.dynconfig= TContainer(debug=True)
+    self.dynconfig= TContainer(debug=debug)
 
   def __del__(self):
     self.Cleanup()
@@ -183,6 +186,11 @@ class TROSUtil(object):
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
+
+    for k in self.acts.keys():
+      print 'Delete action server %r...' % k,
+      del self.acts[k]
+      print 'ok'
 
     for k in self.sub.keys():
       print 'Stop subscribing %r...' % k,
@@ -240,6 +248,13 @@ class TROSUtil(object):
       else:  self.actc[name]= actc
     return True
 
+  def AddActS(self, name, port_name, port_type, auto_start=True):
+    if name not in self.acts:
+      acts= actionlib.SimpleActionServer(port_name, port_type, execute_cb=execute_cb, auto_start=auto_start)
+      if acts is None:  return False
+      else:  self.acts[name]= acts
+    return True
+
   def AddDynConfig(self, name, node_name, time_out=None):
     if name not in self.dynconfig:
       client= SetupDynamicReconfigureClient(node_name, time_out=time_out)
@@ -265,6 +280,10 @@ class TROSUtil(object):
   def DelActC(self, name):
     if name in self.actc:
       del self.actc[name]
+
+  def DelActS(self, name):
+    if name in self.acts:
+      del self.acts[name]
 
   def DelDynConfig(self, name):
     if name in self.dynconfig:
