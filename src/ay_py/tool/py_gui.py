@@ -54,6 +54,7 @@ class TTerminalTab(QtGui.QWidget):
       #grid.addWidget(label, r, 0)
       btn0= QtGui.QPushButton('({term})'.format(term=term))
       btn0.setFlat(True)
+      btn0.setFocusPolicy(QtCore.Qt.NoFocus)
       btn0.clicked.connect(lambda clicked,term=term:self.ShowTermTab(term))
       grid.addWidget(btn0, r, 0)
       for c,commands in enumerate(row):
@@ -62,12 +63,14 @@ class TTerminalTab(QtGui.QWidget):
           name2,f2= commands[2][0],self.CmdToLambda(term,commands[2][1])
           btn= QtGui.QPushButton(name1)
           btn.setCheckable(True)
+          btn.setFocusPolicy(QtCore.Qt.NoFocus)
           btn.clicked.connect(lambda b,btn=btn,name1=name1,f1=f1,name2=name2,f2=f2:
                                 (f1(),btn.setText(name2)) if btn.isChecked() else (f2(),btn.setText(name1)))
           grid.addWidget(btn, r, 1+c)
         else:
           name,f= commands[0],self.CmdToLambda(term,commands[1])
           btn= QtGui.QPushButton(name)
+          btn.setFocusPolicy(QtCore.Qt.NoFocus)
           btn.clicked.connect(f)
           grid.addWidget(btn, r, 1+c)
 

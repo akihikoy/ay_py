@@ -1,30 +1,26 @@
 #! /usr/bin/env python
-#Robot controller for Mikata Arm.
+#Robot controller for Mikata Arm (type 2: using ay_util/mikata_driver).
 from const import *
-#if ROS_ROBOT not in ('ANY','Mikata','Mikata_SIM'):
-  #raise ImportError('Stop importing: ROS_ROBOT is not Mikata')
-#if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
 import roslib
 import rospy
+import actionlib
+import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
+import ay_util_msgs.srv
 import copy
-import copy
-import threading
 
-#TODO:FIXME:For Mikata simulator, avoid loading DynamixelSDK.
 from robot import *
-from rbt_dxlg import TDxlGripper
-from ..misc.dxl_mikata import TMikata
-from ..misc.dxl_holding import TDxlHolding
 from kdl_kin import *
+from rbt_dxlg import TDxlGripper
+from ..misc.dxl_util import TDynamixel1
+from ..misc.dxl_holding import TDxlHolding
 
-
-'''Mikata Gripper utility class (the same as TDxlGripper)'''
-class TMikataGripper(TDxlGripper):
+'''Mikata2 Gripper utility class'''
+class TMikataGripper2(TDxlGripper):
   def __init__(self):
-    super(TMikataGripper,self).__init__(dev=None)
+    super(TMikataGripper2,self).__init__(dev=None)
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self, mikata):
@@ -32,8 +28,7 @@ class TMikataGripper(TDxlGripper):
     res= []
     ra= lambda r: res.append(r)
 
-    #Using external Dynamixel object (maintained by the Mikata controller).
-    self.mikata= mikata  #Reference to Mikata Arm.
+    self.mikata= mikata  #Reference to TRobotMikata2.
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
@@ -44,7 +39,7 @@ class TMikataGripper(TDxlGripper):
   '''Get current position.'''
   def Position(self):
     pos= self.mikata.State()['position'][-1]
-    pos= self.dxlg.dxlg_cmd2pos(self.mikata.invconv_pos['gripper_joint_5'](pos))
+    pos= self.dxlg.dxlg_cmd2pos(TDynamixel1.InvConvPos(pos))
     return pos
 
   '''Activate gripper (torque is enabled).
@@ -69,11 +64,12 @@ class TMikataGripper(TDxlGripper):
     if self.dxlg.holding is None:
       with self.mikata.port_locker:
         self.mikata.SetPWM({'gripper_joint_5':max_effort})
-        self.mikata.MoveTo({'gripper_joint_5':self.mikata.conv_pos['gripper_joint_5'](cmd)}, blocking=(blocking==True))
+        self.mikata.MoveTo({'gripper_joint_5':TDynamixel1.ConvPos(cmd)}, blocking=(blocking==True))
     else:
       with self.mikata.port_locker:
+        #print 'SetPWM',{'gripper_joint_5':max_effort}
         self.mikata.SetPWM({'gripper_joint_5':max_effort})
-      max_pwm= self.mikata.invconv_pwm['gripper_joint_5'](max_effort)
+      max_pwm= self.dxlg.dxl.InvConvPWM(max_effort)
       self.dxlg.holding.SetTarget(cmd, self.dxlg.holding_max_pwm_rate*max_pwm)
 
   #Start holding controller with control rate (Hz).
@@ -81,17 +77,18 @@ class TMikataGripper(TDxlGripper):
     self.StopHolding()
 
     def holding_observer():
-      pos= self.mikata.invconv_pos['gripper_joint_5'](self.mikata.State()['position'][-1])
-      vel= self.mikata.invconv_vel['gripper_joint_5'](self.mikata.State()['velocity'][-1])
-      pwm= self.mikata.invconv_pwm['gripper_joint_5'](self.mikata.State()['effort'][-1])
+      pos= TDynamixel1.InvConvPos(self.mikata.State()['position'][-1])
+      vel= TDynamixel1.InvConvVel(self.mikata.State()['velocity'][-1])
+      pwm= self.dxlg.dxl.InvConvPWM(self.mikata.State()['effort'][-1])
       return pos,vel,pwm
     def holding_controller(target_position):
       with self.mikata.port_locker:
-        self.mikata.MoveTo({'gripper_joint_5':self.mikata.conv_pos['gripper_joint_5'](target_position)}, blocking=False)
+        #print 'MoveTo',{'gripper_joint_5':TDynamixel1.ConvPos(target_position)}
+        self.mikata.MoveTo({'gripper_joint_5':TDynamixel1.ConvPos(target_position)}, blocking=False)
 
     with self.mikata.port_locker:
-      goal_pos= self.mikata.dxl['gripper_joint_5'].Read('GOAL_POSITION')
-      max_pwm= self.mikata.dxl['gripper_joint_5'].Read('GOAL_PWM')
+      goal_pos= self.mikata.DxlRead('GOAL_POSITION',['gripper_joint_5'])['gripper_joint_5']
+      max_pwm= self.mikata.DxlRead('GOAL_PWM',['gripper_joint_5'])['gripper_joint_5']
 
     self.dxlg.holding= TDxlHolding(rate)
     self.dxlg.holding.observer= holding_observer
@@ -105,170 +102,16 @@ class TMikataGripper(TDxlGripper):
     self.dxlg.holding= None
 
 
-'''Interface of dummy Mikata robot.'''
-class TDummyMikata(TROSUtil):
-  def __init__(self):
-    super(TDummyMikata,self).__init__()
-    self.joint_names= rospy.get_param('controller_joint_names')
-
-    self.control_locker= threading.RLock()
-    self.sensor_locker= threading.RLock()
-
-    self.gripper_pos= None
-
-  def __del__(self):
-    self.Cleanup()
-    print '%s: bye.'%self.Name
-
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self):
-    self._is_initialized= False
-    res= []
-    ra= lambda r: res.append(r)
-
-    ra(self.AddPub('joint_path_command', '/joint_path_command', trajectory_msgs.msg.JointTrajectory))
-    ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
-
-    if False not in res:  self._is_initialized= True
-    return self._is_initialized
-
-  def Setup(self):
-    return self.Init()
-
-  def Cleanup(self):
-    #NOTE: cleaning-up order is important. consider dependency
-    super(TDummyMikata,self).Cleanup()
-
-  def Quit(self):
-    self.Cleanup()
-
-  def JointNames(self):
-    return self.joint_names
-
-  def EnableTorque(self,joint_names=None):
-    pass
-
-  def DisableTorque(self,joint_names=None):
-    pass
-
-  def JointStatesCallback(self, msg):
-    with self.sensor_locker:
-      self.state={
-        'position': msg.position,
-        'velocity': msg.velocity,
-        'effort': msg.effort,
-        }
-
-  #Get current state
-  def State(self):
-    with self.sensor_locker:
-      state= copy.deepcopy(self.state)
-    return state
-
-  def StartStateObs(self, callback=None):
-    pass
-  def StopStateObs(self):
-    pass
-  def SetStateObsRate(self, rate):
-    pass
-
-  #Follow a trajectory.
-  #  joint_names: Names of joints to be controlled. (IGNORED)
-  #  (q_traj,t_traj): Sequence of (joint positions) and (time from start).
-  #  current: Currents of joints (available when the operation mode=CURRPOS). (IGNORED)
-  def FollowTrajectory(self, joint_names, q_traj, t_traj, current=None, blocking=False):
-    curr_pos= self.State()['position']
-    if self.gripper_pos is None:  self.gripper_pos= curr_pos[-1]
-
-    if len(q_traj[0])==4:
-      q_traj= [list(q)+[self.gripper_pos] for q in q_traj]
-    elif len(q_traj[0])==1:
-      self.gripper_pos= q_traj[-1][0]
-      q_traj= [list(curr_pos[:-1])+list(q) for q in q_traj]
-
-    #Insert current position to beginning.
-    if t_traj[0]>1.0e-3:
-      t_traj.insert(0,0.0)
-      q_traj.insert(0,curr_pos)
-
-    traj= ToROSTrajectory(self.JointNames(), q_traj, t_traj)
-
-    with self.control_locker:
-      self.pub.joint_path_command.publish(traj)
-      if blocking != False:
-        rospy.sleep(t_traj[-1])  #Just sleep.
-
-  def StopTrajectory(self):
-    pass
-  def SetTrajectoryCtrlRate(self, rate):
-    pass
-
-'''Gripper utility class of TDummyMikata'''
-class TDummyMikataGripper(TDxlGripper):
-  def __init__(self):
-    super(TDummyMikataGripper,self).__init__(dev=None)
-
-    conv_pos= lambda value: (value-2048.0)*0.0015339808
-    self.dxlg.CmdMax= conv_pos(2200)  #Gripper closed (with FingerVision).
-    self.dxlg.CmdMin= conv_pos(1200)  #Gripper opened widely.
-    self.dxlg.CmdOpen= conv_pos(1900)  #Gripper opened moderately.
-
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self, mikata):
-    self.mikata= mikata  #Reference to Mikata Arm.
-    return True
-
-  def Cleanup(self):
-    pass
-
-  '''Get current position.'''
-  def Position(self):
-    pos= self.mikata.State()['position'][-1]
-    pos= self.dxlg.dxlg_cmd2pos(pos)
-    return pos
-
-  '''Activate gripper (torque is enabled).
-    Return success or not.'''
-  def Activate(self):
-    pass
-
-  '''Deactivate gripper (torque is disabled).
-    Return success or not.'''
-  def Deactivate(self):
-    pass
-
-  '''Control a gripper.
-    pos: target position in meter.
-    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
-    speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    cmd= max(self.dxlg.CmdMin,min(self.dxlg.CmdMax,(self.dxlg.dxlg_pos2cmd(pos))))
-    self.mikata.FollowTrajectory(['gripper_joint_5'], [[cmd]], [0.2*110.0/(speed+10.0)], blocking=blocking)
-
-  def StartHolding(self, rate=30):
-    pass
-
-  def StopHolding(self):
-    pass
-
-
-
-'''Robot control class for single Mikata Arm.'''
-class TRobotMikata(TMultiArmRobot):
-  def __init__(self, name='Mikata', dev='/dev/ttyUSB0', is_sim=False):
-    super(TRobotMikata,self).__init__(name=name)
+'''Robot control class for single Mikata Arm whose controller is the ay_util/mikata_driver node.'''
+class TRobotMikata2(TMultiArmRobot):
+  #FIXME: is_sim=True is not implemented yet.
+  def __init__(self, name='Mikata', is_sim=False):
+    super(TRobotMikata2,self).__init__(name=name)
     self.is_sim= is_sim
-    self.dev= dev
-
-    if not self.is_sim:
-      self.mikata= TMikata(dev=self.dev)
-    else:
-      self.mikata= TDummyMikata()
 
     self.joint_names= [[]]
     #self.joint_names[0]= rospy.get_param('controller_joint_names')
-    self.joint_names[0]= self.mikata.JointNames()[:4]  #Gripper joint is not used.
+    self.joint_names[0]= ['joint_1', 'joint_2', 'joint_3', 'joint_4']  # 'gripper_joint_5'
 
     #Mikata all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
@@ -277,6 +120,21 @@ class TRobotMikata(TMultiArmRobot):
     self.links['r_arm']= ['link_2', 'link_3', 'link_4', 'link_5']
     self.links['r_gripper']= ['left_gripper', 'right_gripper']
     self.links['robot']= self.links['base'] + self.links['r_arm'] + self.links['r_gripper']
+
+    self.port_locker= threading.RLock()
+
+    #Dummy Mikata object (compatible with TRobotMikata).
+    self.mikata= TContainer()
+    #DxlRead
+    #DxlWrite
+    self.mikata.port_locker= self.port_locker
+    self.mikata.EnableTorque= self.EnableTorque
+    self.mikata.DisableTorque= self.DisableTorque
+    self.mikata.Reboot= self.Reboot
+    self.mikata.MoveTo= self.MoveTo
+    self.mikata.SetCurrent= self.SetCurrent
+    self.mikata.SetVelocity= self.SetVelocity
+    self.mikata.SetPWM= self.SetPWM
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -287,39 +145,29 @@ class TRobotMikata(TMultiArmRobot):
     self.kin= [None]
     self.kin[0]= TKinematics(base_link='base_link',end_link='link_5')
 
-    #if self.is_sim:
-      #ra(self.AddPub('joint_path_command', '/joint_path_command', trajectory_msgs.msg.JointTrajectory))
-      #ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
+    ra(self.AddSrvP('robot_io', '/mikata_driver/robot_io',
+                    ay_util_msgs.srv.MikataArmIO, persistent=False, time_out=3.0))
 
-    ra(self.AddPub('joint_states', '/joint_states', sensor_msgs.msg.JointState))
+    ra(self.AddActC('traj', '/follow_joint_trajectory',
+                    control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
-    #ra(self.AddSub('joint_path_command', '/joint_path_command', trajectory_msgs.msg.JointTrajectory, self.JointPathCommandCallback))
+    ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
     if not self.is_sim:
-      self.mikata_gripper= TMikataGripper()
+      self.mikata_gripper= TMikataGripper2()
     else:
       self.mikata_gripper= TDummyMikataGripper()
     self.grippers= [self.mikata_gripper]
 
-    print 'Initializing and activating Mikata arm...'
-    ra(self.mikata.Setup())
-    ra(self.mikata_gripper.Init(self.mikata))
-
-    if False in res:  return False
-
-    self.js= None
-    if not self.is_sim:
-      self.mikata.EnableTorque()
-      self.mikata.StartStateObs(self.JointStatesCallback)
+    self.mikata.EnableTorque()
+    ra(self.mikata_gripper.Init(self))
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
-    self.mikata.StopStateObs()
-    self.mikata.Quit()
-    super(TRobotMikata,self).Cleanup()
+    super(TRobotMikata2,self).Cleanup()
 
   '''Configure a state validity checker.'''
   def ConfigureSVC(self, c):
@@ -333,8 +181,8 @@ class TRobotMikata(TMultiArmRobot):
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
-    if q in ('Mikata','Mikata_SIM'):  return True
-    return super(TRobotMikata,self).Is(q)
+    if q in ('Mikata','Mikata2','Mikata_SIM'):  return True
+    return super(TRobotMikata2,self).Is(q)
 
   @property
   def NumArms(self):
@@ -365,7 +213,7 @@ class TRobotMikata(TMultiArmRobot):
   '''Return limits of joint angular velocity.
     arm: arm id, or None (==currarm). '''
   def JointVelLimits(self, arm=None):
-    #FIXME: Should be adjusted for Motoman
+    #FIXME: Should be adjusted for Mikata
     return [0.5, 0.5, 0.5, 0.5]
 
   '''Return range of gripper.
@@ -379,30 +227,31 @@ class TRobotMikata(TMultiArmRobot):
     arm= 0
     return self.grippers[arm]
 
-  def JointStatesCallback(self, state):
-    if self.js is None:
-      self.js= sensor_msgs.msg.JointState()
-      self.js.name= state['name']
-      self.js.header.seq= 0
-    self.js.header.seq= self.js.header.seq+1
-    self.js.header.stamp= rospy.Time.now()
-    self.js.position= state['position']
-    self.js.velocity= state['velocity']
-    self.js.effort= state['effort']
-    self.pub.joint_states.publish(self.js)
+  def JointStatesCallback(self, msg):
+    with self.sensor_locker:
+      self.x_curr= msg
+      self.q_curr= self.x_curr.position[:4]
+      self.dq_curr= self.x_curr.velocity[:4]
+
+  def State(self, arm=None):
+    with self.sensor_locker:
+      state= {'position':self.x_curr.position,
+              'velocity':self.x_curr.velocity,
+              'effort':self.x_curr.effort}
+    return state
 
   '''Return joint angles of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def Q(self, arm=None):
     with self.sensor_locker:
-      q= self.mikata.State()['position'][:4]
+      q= self.q_curr
     return list(q)
 
   '''Return joint velocities of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
-      dq= self.mikata.State()['velocity'][:4]
+      dq= self.dq_curr
     return list(dq)
 
   '''Compute a forward kinematics of an arm.
@@ -440,7 +289,7 @@ class TRobotMikata(TMultiArmRobot):
       #Since KDL does not provide Jacobian computation with an offset x_ext,
       #and converting J with x_ext is not simple, we raise an Exception.
       #TODO: Implement our own FK to solve this issue.
-      raise Exception('TRobotMikata.J: Jacobian with x_ext is not implemented yet.')
+      raise Exception('TRobotMikata2.J: Jacobian with x_ext is not implemented yet.')
 
     angles= {joint:q[j] for j,joint in enumerate(self.joint_names[arm])}  #Deserialize
     with self.sensor_locker:
@@ -493,11 +342,33 @@ class TRobotMikata(TMultiArmRobot):
     assert(len(q_traj)==len(t_traj))
     arm= 0
 
-    with self.control_locker:
-      self.mikata.FollowTrajectory(self.joint_names[arm], q_traj, t_traj, blocking=(blocking==True))
+    self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
 
-      if blocking == 'time':
-        rospy.sleep(t_traj[-1])  #Just sleep.
+    #Insert current position to beginning.
+    if t_traj[0]>1.0e-4:
+      t_traj.insert(0,0.0)
+      q_traj.insert(0,self.Q(arm=arm))
+
+    dq_traj= QTrajToDQTraj(q_traj, t_traj)
+
+    #copy q_traj, t_traj to goal
+    goal= control_msgs.msg.FollowJointTrajectoryGoal()
+    goal.goal_time_tolerance= rospy.Time(0.1)
+    goal.trajectory.joint_names= self.joint_names[arm]
+    goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
+
+    with self.control_locker:
+      self.actc.traj.send_goal(goal)
+      BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
+
+  '''Stop motion such as FollowQTraj.
+    arm: arm id, or None (==currarm). '''
+  def StopMotion(self, arm=None):
+    arm= 0
+
+    with self.control_locker:
+      self.actc.traj.cancel_goal()
+      BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
 
 
   '''Open a gripper.
@@ -548,4 +419,92 @@ class TRobotMikata(TMultiArmRobot):
       arm: arm id, or None (==currarm).'''
   def FingertipOffset(self, pos=None, arm=None):
     return 0.0
+
+
+  '''Mikata Arm control through /mikata_driver/robot_io'''
+
+  #Read from Dynamixel address.
+  #Return: {joint_name:value}
+  def DxlRead(self, address, joint_names):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= joint_names
+    req.command= 'Read'
+    req.data_s= address
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+    return {joit_name:value for joit_name,value in zip(joint_names, res.res_ia)}
+
+  #Read to Dynamixel.  data: {joint_name:value}
+  def DxlWrite(self, address, data):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= data.keys()
+    req.command= 'Write'
+    req.data_s= address
+    req.data_ia= data.values()
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
+  def EnableTorque(self,joint_names=None):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= joint_names if joint_names is not None else []
+    req.command= 'EnableTorque'
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
+  def DisableTorque(self,joint_names=None):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= joint_names if joint_names is not None else []
+    req.command= 'DisableTorque'
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
+  def Reboot(self,joint_names=None):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= joint_names if joint_names is not None else []
+    req.command= 'Reboot'
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
+  #Move the position to a given value(rad).
+  #  target: Target positions {joint_name:position(rad)}
+  #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
+  def MoveTo(self, target, blocking=True):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= target.keys()
+    req.command= 'MoveTo'
+    req.data_fa= target.values()
+    req.data_b= blocking
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
+  #Set current(mA)
+  #  current: Target currents {joint_name:current(mA)}
+  def SetCurrent(self, current):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= current.keys()
+    req.command= 'SetCurrent'
+    req.data_fa= current.values()
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
+  #Set velocity(rad/s)
+  #  velocity: Target velocities {joint_name:velocity(rad/s)}
+  def SetVelocity(self, velocity):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= velocity.keys()
+    req.command= 'SetVelocity'
+    req.data_fa= velocity.values()
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
+  #Set PWM(percentage).
+  #  pwm: Target PWMs {joint_name:pwm(percentage)}
+  def SetPWM(self, pwm):
+    req= ay_util_msgs.srv.MikataArmIORequest()
+    req.joint_names= pwm.keys()
+    req.command= 'SetPWM'
+    req.data_fa= pwm.values()
+    with self.port_locker:
+      res= self.srvp.robot_io(req)
+
 
