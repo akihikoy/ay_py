@@ -815,3 +815,58 @@ class TRate(object):
     # inherently too slow
     if curr_time - self.last_time > self.sleep_dur * 2:
       self.last_time = curr_time
+
+'''
+Meta-class to generate a singleton class with multiple instances.
+An instance is created for each key variable x.
+NOTE: This is EXPERIMENTAL.  Especially not tested with threading.
+Usage:
+  Define a class where this class is used as the meta class.
+
+  class X(object):
+    __metaclass__= TMultiSingleton
+
+  In X.__init__, the first argument should be the key value (x).
+  In a function of X, use X._delete(self.x) to delete the instance (or reduce the reference count).
+  X can be instantiated as a usual class:
+    x1,x2,x3= X(1),X(1),X(2)
+  where x1 and x2 are the same instance (ids are the same) since they have the same key value (1).
+  x3 is a different instance.
+'''
+class TMultiSingleton(type):
+  _instance= None
+  _ref_counter= None
+  _lock= None
+
+  def __call__(cls, x, *args, **kwargs):
+    if cls._instance is None:
+      cls._instance= {}
+      cls._ref_counter= {}
+      cls._lock= threading.Lock()
+    if x not in cls._instance:
+      with cls._lock:
+        if x not in cls._instance:
+          print 'Creating',cls.__name__,x
+          cls._instance[x]= super(TMultiSingleton,cls).__call__(x, *args, **kwargs)
+          cls._ref_counter[x]= 1
+        else:  cls._ref_counter[x]+= 1
+    else:  cls._ref_counter[x]+= 1
+    return cls._instance[x]
+
+  def Delete(self, x):
+    cls= self
+    with cls._lock:
+      if x not in cls._ref_counter or cls._ref_counter[x]==0:
+        raise Exception('TMultiSingleton.Delete is called with zombie.')
+      cls._ref_counter[x]-= 1
+      if cls._ref_counter[x]==0:
+        print 'Deleting',cls.__name__,x
+        instance= cls._instance[x]
+        del cls._instance[x]
+        del cls._ref_counter[x]
+
+  def NumReferences(self, x):
+    cls= self
+    if cls._ref_counter is None or x not in cls._ref_counter:  return 0
+    return cls._ref_counter[x]
+
