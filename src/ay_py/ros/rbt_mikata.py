@@ -207,6 +207,7 @@ class TDummyMikata(TROSUtil):
 class TDummyMikataGripper(TDxlGripper):
   def __init__(self):
     super(TDummyMikataGripper,self).__init__(dev=None)
+    self.joint_name= 'gripper_joint_5'
 
     conv_pos= lambda value: (value-2048.0)*0.0015339808
     self.dxlg.CmdMax= conv_pos(2200)  #Gripper closed (with FingerVision).
@@ -244,7 +245,7 @@ class TDummyMikataGripper(TDxlGripper):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
     cmd= max(self.dxlg.CmdMin,min(self.dxlg.CmdMax,(self.dxlg.dxlg_pos2cmd(pos))))
-    self.mikata.FollowTrajectory(['gripper_joint_5'], [[cmd]], [0.2*110.0/(speed+10.0)], blocking=blocking)
+    self.mikata.FollowTrajectory([self.joint_name], [[cmd]], [0.2*110.0/(speed+10.0)], blocking=blocking)
 
   def StartHolding(self, rate=30):
     pass

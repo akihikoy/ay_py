@@ -21,6 +21,7 @@ from ..misc.dxl_holding import TDxlHolding
 class TMikataGripper2(TDxlGripper):
   def __init__(self):
     super(TMikataGripper2,self).__init__(dev=None)
+    self.joint_name= 'gripper_joint_5'
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self, mikata):
@@ -45,13 +46,13 @@ class TMikataGripper2(TDxlGripper):
   '''Activate gripper (torque is enabled).
     Return success or not.'''
   def Activate(self):
-    self.mikata.EnableTorque(['gripper_joint_5'])
+    self.mikata.EnableTorque([self.joint_name])
     return True
 
   '''Deactivate gripper (torque is disabled).
     Return success or not.'''
   def Deactivate(self):
-    self.mikata.DisableTorque(['gripper_joint_5'])
+    self.mikata.DisableTorque([self.joint_name])
     return True
 
   '''Control a gripper.
@@ -63,12 +64,12 @@ class TMikataGripper2(TDxlGripper):
     cmd= max(self.dxlg.CmdMin,min(self.dxlg.CmdMax,int(self.dxlg.dxlg_pos2cmd(pos))))
     if self.dxlg.holding is None:
       with self.mikata.port_locker:
-        self.mikata.SetPWM({'gripper_joint_5':max_effort})
-        self.mikata.MoveTo({'gripper_joint_5':TDynamixel1.ConvPos(cmd)}, blocking=(blocking==True))
+        self.mikata.SetPWM({self.joint_name:max_effort})
+        self.mikata.MoveTo({self.joint_name:TDynamixel1.ConvPos(cmd)}, blocking=(blocking==True))
     else:
       with self.mikata.port_locker:
-        #print 'SetPWM',{'gripper_joint_5':max_effort}
-        self.mikata.SetPWM({'gripper_joint_5':max_effort})
+        #print 'SetPWM',{self.joint_name:max_effort}
+        self.mikata.SetPWM({self.joint_name:max_effort})
       max_pwm= self.dxlg.dxl.InvConvPWM(max_effort)
       self.dxlg.holding.SetTarget(cmd, self.dxlg.holding_max_pwm_rate*max_pwm)
 
@@ -83,12 +84,12 @@ class TMikataGripper2(TDxlGripper):
       return pos,vel,pwm
     def holding_controller(target_position):
       with self.mikata.port_locker:
-        #print 'MoveTo',{'gripper_joint_5':TDynamixel1.ConvPos(target_position)}
-        self.mikata.MoveTo({'gripper_joint_5':TDynamixel1.ConvPos(target_position)}, blocking=False)
+        #print 'MoveTo',{self.joint_name:TDynamixel1.ConvPos(target_position)}
+        self.mikata.MoveTo({self.joint_name:TDynamixel1.ConvPos(target_position)}, blocking=False)
 
     with self.mikata.port_locker:
-      goal_pos= self.mikata.DxlRead('GOAL_POSITION',['gripper_joint_5'])['gripper_joint_5']
-      max_pwm= self.mikata.DxlRead('GOAL_PWM',['gripper_joint_5'])['gripper_joint_5']
+      goal_pos= self.mikata.DxlRead('GOAL_POSITION',[self.joint_name])[self.joint_name]
+      max_pwm= self.mikata.DxlRead('GOAL_PWM',[self.joint_name])[self.joint_name]
 
     self.dxlg.holding= TDxlHolding(rate)
     self.dxlg.holding.observer= holding_observer

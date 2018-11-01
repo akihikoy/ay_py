@@ -69,6 +69,8 @@ class TKinematics(object):
     print "KDL-chain joint types: %s" % [self._arm_chain.getSegment(i).getJoint().getType() for i in range(self._arm_chain.getNrOfSegments())]
     #print [self._arm_chain.getSegment(i) for i in range(self._arm_chain.getNrOfSegments())]
 
+    print "Effective joint names: %s" % self.joint_names
+
   def get_joint_information(self):
     self._urdf_joints = {joint.name:joint for joint in self._robot.joints if joint.type!='fixed'}
     limits= [self._urdf_joints[jnt_name].limit for jnt_name in self.joint_names]

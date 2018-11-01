@@ -51,7 +51,7 @@ class TMikata(object):
         dxl.Id= id
         dxl.Baudrate= self.baudrate
         if not dxl.Setup():
-          print 'Failed to setup Dynamixel of Mikata at:',jname
+          print 'Failed to setup Dynamixel at:',jname
           return False
 
     #Conversions from/to Dynamixel value to/from PWM(percentage), current(mA),
