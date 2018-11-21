@@ -40,7 +40,7 @@ class TMikataGripper2(TDxlGripper):
   '''Get current position.'''
   def Position(self):
     pos= self.mikata.State()['position'][-1]
-    pos= self.dxlg.dxlg_cmd2pos(TDynamixel1.InvConvPos(pos))
+    pos= self.dxlg.dxlg_cmd2pos(self.dxlg.dxl.InvConvPos(pos))
     return pos
 
   '''Activate gripper (torque is enabled).
@@ -65,7 +65,7 @@ class TMikataGripper2(TDxlGripper):
     if self.dxlg.holding is None:
       with self.mikata.port_locker:
         self.mikata.SetPWM({self.joint_name:max_effort})
-        self.mikata.MoveTo({self.joint_name:TDynamixel1.ConvPos(cmd)}, blocking=(blocking==True))
+        self.mikata.MoveTo({self.joint_name:self.dxlg.dxl.ConvPos(cmd)}, blocking=(blocking==True))
     else:
       with self.mikata.port_locker:
         #print 'SetPWM',{self.joint_name:max_effort}
@@ -78,14 +78,14 @@ class TMikataGripper2(TDxlGripper):
     self.StopHolding()
 
     def holding_observer():
-      pos= TDynamixel1.InvConvPos(self.mikata.State()['position'][-1])
-      vel= TDynamixel1.InvConvVel(self.mikata.State()['velocity'][-1])
+      pos= self.dxlg.dxl.InvConvPos(self.mikata.State()['position'][-1])
+      vel= self.dxlg.dxl.InvConvVel(self.mikata.State()['velocity'][-1])
       pwm= self.dxlg.dxl.InvConvPWM(self.mikata.State()['effort'][-1])
       return pos,vel,pwm
     def holding_controller(target_position):
       with self.mikata.port_locker:
-        #print 'MoveTo',{self.joint_name:TDynamixel1.ConvPos(target_position)}
-        self.mikata.MoveTo({self.joint_name:TDynamixel1.ConvPos(target_position)}, blocking=False)
+        #print 'MoveTo',{self.joint_name:self.dxlg.dxl.ConvPos(target_position)}
+        self.mikata.MoveTo({self.joint_name:self.dxlg.dxl.ConvPos(target_position)}, blocking=False)
 
     with self.mikata.port_locker:
       goal_pos= self.mikata.DxlRead('GOAL_POSITION',[self.joint_name])[self.joint_name]

@@ -42,8 +42,8 @@ class TDynamixelGripper(object):
     self.dxlg_range= [0.0,0.095]
     self.dxlg_cmd2pos= lambda cmd: self.dxlg_range[1] + (cmd-self.CmdOpen)*(self.dxlg_range[0]-self.dxlg_range[1])/(self.CmdMax-self.CmdOpen)
     self.dxlg_pos2cmd= lambda pos: self.CmdOpen + (pos-self.dxlg_range[1])*(self.CmdMax-self.CmdOpen)/(self.dxlg_range[0]-self.dxlg_range[1])
-    self.dxlg_cmd2vel= lambda cmd: (self.dxlg_range[0]-self.dxlg_range[1])/(TDynamixel1.ConvPos(self.CmdMax)-TDynamixel1.ConvPos(self.CmdOpen))*TDynamixel1.ConvVel(cmd)
-    self.dxlg_vel2cmd= lambda vel: TDynamixel1.InvConvVel(vel*(TDynamixel1.ConvPos(self.CmdMax)-TDynamixel1.ConvPos(self.CmdOpen))/(self.dxlg_range[0]-self.dxlg_range[1]))
+    self.dxlg_cmd2vel= lambda cmd: (self.dxlg_range[0]-self.dxlg_range[1])/(self.dxl.ConvPos(self.CmdMax)-self.dxl.ConvPos(self.CmdOpen))*self.dxl.ConvVel(cmd)
+    self.dxlg_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdMax)-self.dxl.ConvPos(self.CmdOpen))/(self.dxlg_range[0]-self.dxlg_range[1]))
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -63,9 +63,11 @@ class TDynamixelGripper(object):
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
-    self.Deactivate()
-    with self.port_locker:
-      self.dxl.Quit()
+    if self._is_initialized:
+      self.Deactivate()
+      with self.port_locker:
+        self.dxl.Quit()
+      self._is_initialized= False
 
     #Check the thread lockers status:
     print 'Count of port_locker:',self.port_locker._RLock__count

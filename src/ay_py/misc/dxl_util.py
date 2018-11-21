@@ -4,6 +4,12 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Mar.28, 2017
+#\version 0.2
+#\date    Aug, 2018
+#         Implemented TDynamixelPortHandler for automatic reopening the port.
+#\version 0.3
+#\date    Nov.20, 2018
+#         Added RH-P12-RN (Thormang3 gripper) protocol.
 
 #This code is based on DynamixelSDK/python/protocol2_0/sync_read_write.py
 #DynamixelSDK: https://github.com/ROBOTIS-GIT/DynamixelSDK
@@ -11,7 +17,7 @@
 #Dynamixel XH430-V350: http://support.robotis.com/en/product/actuator/dynamixel_x/xh_series/xh-430-v350.htm
 
 import dxl_funcs as dynamixel  #Using Dynamixel SDK
-import time, threading
+import math, time, threading
 
 class TDynamixelPortHandler(object):
   def __init__(self):
@@ -161,7 +167,7 @@ class TDynamixel1(object):
     self.WriteFuncs= (None, dynamixel.write1ByteTxRx, dynamixel.write2ByteTxRx, None, dynamixel.write4ByteTxRx)
     self.ReadFuncs= (None, dynamixel.read1ByteTxRx, dynamixel.read2ByteTxRx, None, dynamixel.read4ByteTxRx)
 
-    # For Dynamixel PRO 54-200 with USB2DYNAMIXEL
+    # For Dynamixel PRO 54-200
     if type=='PRO54-200':  #FIXME: Correct name?
       #ADDR[NAME]=(ADDRESS,SIZE)
       self.ADDR={
@@ -171,7 +177,7 @@ class TDynamixel1(object):
         }
       self.PROTOCOL_VERSION = 2  # Protocol version of Dynamixel
 
-    # For Dynamixel XM430-W350 with USB2DYNAMIXEL
+    # For Dynamixel XM430-W350
     elif type in ('XM430-W350','XH430-V350'):
       #ADDR[NAME]=(ADDRESS,SIZE)
       self.ADDR={
@@ -212,6 +218,47 @@ class TDynamixel1(object):
         }
       self.PROTOCOL_VERSION = 2  # Protocol version of Dynamixel
 
+    # For RH-P12-RN
+    elif type in ('RH-P12-RN',):
+      #ADDR[NAME]=(ADDRESS,SIZE)
+      self.ADDR={
+        'MODEL_NUMBER'        : (0,2),
+        'MODEL_INFORMATION'   : (2,4),
+        'FIRMWARE_VERSION'    : (6,1),
+        'ID'                  : (7,1),
+        'BAUD_RATE'           : (8,1),
+        'RETURN_DELAY_TIME'   : (9,1),
+        'OPERATING_MODE'      : (11,1),
+        'TEMP_LIMIT'          : (21,1),
+        'MAX_VOLT_LIMIT'      : (22,2),
+        'MIN_VOLT_LIMIT'      : (24,2),
+        'PWM_LIMIT'           : (None,None),
+        'CURRENT_LIMIT'       : (30,2),
+        'ACC_LIMIT'           : (26,4),
+        'VEL_LIMIT'           : (32,4),
+        'MAX_POS_LIMIT'       : (36,4),
+        'MIN_POS_LIMIT'       : (40,4),
+        'SHUTDOWN'            : (48,1),
+        'TORQUE_ENABLE'       : (562,1),
+        'HARDWARE_ERR_ST'     : (892,1),
+        'VEL_I_GAIN'          : (None,None),
+        'VEL_P_GAIN'          : (None,None),
+        'POS_D_GAIN'          : (590,2),
+        'POS_I_GAIN'          : (592,2),
+        'POS_P_GAIN'          : (594,2),
+        'GOAL_PWM'            : (None,None),
+        'GOAL_CURRENT'        : (604,2),
+        'GOAL_VELOCITY'       : (600,4),
+        'GOAL_POSITION'       : (596,4),
+        'PRESENT_PWM'         : (None,None),
+        'PRESENT_CURRENT'     : (621,2),
+        'PRESENT_VELOCITY'    : (615,4),
+        'PRESENT_POSITION'    : (611,4),
+        'PRESENT_IN_VOLT'     : (623,2),
+        'PRESENT_TEMP'        : (625,1),
+        }
+      self.PROTOCOL_VERSION = 2  # Protocol version of Dynamixel
+
     # Operation modes
     self.OP_MODE={
       'CURRENT'    : 0,   # Current Control Mode
@@ -221,19 +268,34 @@ class TDynamixel1(object):
       'CURRPOS'    : 5,   # Current-based Position Control Mode
       'PWM'        : 16,  # PWM Control Mode (Voltage Control Mode)
       }
+    #NOTE: with 'RH-P12-RN', only CURRENT and CURRPOS are available.
 
     # Baud rates
     self.BAUD_RATE= [9600,57600,115200,1e6,2e6,3e6,4e6,4.5e6]
+    if type=='RH-P12-RN':  self.BAUD_RATE.append(10.5e6)
 
     self.TORQUE_ENABLE  = 1  # Value for enabling the torque
     self.TORQUE_DISABLE = 0  # Value for disabling the torque
     self.MIN_POSITION = 0  # Dynamixel will rotate between this value
     self.MAX_POSITION = 4095  # and this value (note that the Dynamixel would not move when the position value is out of movable range. Check e-manual about the range of the Dynamixel you use.)
-    if type=='XM430-W350':
-      self.MAX_CURRENT = 1193   # == Current Limit(38)
-    elif type=='XH430-V350':
-      self.MAX_CURRENT = 689   # == Current Limit(38)
+    if type=='RH-P12-RN':  self.MAX_POSITION = 1150
+    if type=='XM430-W350':    self.MAX_CURRENT = 1193   # == Current Limit(38)
+    elif type=='XH430-V350':  self.MAX_CURRENT = 689   # == Current Limit(38)
+    elif type=='RH-P12-RN':   self.MAX_CURRENT = 820
     self.MAX_PWM = 885
+    if type=='RH-P12-RN':  self.MAX_PWM = None
+
+    self.POSITION_UNIT= math.pi/2048.0
+    self.POSITION_OFFSET= 2048.0
+    if type=='XM430-W350':
+      self.CURRENT_UNIT= 2.69
+      self.VELOCITY_UNIT= 0.229*(2.0*math.pi)/60.0
+    elif type=='XH430-V350':
+      self.CURRENT_UNIT= 1.34
+      self.VELOCITY_UNIT= 0.229*(2.0*math.pi)/60.0
+    elif type=='RH-P12-RN':
+      self.CURRENT_UNIT= 4.02
+      self.VELOCITY_UNIT= 0.114*(2.0*math.pi)/60.0
 
     self.COMM_SUCCESS = 0      # Communication Success result value
     self.COMM_TX_FAIL = -1001  # Communication Tx Failed
@@ -244,6 +306,7 @@ class TDynamixel1(object):
     #self.Baudrate= 1000000
     self.DevName= dev  # Port name.  e.g. Win:'COM1', Linux:'/dev/ttyUSB0'
     self.OpMode= 'POSITION'
+    if type=='RH-P12-RN':  self.OpMode= 'CURRPOS'
     self.CurrentLimit= self.MAX_CURRENT
     '''Shutdown mode:
       0x01: Input Voltage Error
@@ -277,50 +340,46 @@ class TDynamixel1(object):
     return int(value*self.MAX_PWM/100.0)
 
   #Conversion from Dynamixel current value to current(mA).
-  @staticmethod
-  def ConvCurr(value):
-    return value*2.69
+  def ConvCurr(self,value):
+    return value*self.CURRENT_UNIT
   #Conversion from current(mA) to Dynamixel current value.
-  @staticmethod
-  def InvConvCurr(value):
-    return int(value/2.69)
+  def InvConvCurr(self,value):
+    return int(value/self.CURRENT_UNIT)
 
   #Conversion from Dynamixel velocity value to velocity(rad/s).
-  @staticmethod
-  def ConvVel(value):
-    #return value*0.229*(2*math.pi)/60.0
-    return value*0.023980824
+  def ConvVel(self,value):
+    return value*self.VELOCITY_UNIT
   #Conversion from velocity(rad/s) to Dynamixel velocity value.
-  @staticmethod
-  def InvConvVel(value):
-    return int(value/0.023980824)
+  def InvConvVel(self,value):
+    return int(value/self.VELOCITY_UNIT)
 
   #Conversion from Dynamixel position value to position(rad).
-  @staticmethod
-  def ConvPos(value):
-    #return (value-2048.0)/2048.0*math.pi
-    return (value-2048.0)*0.0015339808
+  def ConvPos(self,value):
+    return (value-self.POSITION_OFFSET)*self.POSITION_UNIT
   #Conversion from position(rad) to Dynamixel position value.
-  @staticmethod
-  def InvConvPos(value):
-    return int(value*651.8986469+2047.0)
+  def InvConvPos(self,value):
+    return int(value/self.POSITION_UNIT+self.POSITION_OFFSET)
 
   #Conversion from Dynamixel temperature value to temperature(deg of Celsius).
-  @staticmethod
-  def ConvTemp(value):
+  def ConvTemp(self,value):
     return value
   #Conversion from temperature(deg of Celsius) to Dynamixel temperature value.
-  @staticmethod
-  def InvConvTemp(value):
+  def InvConvTemp(self,value):
     return int(value)
 
 
   def Write(self, address, value):
     addr,size= self.ADDR[address]
+    if addr is None:
+      print '{address} is not available with this Dynamixel.'.format(address=address)
+      return
     self.WriteFuncs[size](self.port_num(), self.PROTOCOL_VERSION, self.Id, addr, value)
 
   def Read(self, address):
     addr,size= self.ADDR[address]
+    if addr is None:
+      print '{address} is not available with this Dynamixel.'.format(address=address)
+      return None
     value= self.ReadFuncs[size](self.port_num(), self.PROTOCOL_VERSION, self.Id, addr)
     if size==2:
       #value= value & 255
@@ -494,7 +553,8 @@ class TDynamixel1(object):
   #  current: Target current, should be in [-self.MAX_CURRENT, self.MAX_CURRENT]
   #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
   def MoveToC(self, target, current, blocking=True):
-    target = int(target)
+    target= int(target)
+    current= int(current)
     #FIXME: If OpMode allows multi turn, target could vary.
     if target < self.MIN_POSITION:  target = self.MIN_POSITION
     elif target > self.MAX_POSITION:  target = self.MAX_POSITION

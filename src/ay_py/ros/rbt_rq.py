@@ -58,7 +58,9 @@ class TRobotiq(TGripper2F1):
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
-    self.Deactivate()
+    if self._is_initialized:
+      self.Deactivate()
+      self._is_initialized= False
     super(TRobotiq,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
