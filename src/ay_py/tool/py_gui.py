@@ -158,7 +158,7 @@ class TTerminalTab(QtGui.QWidget):
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
       self.StartProc('tmux', ['send-keys', '-t', term+':0', 'exit', 'Enter'])
-    QtTest.QTest.qWait(100)
+    QtTest.QTest.qWait(500)
 
   # Override closing event
   def closeEvent(self, event):
