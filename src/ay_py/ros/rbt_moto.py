@@ -14,7 +14,6 @@ import trajectory_msgs.msg
 import copy
 
 from robot import *
-from rbt_rq import TRobotiq
 from kdl_kin import *
 
 '''Robot control class for single Motoman SIA10F with a Robotiq gripper.'''
@@ -51,7 +50,11 @@ class TRobotMotoman(TMultiArmRobot):
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
-    self.robotiq= TRobotiq()  #Robotiq controller
+    if not self.is_sim:
+      mod= __import__('rbt_rq',globals(),None,('TRobotiq',))
+      self.robotiq= TRobotiq()  #Robotiq controller
+    else:
+      self.robotiq= TSimGripper2F1(('Robotiq',),pos_range=[0.0,0.0855])
     self.grippers= [self.robotiq]
 
     #print 'Enabling the robot...'
@@ -265,7 +268,6 @@ class TRobotMotoman(TMultiArmRobot):
     speed: speed of the movement; 0 (minimum), 100 (maximum).
     blocking: False: move background, True: wait until motion ends.  '''
   def MoveGripper(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
-    if self.is_sim:  return  #WARNING:We do nothing if the robot is on simulator.
     arm= 0
 
     gripper= self.grippers[arm]
@@ -276,7 +278,6 @@ class TRobotMotoman(TMultiArmRobot):
   '''Get a gripper position in meter.
     arm: arm id, or None (==currarm). '''
   def GripperPos(self, arm=None):
-    if self.is_sim:  return 0.0  #WARNING:We do nothing if the robot is on simulator.
     arm= 0
 
     gripper= self.grippers[arm]

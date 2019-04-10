@@ -293,7 +293,6 @@ class TRobotUR(TMultiArmRobot):
     arm: arm id, or None (==currarm).
     blocking: False: move background, True: wait until motion ends.  '''
   def OpenGripper(self, arm=None, blocking=False):
-    if self.is_sim:  return  #WARNING:We do nothing if the robot is on simulator.
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
     with self.control_locker:
@@ -303,7 +302,6 @@ class TRobotUR(TMultiArmRobot):
     arm: arm id, or None (==currarm).
     blocking: False: move background, True: wait until motion ends.  '''
   def CloseGripper(self, arm=None, blocking=False):
-    if self.is_sim:  return  #WARNING:We do nothing if the robot is on simulator.
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
     with self.control_locker:
@@ -316,7 +314,6 @@ class TRobotUR(TMultiArmRobot):
     speed: speed of the movement; 0 (minimum), 100 (maximum).
     blocking: False: move background, True: wait until motion ends.  '''
   def MoveGripper(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
-    if self.is_sim:  return  #WARNING:We do nothing if the robot is on simulator.
     arm= 0
 
     gripper= self.grippers[arm]
@@ -326,7 +323,6 @@ class TRobotUR(TMultiArmRobot):
   '''Get a gripper position in meter.
     arm: arm id, or None (==currarm). '''
   def GripperPos(self, arm=None):
-    if self.is_sim:  return 0.0  #WARNING:We do nothing if the robot is on simulator.
     arm= 0
 
     gripper= self.grippers[arm]

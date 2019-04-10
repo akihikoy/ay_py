@@ -129,6 +129,9 @@ class TRobotPR2(TDualArmRobot):
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
     if q in ('PR2','PR2_SIM'):  return True
+    if q in ('sim','SIM'):
+      CPrint(4,'PR2 cannot answer to the query: Is(\'{q}\')'.format(q=q))
+      return self.is_sim
     return super(TRobotPR2,self).Is(q)
 
   '''Mannequin controller.'''

@@ -17,6 +17,7 @@ class TMultiArmRobot(TROSUtil):
 
     self._name= name
     self.currarm= 0
+    self.is_sim= False  #Whether the robot is simulated.
 
     #Thread locker for self.currarm:
     self.currarm_locker= threading.RLock()
@@ -54,6 +55,7 @@ class TMultiArmRobot(TROSUtil):
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
+    if q in ('sim','SIM'):  return self.is_sim
     return False
 
   @property
@@ -347,3 +349,63 @@ class TFakeGripper(TGripper2F1):
   def Is(self, q):
     if q in ('NoGripper'):  return True
     return False
+
+
+'''Simulated 2 finger 1 DoF gripper'''
+class TSimGripper2F1(TGripper2F1):
+  def __init__(self,is_=('Gripper','Gripper2F1'),pos_range=[0.0, 1.0],pos_open=None,pos_close=None):
+    super(TSimGripper2F1,self).__init__()
+
+    #Configurable parameters:
+    self.is_= is_
+    self.pos_range= pos_range
+    self.pos_open= pos_range[1] if pos_open is None else pos_open
+    self.pos_close= pos_range[0] if pos_close is None else pos_close
+
+    #Current position:
+    self.pos= 0.0
+
+  '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+  def Is(self, q):
+    if q in self.is_:  return True
+    if q in ('SimGripper','SimGripper2F1'):  return True
+    if q in ('sim','SIM'):  return True
+    return super(TSimGripper2F1,self).Is(q)
+
+  '''Range of gripper position.'''
+  def PosRange(self):
+    return self.pos_range
+
+  '''Get current position.'''
+  def Position(self):
+    return self.pos
+
+  '''Activate gripper (torque is enabled).
+    Return success or not.'''
+  def Activate(self):
+    return True
+
+  '''Deactivate gripper (torque is disabled).
+    Return success or not.'''
+  def Deactivate(self):
+    return True
+
+  '''Open a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Open(self, blocking=False):
+    self.Move(self.pos_open)
+
+  '''Close a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Close(self, blocking=False):
+    self.Move(self.pos_close)
+
+  '''Control a gripper.
+    pos: target position.
+    max_effort: maximum effort to control.
+    speed: speed of the movement.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Move(self, pos, max_effort=None, speed=None, blocking=False):
+    self.pos= pos
+    if self.pos<self.pos_range[0]:  self.pos= self.pos_range[0]
+    if self.pos>self.pos_range[1]:  self.pos= self.pos_range[1]
