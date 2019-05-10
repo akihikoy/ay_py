@@ -74,8 +74,8 @@ class TKinematics(object):
   def get_joint_information(self):
     self._urdf_joints = {joint.name:joint for joint in self._robot.joints if joint.type!='fixed'}
     limits= [self._urdf_joints[jnt_name].limit for jnt_name in self.joint_names]
-    self.joint_limits_lower = [-np.inf if limit is None else limit.lower for limit in limits]
-    self.joint_limits_upper = [+np.inf if limit is None else limit.upper for limit in limits]
+    self.joint_limits_lower = [-np.inf if (limit is None or limit.lower is None) else limit.lower for limit in limits]
+    self.joint_limits_upper = [+np.inf if (limit is None or limit.lower is None) else limit.upper for limit in limits]
     self.joint_types = [self._urdf_joints[jnt_name].type for jnt_name in self.joint_names]
 
   def joints_to_kdl(self, type, values=None):
