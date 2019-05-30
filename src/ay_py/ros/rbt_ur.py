@@ -8,7 +8,7 @@ import actionlib
 import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
-import ur_modern_driver.msg
+import ur_msgs.msg
 import copy
 
 from robot import *
@@ -18,9 +18,11 @@ from kdl_kin import *
 
 '''Robot control class for single Universal Robots UR* with an empty gripper.'''
 class TRobotUR(TMultiArmRobot):
-  def __init__(self, name='UR', is_sim=False):
+  def __init__(self, name='UR', ur_series='CB', robot_ip=None, is_sim=False):
     super(TRobotUR,self).__init__(name=name)
     self.is_sim= is_sim
+    self.ur_series= ur_series
+    self.robot_ip= robot_ip  #If robot_ip is None, Init() fills it from the /ur_driver/robot_ip_address parameter.
 
     self.joint_names= [[]]
     #self.joint_names[0]= rospy.get_param('controller_joint_names')
@@ -42,6 +44,9 @@ class TRobotUR(TMultiArmRobot):
     self._is_initialized= False
     res= []
     ra= lambda r: res.append(r)
+
+    if self.robot_ip is None and not self.is_sim:
+      self.robot_ip= rospy.get_param('/ur_driver/robot_ip_address')
 
     #Check the validity of joint positions:
     try:
@@ -75,7 +80,7 @@ class TRobotUR(TMultiArmRobot):
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
     if not self.is_sim:
-      ra(self.AddSub('robot_mode_state', '/ur_driver/robot_mode_state', ur_modern_driver.msg.RobotModeDataMsg, self.RobotModeStateCallback))
+      ra(self.AddSub('robot_mode_state', '/ur_driver/robot_mode_state', ur_msgs.msg.RobotModeDataMsg, self.RobotModeStateCallback))
 
     #self.robotiq= TRobotiq()  #Robotiq controller
     #self.grippers= [self.robotiq]
@@ -105,14 +110,20 @@ class TRobotUR(TMultiArmRobot):
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
-    if q in ('UR','UR_SIM','UR3'):  return True
+    if q in ('UR','UR_SIM'):  return True
+    if q=='E':  return (self.ur_series=='E')
+    if q=='CB':  return (self.ur_series=='CB')
     return super(TRobotUR,self).Is(q)
 
   #Check if the robot is normal state (i.e. running properly without stopping).
   def IsNormal(self):
     if self.is_sim:  return True
     with self.robotmodestate_locker:
-      return all((self.robot_mode_state.is_ready, not self.robot_mode_state.is_emergency_stopped, not self.robot_mode_state.is_protective_stopped))
+      #return all((self.robot_mode_state.is_ready, not self.robot_mode_state.is_emergency_stopped, not self.robot_mode_state.is_protective_stopped))
+      return all((self.robot_mode_state.is_real_robot_enabled, not self.robot_mode_state.is_emergency_stopped, not self.robot_mode_state.is_protective_stopped))
+
+  def RobotIP(self):
+    return self.robot_ip
 
   @property
   def NumArms(self):

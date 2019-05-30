@@ -58,6 +58,9 @@ class TMultiArmRobot(TROSUtil):
     if q in ('sim','SIM'):  return self.is_sim
     return False
 
+  def IsInitialized(self):
+    return self._is_initialized
+
   @property
   def Name(self):
     return self._name
