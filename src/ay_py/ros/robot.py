@@ -56,6 +56,7 @@ class TMultiArmRobot(TROSUtil):
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
     if q in ('sim','SIM'):  return self.is_sim
+    if q == self._name:  return True
     return False
 
   def IsInitialized(self):
