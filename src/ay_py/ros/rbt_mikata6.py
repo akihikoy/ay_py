@@ -58,8 +58,9 @@ class TRobotMikata6(TRobotMikata2):
     self.kin= [None]
     self.kin[0]= TKinematics(base_link='link1',end_link='link7')
 
-    ra(self.AddSrvP('robot_io', '/mikata6_driver/robot_io',
-                    ay_util_msgs.srv.MikataArmIO, persistent=False, time_out=3.0))
+    if not self.is_sim:
+      ra(self.AddSrvP('robot_io', '/mikata6_driver/robot_io',
+                      ay_util_msgs.srv.MikataArmIO, persistent=False, time_out=3.0))
 
     ra(self.AddActC('traj', '/follow_joint_trajectory',
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
@@ -69,7 +70,8 @@ class TRobotMikata6(TRobotMikata2):
     if not self.is_sim:
       self.mikata_gripper= TMikata6Gripper()
     else:
-      self.mikata_gripper= TDummyMikata6Gripper()
+      self.mikata_gripper= TDummyMikataGripper2()
+      self.mikata_gripper.joint_name= 'gripper'
     self.grippers= [self.mikata_gripper]
 
     self.mikata.EnableTorque()
@@ -106,19 +108,19 @@ class TRobotMikata6(TRobotMikata2):
     return 'link7'
 
   def DoF(self, arm=None):
-    return 7
+    return 6
 
   '''Return limits of joint angular velocity.
     arm: arm id, or None (==currarm). '''
   def JointVelLimits(self, arm=None):
     #FIXME: Should be adjusted for Mikata6
-    return [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+    return [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
 
   def JointStatesCallback(self, msg):
     with self.sensor_locker:
       self.x_curr= msg
-      self.q_curr= self.x_curr.position[:7]
-      self.dq_curr= self.x_curr.velocity[:7]
+      self.q_curr= self.x_curr.position[:6]
+      self.dq_curr= self.x_curr.velocity[:6]
 
   '''Compute an inverse kinematics of an arm.
   Return joint angles for a target self.EndLink(arm) pose on self.BaseFrame.
