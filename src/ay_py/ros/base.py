@@ -224,16 +224,32 @@ class TROSUtil(object):
   def IsInitialized(self):
     return self._is_initialized
 
+  #Add a subscriber.
   def AddSub(self, name, port_name, port_type, call_back, callback_args=None, queue_size=None, buff_size=65536, tcp_nodelay=False):
     if name not in self.sub:
       self.sub[name]= rospy.Subscriber(port_name, port_type, call_back, callback_args, queue_size, buff_size, tcp_nodelay)
     return True
 
+  #Add a subscriber and wait for the first message.
+  def AddSubW(self, name, port_name, port_type, call_back, callback_args=None, queue_size=None, buff_size=65536, tcp_nodelay=False, time_out=None):
+    if name not in self.sub:
+      try:
+        print 'Waiting for %s... (t/o: %r)' % (port_name, time_out)
+        msg= rospy.wait_for_message(port_name, port_type, time_out)
+        if callback_args is None:  call_back(msg)
+        else:                      call_back(msg,callback_args)
+        self.sub[name]= rospy.Subscriber(port_name, port_type, call_back, callback_args, queue_size, buff_size, tcp_nodelay)
+      except rospy.ROSException:
+        raise Exception('Failed to receive the message: {port_name}'.format(port_name=port_name))
+    return True
+
+  #Add a publisher.
   def AddPub(self, name, port_name, port_type, subscriber_listener=None, tcp_nodelay=False, latch=False, headers=None, queue_size=10):
     if name not in self.pub:
       self.pub[name]= rospy.Publisher(port_name, port_type, subscriber_listener, tcp_nodelay, latch, headers, queue_size)
     return True
 
+  #Add a service proxy.
   def AddSrvP(self, name, port_name, port_type, persistent=False, time_out=None):
     if name not in self.srvp:
       srvp= SetupServiceProxy(port_name, port_type, persistent, time_out)
@@ -241,6 +257,7 @@ class TROSUtil(object):
       else:  self.srvp[name]= srvp
     return True
 
+  #Add an action client.
   def AddActC(self, name, port_name, port_type, time_out=None, num_wait=1):
     if name not in self.actc:
       actc= SetupSimpleActionClient(port_name, port_type, time_out, num_wait)
@@ -248,6 +265,7 @@ class TROSUtil(object):
       else:  self.actc[name]= actc
     return True
 
+  #Add an action server.
   def AddActS(self, name, port_name, port_type, auto_start=True):
     if name not in self.acts:
       acts= actionlib.SimpleActionServer(port_name, port_type, execute_cb=execute_cb, auto_start=auto_start)
@@ -255,6 +273,7 @@ class TROSUtil(object):
       else:  self.acts[name]= acts
     return True
 
+  #Add a dynamic reconfigure client.
   def AddDynConfig(self, name, node_name, time_out=None):
     if name not in self.dynconfig:
       client= SetupDynamicReconfigureClient(node_name, time_out=time_out)

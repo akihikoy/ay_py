@@ -51,11 +51,11 @@ class TRobotUR(TMultiArmRobot):
     #Check the validity of joint positions:
     try:
       x_curr= rospy.wait_for_message('/joint_states', sensor_msgs.msg.JointState, 3.0)
-      if not all([-1.25*math.pi<q and q<1.25*math.pi for q in x_curr.position]):
+      if not all([-1.5*math.pi<q and q<1.5*math.pi for q in x_curr.position]):
         CPrint(4,'''Warning: some joint angles exceed the expected range.
   Joint angles = {q}
   Running without notifying is very dangerous.
-  Manually moving joints to proper range (-1.25*math.pi, 1.25*math.pi)
+  Manually moving joints to proper range (-1.5*math.pi, 1.5*math.pi)
   is highly recommended.
   Hint: Use the Freedrive mode with observing the /joint_states topic by:
     $ rostopic echo '/joint_states/position[5]'
