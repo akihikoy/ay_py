@@ -421,7 +421,7 @@ def GetOrSet(d, key, default=None):
 #    If False, this does not ask user to:
 #      Create the parent dir.
 #      Overwrite the file when it exists.
-def OpenW(file_name, mode='w', interactive=True):
+def OpenWCheck(file_name, mode, interactive):
   parent= os.path.dirname(file_name)
   if parent!='' and not os.path.exists(parent):
     if interactive:
@@ -436,7 +436,32 @@ def OpenW(file_name, mode='w', interactive=True):
     CPrint(2,'OpenW: File exists:',file_name)
     CPrint(2,'Overwrite? (if No, raise IOError)')
     if not AskYesNo():  raise IOError(2,'Canceled to open file as file exists:',file_name)
+def OpenW(file_name, mode='w', interactive=True):
+  OpenWCheck(file_name,mode,interactive)
   return open(file_name,mode)
+
+'''
+Virtual file pointer to write the same contents into a file A and std-out.
+Basically it behaves as if a file object of A opened as 'w' mode.
+Usage:
+  with DualWriter('file_path') as fp:
+    fp.write('hello DualWriter;\n')
+'''
+class TDualWriter(file):
+  def __init__(self,file_name):
+    super(TDualWriter,self).__init__(file_name,'w')
+  def flush(self):
+    sys.stdout.flush()
+    super(TDualWriter,self).flush()
+  def write(self,str):
+    sys.stdout.write(str)
+    super(TDualWriter,self).write(str)
+  def writelines(self,sequence):
+    sys.stdout.writelines(sequence)
+    super(TDualWriter,self).writelines(sequence)
+def DualWriter(file_name,interactive=True):
+  OpenWCheck(file_name,'w',interactive)
+  return TDualWriter(file_name)
 
 #Modify file name from xxx.pyc to xxx.py.
 #This does nothing to xxx.py or other extensions.
