@@ -16,6 +16,7 @@ class TDynamixelGripper(object):
   def __init__(self, dev='/dev/ttyUSB0'):
     self.dxl_type= 'XM430-W350'
     self.dev= dev
+    self.baudrate= 2e6
     self.dxl= TDynamixel1(self.dxl_type,dev=self.dev)
 
     #Thread locker:
@@ -52,6 +53,7 @@ class TDynamixelGripper(object):
     ra= lambda r: res.append(r)
 
     #self.dxl= TDynamixel1(self.dxl_type,dev=self.dev)
+    self.dxl.Baudrate= self.baudrate
 
     with self.port_locker:
       ra(self.dxl.Setup())

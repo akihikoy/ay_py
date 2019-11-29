@@ -22,6 +22,7 @@ class TRobotGen3ThG(TRobotGen3):
     ra(super(TRobotGen3ThG,self).Init())
 
     if not self.is_sim:
+      #The gripper module is imported here to avoid importing it in simulation mode.
       mod= __import__('rbt_rhp12rn',globals(),None,('TRHP12RNGripper',))
       self.th_gripper= mod.TRHP12RNGripper(dev=self.dev)
     else:

@@ -22,8 +22,9 @@ class TRobotURDxlG(TRobotUR):
     ra(super(TRobotURDxlG,self).Init())
 
     if not self.is_sim:
+      #The gripper module is imported here to avoid importing it in simulation mode.
       mod= __import__('rbt_dxlg',globals(),None,('TDxlGripper',))
-      self.dxl_gripper= mod.TDxlGripper(('DxlGripper',),dev=self.dev)
+      self.dxl_gripper= mod.TDxlGripper(dev=self.dev)
     else:
       self.dxl_gripper= TSimGripper2F1(pos_range=[0.0,0.095])
     self.grippers= [self.dxl_gripper]
