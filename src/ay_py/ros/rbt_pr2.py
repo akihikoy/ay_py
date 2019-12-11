@@ -300,6 +300,18 @@ class TRobotPR2(TDualArmRobot):
     with self.control_locker:
       self.grippers[arm].Move(pos, max_effort, blocking=blocking)
 
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+    NOTE: In the previous versions (before 2019-12-10), this offset was from the opened fingertip position.
+      pos: Gripper position to get the offset. None: Current position.
+      arm: arm id, or None (==currarm).'''
+  def FingertipOffset(self, pos=None, arm=None):
+    if arm is None:  arm= self.Arm
+    if pos is None:  pos= self.GripperPos(arm)
+    return self.grippers[arm].FingertipOffset(pos)
+
   '''Control the head.
     pan, tilt: target angles.
     dt: duration to reach the target.  '''
@@ -343,6 +355,15 @@ class TPR2Gripper(TGripper2F1):
   def Is(self, q):
     if q in ('PR2Gripper',):  return True
     return super(TPR2Gripper,self).Is(q)
+
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+      pos: Gripper position to get the offset. '''
+  def FingertipOffset(self, pos):
+    #WARNING: NotImplemented
+    return 0.0
 
   '''Get current position.'''
   def Position(self):

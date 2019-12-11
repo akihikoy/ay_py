@@ -309,19 +309,17 @@ class TRobotBaxter(TDualArmRobot):
         pos= gripper.Position()
       return pos
 
-  '''Get fingertip offset in meter.
-    The fingertip trajectory of Robotiq gripper has a round shape.
-    This function gives the offset from the opening posture.
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+    NOTE: In the previous versions (before 2019-12-10), this offset was from the opened fingertip position.
       pos: Gripper position to get the offset. None: Current position.
-      arm: LEFT, RIGHT, or None (==currarm).'''
+      arm: arm id, or None (==currarm).'''
   def FingertipOffset(self, pos=None, arm=None):
     if arm is None:  arm= self.Arm
-    gripper= self.grippers[arm]
-    if gripper.Is('BaxterEPG'):
-      return 0.0  #If gripper is EPG, it is completely flat.
-    elif gripper.Is('Robotiq'):
-      if pos is None:  pos= self.GripperPos(arm)
-      return -0.701*pos**3 - 2.229*pos**2 + 0.03*pos + 0.128 - 0.113
+    if pos is None:  pos= self.GripperPos(arm)
+    return self.grippers[arm].FingertipOffset(pos)
 
   '''Control the head around z.
     angle: target angle in radian.
@@ -377,6 +375,14 @@ class TBaxterEPG(TGripper2F1):
   '''Range of gripper position.'''
   def PosRange(self):
     return self.epg_range
+
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+      pos: Gripper position to get the offset. '''
+  def FingertipOffset(self, pos):
+    return 0.0
 
   '''Get current position.'''
   def Position(self):

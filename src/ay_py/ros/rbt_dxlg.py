@@ -55,6 +55,15 @@ class TDxlGripper(TGripper2F1):
   def Position(self):
     return self.dxlg.State()['position']
 
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+      pos: Gripper position to get the offset. '''
+  def FingertipOffset(self, pos):
+    #WARNING: NotImplemented
+    return 0.0
+
   def PosRange(self):
     return self.dxlg.PosRange()
   def Activate(self):
@@ -177,11 +186,15 @@ class TRobotDxlGripper(TMultiArmRobot):
       pos= gripper.Position()
     return pos
 
-  '''Get fingertip offset in meter.
-    The fingertip trajectory of gripper has a round shape.
-    This function gives the offset from the opening posture.
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+    NOTE: In the previous versions (before 2019-12-10), this offset was from the opened fingertip position.
       pos: Gripper position to get the offset. None: Current position.
       arm: arm id, or None (==currarm).'''
   def FingertipOffset(self, pos=None, arm=None):
-    return 0.0
+    if arm is None:  arm= self.Arm
+    if pos is None:  pos= self.GripperPos(arm)
+    return self.grippers[arm].FingertipOffset(pos)
 

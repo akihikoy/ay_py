@@ -32,6 +32,7 @@ class TKBHit:
   def __init__(self,activate=True):
     self.is_curses_term= False
     self.termios= termios  #Ensure to use termios in __del__
+    self.ask_timeout= 6000  #Timeout in Ask* functions.
 
     if activate:
       self.Activate()
@@ -109,3 +110,32 @@ class TKBHit:
         #sys.stdout.flush()
     return None
 
+  #KBHit compatible AskYesNo.
+  def AskYesNo(self):
+    if self.IsActive():
+      while 1:
+        sys.stdout.write('  (y|n) > ')
+        sys.stdout.flush()
+        if self.CheckKBHit(self.ask_timeout):
+          ans= self.GetChE()
+          sys.stdout.write('\n')
+          if ans=='y' or ans=='Y':  return True
+          elif ans=='n' or ans=='N':  return False
+    else:
+      return AskYesNo()
+
+  #KBHit compatible AskGen.
+  #Usage: AskGen('y','n','c')
+  def AskGen(self,*argv):
+    assert(len(argv)>0)
+    if self.IsActive():
+      while 1:
+        sys.stdout.write('  (%s) > ' % '|'.join(argv))
+        sys.stdout.flush()
+        if self.CheckKBHit(self.ask_timeout):
+          ans= self.GetChE()
+          sys.stdout.write('\n')
+          for a in argv:
+            if ans==a:  return a
+    else:
+      return AskGen(*argv)

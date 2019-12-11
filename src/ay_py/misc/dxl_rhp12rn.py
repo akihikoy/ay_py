@@ -6,7 +6,7 @@
 #\date    Nov.20, 2018
 from dxl_util import TDynamixel1
 from ..misc.dxl_holding import TDxlHolding
-from ..core.util import TRate
+from ..core.util import TRate, CPrint
 import time
 import threading
 import copy
@@ -165,11 +165,18 @@ class TRHP12RN(object):
     with self.moveth_locker:
       self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
     rate= TRate(self.hz_moveth_ctrl)
+    p_log= []
     while blocking:
       p= self.State()['position']
       if p is None:  return
-      if not (abs(cmd - self.thg_pos2cmd(p)) > self.dxl.GoalThreshold):  break
-      #print abs(cmd - self.thg_pos2cmd(p)) - self.dxl.GoalThreshold
+      p_log.append(self.thg_pos2cmd(p))
+      if len(p_log)>10:  p_log.pop(0)
+      if not (abs(cmd - p_log[-1]) > self.dxl.GoalThreshold):  break
+      #Detecting stuck:
+      if len(p_log)>=10 and not (abs(p_log[0] - p_log[-1]) > self.dxl.GoalThreshold):
+        CPrint(4,'TRHP12RN: Control gets stuck in MoveTh. Abort.')
+        break
+      #print abs(cmd - p_log[-1]) - self.dxl.GoalThreshold
       rate.sleep()
 
 

@@ -72,6 +72,14 @@ class TRobotiq(TGripper2F1):
   def PosRange(self):
     return self.rqg_range
 
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+      pos: Gripper position to get the offset. '''
+  def FingertipOffset(self, pos):
+    return -0.701*pos**3 - 2.229*pos**2 + 0.03*pos # + 0.128 - 0.113
+
   def SensorHandler(self,msg):
     self.status= msg
     if self.SensorCallback is not None:

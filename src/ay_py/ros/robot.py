@@ -258,6 +258,16 @@ class TMultiArmRobot(TROSUtil):
   def CloseGripper(self, arm=None, blocking=False):
     pass
 
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+    NOTE: In the previous versions (before 2019-12-10), this offset was from the opened fingertip position.
+      pos: Gripper position to get the offset. None: Current position.
+      arm: arm id, or None (==currarm).'''
+  def FingertipOffset(self, pos=None, arm=None):
+    raise NotImplementedError('FingertipOffset is not implemented for:',self.Name)
+
 
 '''Common robot control class for dual-arm robots such as PR2 and Baxter.'''
 class TDualArmRobot(TMultiArmRobot):
@@ -305,6 +315,14 @@ class TGripper2F1(TROSUtil):
   '''Range of gripper position.'''
   def PosRange(self):
     return None
+
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+      pos: Gripper position to get the offset. '''
+  def FingertipOffset(self, pos):
+    return 0.0
 
   '''Get current position.'''
   def Position(self):
