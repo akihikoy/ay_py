@@ -337,3 +337,9 @@ def InvProjectFromImage(pt2d, P):
   Fx,Fy,Cx,Cy= P[0,0],P[1,1],P[0,2],P[1,2]
   return [(pt2d[0]-Cx)/Fx, (pt2d[1]-Cy)/Fy, 1.0]
 
+#Get a projection matrix for resized image.
+def GetProjMatForResizedImg(P, resize_ratio):
+  P= resize_ratio*P
+  P[2,2]= 1.0
+  return P
+
