@@ -93,9 +93,42 @@ def QFromAxisAngle(axis,angle):
 def RFromAxisAngle(axis,angle):
   return QToRot(QFromAxisAngle(axis,angle))
 
+##Quaternion to 3x3 rotation matrix
+#def QToRot(q):
+  #return _rostf.quaternion_matrix(q)[:3,:3]
 #Quaternion to 3x3 rotation matrix
+#cf. http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/
 def QToRot(q):
-  return _rostf.quaternion_matrix(q)[:3,:3]
+  R= np.array([[0.0]*3]*3)
+  qx= q[0]
+  qy= q[1]
+  qz= q[2]
+  qw= q[3]
+  sqw = qw*qw
+  sqx = qx*qx
+  sqy = qy*qy
+  sqz = qz*qz
+
+  #invs (inverse square length) is only required if quaternion is not already normalised
+  invs = 1.0 / (sqx + sqy + sqz + sqw)
+  R[0,0] = ( sqx - sqy - sqz + sqw)*invs  #since sqw + sqx + sqy + sqz =1/invs*invs
+  R[1,1] = (-sqx + sqy - sqz + sqw)*invs
+  R[2,2] = (-sqx - sqy + sqz + sqw)*invs
+
+  tmp1 = qx*qy
+  tmp2 = qz*qw
+  R[1,0] = 2.0 * (tmp1 + tmp2)*invs
+  R[0,1] = 2.0 * (tmp1 - tmp2)*invs
+
+  tmp1 = qx*qz
+  tmp2 = qy*qw
+  R[2,0] = 2.0 * (tmp1 - tmp2)*invs
+  R[0,2] = 2.0 * (tmp1 + tmp2)*invs
+  tmp1 = qy*qz
+  tmp2 = qx*qw
+  R[2,1] = 2.0 * (tmp1 + tmp2)*invs
+  R[1,2] = 2.0 * (tmp1 - tmp2)*invs
+  return R
 
 #3x3 rotation matrix to quaternion
 def RotToQ(R):
@@ -106,7 +139,8 @@ def RotToQ(R):
 #Convert a pose, x,y,z,quaternion(qx,qy,qz,qw) to pos (x,y,z) and 3x3 rotation matrix
 def XToPosRot(x):
   p = np.array(x[0:3])
-  R = _rostf.quaternion_matrix(x[3:7])[:3,:3]
+  #R = _rostf.quaternion_matrix(x[3:7])[:3,:3]
+  R = QToRot(x[3:7])
   return p, R
 
 #Convert pos p=(x,y,z) and 3x3 rotation matrix R to a pose, x,y,z,quaternion(qx,qy,qz,qw)
