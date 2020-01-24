@@ -12,6 +12,20 @@ from geom import *
 def TimeTraj(dt, inum):
   return FRange1(0.0, dt, inum)[1:]
 
+'''
+Generate t_traj (time trajectory) from x_traj (trajectory of position+quaternion) and speed.
+t_traj[0] is zero.
+'''
+def TTrajFromXTraj(x_traj, linear_speed, angular_speed):
+  def duration(x0,x1):
+    diff= DiffX(x1,x0)
+    #print 'duration:',la.norm(diff[:3])/linear_speed,la.norm(diff[3:])/angular_speed
+    return max(la.norm(diff[:3])/linear_speed,la.norm(diff[3:])/angular_speed)
+  t_traj= [0.0]
+  for x0,x1 in zip(x_traj[:-1],x_traj[1:]):
+    t_traj.append(t_traj[-1]+duration(x0,x1))
+  return t_traj
+
 #Remove radian jumping in a joint angle trajectory.
 def SmoothQTraj(q_traj):
   if len(q_traj)==0:  return
