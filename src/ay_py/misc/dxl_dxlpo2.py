@@ -1,23 +1,21 @@
 #!/usr/bin/python
-#\file    dxl_ezg.py
-#\brief   Control module of SAKE EZGripper Gen2.
+#\file    dxl_dxlpo2.py
+#\brief   Control module of DxlpO2 gripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
-#\date    Jul.12, 2019
-#         NOTE: Dynamixel MX-64AR of EZGripper is originally protocol 1.0; update the firmware.
+#\date    Jan.28, 2020
 from dxl_util import TDynamixel1
 from ..core.util import TRate
 import time
 import threading
 import copy
 
-'''SAKE EZGripper Gen2 utility class'''
-class TEZG(object):
+'''DxlpO2 gripper utility class'''
+class TDxlpO2(object):
   def __init__(self, dev='/dev/ttyUSB0'):
-    self.dxl_type= 'MX-64AR'
+    self.dxl_type= 'PH54-200-S500'
     self.dev= dev
     self.baudrate= 2e6
-    self.op_mode= 'CURRPOS'
     self.dxl= TDynamixel1(self.dxl_type,dev=self.dev)
 
     #Thread locker:
@@ -32,17 +30,18 @@ class TEZG(object):
       'StateObserver':[False,None],
       'MoveThController':[False,None],}
 
-    self.CmdMax= 2104  #Gripper opened widely.
-    self.CmdMin= 50  #Gripper closed strongly.
-    self.CmdOpen= 809  #Gripper opened.
-    self.CmdClose= 233  #Gripper closed.
+    self.CmdMax= 0  #Gripper opened widely.
+    self.CmdMin= -250962  #Gripper closed.
+    self.CmdOpen= -150000  #Gripper opened.
+    self.CmdClose= -250962  #Gripper closed.
 
     #Gripper command-position conversions.
-    self.ezg_range= [0.0,0.150]
-    self.ezg_cmd2pos= lambda cmd: max(self.ezg_range[0], self.ezg_range[0] + (cmd-self.CmdClose)*(self.ezg_range[1]-self.ezg_range[0])/(self.CmdOpen-self.CmdClose))
-    self.ezg_pos2cmd= lambda pos: self.CmdClose + (pos-self.ezg_range[0])*(self.CmdOpen-self.CmdClose)/(self.ezg_range[1]-self.ezg_range[0])
-    self.ezg_cmd2vel= lambda cmd: (self.ezg_range[1]-self.ezg_range[0])/(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))*self.dxl.ConvVel(cmd)
-    self.ezg_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))/(self.ezg_range[1]-self.ezg_range[0]))
+    self.gripper_range= [0.0,0.300]  #FIXME: 0.3 is inaccurate.
+    self.gripper_cmd2pos= lambda cmd: max(self.gripper_range[0], self.gripper_range[0] + (cmd-self.CmdClose)*(self.gripper_range[1]-self.gripper_range[0])/(self.CmdOpen-self.CmdClose))
+    self.gripper_pos2cmd= lambda pos: self.CmdClose + (pos-self.gripper_range[0])*(self.CmdOpen-self.CmdClose)/(self.gripper_range[1]-self.gripper_range[0])
+    #WARNING: The following functions are not considered well (coped from other gripper).
+    self.gripper_cmd2vel= lambda cmd: (self.gripper_range[1]-self.gripper_range[0])/(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))*self.dxl.ConvVel(cmd)
+    self.gripper_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))/(self.gripper_range[1]-self.gripper_range[0]))
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -52,7 +51,6 @@ class TEZG(object):
 
     #self.dxl= TDynamixel1(self.dxl_type,dev=self.dev)
     self.dxl.Baudrate= self.baudrate
-    self.OpMode= self.op_mode
 
     with self.port_locker:
       ra(self.dxl.Setup())
@@ -75,16 +73,16 @@ class TEZG(object):
 
   '''Range of gripper position.'''
   def PosRange(self):
-    return self.ezg_range
+    return self.gripper_range
 
   '''Get current position.'''
   def Position(self):
     with self.port_locker:
       pos= self.dxl.Position()
     if pos is None:
-      print 'EZGripper: Failed to read position'
+      print 'DxlpO2: Failed to read position'
       return None
-    pos= self.ezg_cmd2pos(pos)
+    pos= self.gripper_cmd2pos(pos)
     return pos
 
   '''Activate gripper (torque is enabled).
@@ -104,12 +102,12 @@ class TEZG(object):
   '''Open a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
-    self.Move(pos=self.ezg_range[1], blocking=blocking)
+    self.Move(pos=self.gripper_range[1], blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
-    self.Move(pos=self.ezg_range[0], blocking=blocking)
+    self.Move(pos=self.gripper_range[0], blocking=blocking)
 
   '''Control a gripper.
     pos: target position in meter.
@@ -117,7 +115,7 @@ class TEZG(object):
     speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    cmd= max(self.CmdMin,min(self.CmdMax,int(self.ezg_pos2cmd(pos))))
+    cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
     trg_curr= self.dxl.CurrentLimit*max_effort*0.01
     with self.port_locker:
       self.dxl.MoveToC(cmd, trg_curr, blocking=True if blocking else False)
@@ -165,7 +163,7 @@ class TEZG(object):
     speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def MoveTh(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    cmd= max(self.CmdMin,min(self.CmdMax,int(self.ezg_pos2cmd(pos))))
+    cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
     with self.moveth_locker:
       self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
     rate= TRate(self.hz_moveth_ctrl)
@@ -173,12 +171,12 @@ class TEZG(object):
     while blocking:
       p= self.State()['position']
       if p is None:  return
-      p_log.append(self.ezg_pos2cmd(p))
+      p_log.append(self.gripper_pos2cmd(p))
       if len(p_log)>10:  p_log.pop(0)
       if not (abs(cmd - p_log[-1]) > self.dxl.GoalThreshold):  break
       #Detecting stuck:
       if len(p_log)>=10 and not (abs(p_log[0] - p_log[-1]) > self.dxl.GoalThreshold):
-        CPrint(4,'TEZG: Control gets stuck in MoveTh. Abort.')
+        CPrint(4,'TDxlpO2: Control gets stuck in MoveTh. Abort.')
         break
       #print abs(cmd - p_log[-1]) - self.dxl.GoalThreshold
       rate.sleep()
@@ -188,7 +186,7 @@ class TEZG(object):
   def StartMoveTh(self):
     self.StopMoveTh()
     with self.port_locker:
-      goal_pos= self.ezg_cmd2pos(self.dxl.Read('GOAL_POSITION'))
+      goal_pos= self.gripper_cmd2pos(self.dxl.Read('GOAL_POSITION'))
       max_effort= self.dxl.Read('GOAL_CURRENT')/self.dxl.CurrentLimit*100.0
     with self.moveth_locker:
       self.moveth_cmd= {'pos':goal_pos,'max_effort':max_effort}
@@ -216,8 +214,8 @@ class TEZG(object):
       with self.port_locker:
         state= {
           'stamp':time.time(),
-          'position':self.ezg_cmd2pos(self.dxl.Position()),
-          'velocity':self.ezg_cmd2vel(self.dxl.Velocity()),
+          'position':self.gripper_cmd2pos(self.dxl.Position()),
+          'velocity':self.gripper_cmd2vel(self.dxl.Velocity()),
           'effort':self.dxl.Current()/self.dxl.CurrentLimit*100.0,  #FIXME: PWM vs. Current
           }
         #print state['position']
@@ -236,7 +234,7 @@ class TEZG(object):
       with self.moveth_locker:
         moveth_cmd= copy.deepcopy(self.moveth_cmd)
       pos,max_effort= moveth_cmd['pos'],moveth_cmd['max_effort']
-      cmd= max(self.CmdMin,min(self.CmdMax,int(self.ezg_pos2cmd(pos))))
+      cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
       trg_curr= self.dxl.CurrentLimit*max_effort*0.01
 
       with self.port_locker:

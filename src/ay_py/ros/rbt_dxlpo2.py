@@ -1,44 +1,44 @@
 #! /usr/bin/env python
-#Robot controller for SAKE EZGripper Gen2.
+#Robot controller for DxlpO2 gripper.
 from const import *
 
 from robot import TGripper2F1,TMultiArmRobot
-from ..misc.dxl_ezg import TEZG
+from ..misc.dxl_dxlpo2 import TDxlpO2
 
 
-'''SAKE EZGripper Gen2 utility class'''
-class TEZGripper(TGripper2F1):
+'''DxlpO2 gripper utility class'''
+class TDxlpO2Gripper(TGripper2F1):
   def __init__(self, dev='/dev/ttyUSB0'):
-    super(TEZGripper,self).__init__()
+    super(TDxlpO2Gripper,self).__init__()
 
-    self.ezg= TEZG(dev=dev)
+    self.dxlpo2= TDxlpO2(dev=dev)
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
-    self._is_initialized= self.ezg.Init()
+    self._is_initialized= self.dxlpo2.Init()
 
     if self._is_initialized:
-      self.ezg.StartStateObs()
-      self.ezg.StartMoveTh()
+      self.dxlpo2.StartStateObs()
+      self.dxlpo2.StartMoveTh()
 
     return self._is_initialized
 
   def Cleanup(self):
     if self._is_initialized:
-      self.ezg.StopMoveTh()
-      self.ezg.StopStateObs()
-      self.ezg.Cleanup()
+      self.dxlpo2.StopMoveTh()
+      self.dxlpo2.StopStateObs()
+      self.dxlpo2.Cleanup()
       self._is_initialized= False
-    super(TEZGripper,self).Cleanup()
+    super(TDxlpO2Gripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
-    if q=='EZGripper':  return True
-    return super(TEZGripper,self).Is(q)
+    if q=='DxlpO2Gripper':  return True
+    return super(TDxlpO2Gripper,self).Is(q)
 
   '''Get current position.'''
   def Position(self):
-    return self.ezg.State()['position']
+    return self.dxlpo2.State()['position']
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
@@ -50,28 +50,28 @@ class TEZGripper(TGripper2F1):
     return 0.0
 
   def PosRange(self):
-    return self.ezg.PosRange()
+    return self.dxlpo2.PosRange()
   def Activate(self):
-    return self.ezg.Activate()
+    return self.dxlpo2.Activate()
   def Deactivate(self):
-    return self.ezg.Deactivate()
+    return self.dxlpo2.Deactivate()
   def Open(self, blocking=False):
-    self.Move(pos=self.ezg.ezg_range[1], blocking=blocking)
+    self.Move(pos=self.dxlpo2.gripper_range[1], blocking=blocking)
   def Close(self, blocking=False):
-    self.Move(pos=self.ezg.ezg_range[0], blocking=blocking)
+    self.Move(pos=self.dxlpo2.gripper_range[0], blocking=blocking)
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    self.ezg.MoveTh(pos, max_effort, speed, blocking)
+    self.dxlpo2.MoveTh(pos, max_effort, speed, blocking)
   def Stop(self):
-    self.ezg.StopMoveTh()
+    self.dxlpo2.StopMoveTh()
 
 
-'''Robot control class for EZGripper.
+'''Robot control class for DxlpO2Gripper.
   This is defined as a subclass of TMultiArmRobot,
-  but actually it does not have a body (only EZGripper gripper).
+  but actually it does not have a body (only DxlpO2Gripper gripper).
   This virtual body is designed for a compatibility of programs.'''
-class TRobotEZGripper(TMultiArmRobot):
-  def __init__(self, name='EZGripper', dev='/dev/ttyUSB0'):
-    super(TRobotEZGripper,self).__init__(name=name)
+class TRobotDxlpO2Gripper(TMultiArmRobot):
+  def __init__(self, name='DxlpO2Gripper', dev='/dev/ttyUSB0'):
+    super(TRobotDxlpO2Gripper,self).__init__(name=name)
     self.currarm= 0
     self.dev= dev
 
@@ -81,24 +81,24 @@ class TRobotEZGripper(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
-    self.ez_gripper= TEZGripper(dev=self.dev)
-    self.grippers= [self.ez_gripper]
+    self.dxlpo2_gripper= TDxlpO2Gripper(dev=self.dev)
+    self.grippers= [self.dxlpo2_gripper]
 
-    print 'Initializing and activating EZGripper gripper...'
-    ra(self.ez_gripper.Init())
+    print 'Initializing and activating DxlpO2Gripper gripper...'
+    ra(self.dxlpo2_gripper.Init())
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
-    self.ez_gripper.Cleanup()
-    super(TRobotEZGripper,self).Cleanup()
+    self.dxlpo2_gripper.Cleanup()
+    super(TRobotDxlpO2Gripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
-    if q=='EZGripper':  return True
-    return super(TRobotEZGripper,self).Is(q)
+    if q in ('DxlpO2','DxlpO2Gripper'):  return True
+    return super(TRobotDxlpO2Gripper,self).Is(q)
 
   @property
   def NumArms(self):

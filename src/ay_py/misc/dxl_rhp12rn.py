@@ -5,7 +5,6 @@
 #\version 0.1
 #\date    Nov.20, 2018
 from dxl_util import TDynamixel1
-from ..misc.dxl_holding import TDxlHolding
 from ..core.util import TRate, CPrint
 import time
 import threading
