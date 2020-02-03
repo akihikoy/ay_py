@@ -139,3 +139,40 @@ class TKBHit:
             if ans==a:  return a
     else:
       return AskGen(*argv)
+
+#Wait for a key input (immediately quit after a key input).
+def KBHitOnce():
+  sys.stdout.flush()
+  kbhit= TKBHit()
+  try:
+    while True:
+      if kbhit.IsActive():
+        key= kbhit.KBHit()
+        if key is not None:
+          return key
+      else:  break
+      time.sleep(0.005)
+  finally:
+    kbhit.Deactivate()
+  return None
+
+#KBHit version of AskYesNo (does not wait for pressing return key).
+def KBHAskYesNo():
+  sys.stdout.flush()
+  kbhit= TKBHit()
+  try:
+    return kbhit.AskYesNo()
+  finally:
+    kbhit.Deactivate()
+  return None
+
+#KBHit version of AskGen (does not wait for pressing return key).
+def KBHAskGen(*argv):
+  sys.stdout.flush()
+  kbhit= TKBHit()
+  try:
+    return kbhit.AskGen(*argv)
+  finally:
+    kbhit.Deactivate()
+  return None
+
