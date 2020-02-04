@@ -273,7 +273,11 @@ def AverageX(x1, x2, w2):
   x[3:]= AverageQ(x1[3:], x2[3:], w2)
   return x
 
-#Get difference of two poses [dx,dy,dz, dwx,dwy,dwz] (like x2-x1)
+#Get difference of two orientations [dwx,dwy,dwz] (intuitively, q2-q1)
+def DiffQ(q1, q2):
+  return InvRodrigues(np.dot(QToRot(q2),QToRot(q1).T))
+
+#Get difference of two poses [dx,dy,dz, dwx,dwy,dwz] (intuitively, x2-x1)
 def DiffX(x1, x2):
   w= InvRodrigues(np.dot(QToRot(x2[3:]),QToRot(x1[3:]).T))
   return [x2[0]-x1[0],x2[1]-x1[1],x2[2]-x1[2], w[0],w[1],w[2]]
