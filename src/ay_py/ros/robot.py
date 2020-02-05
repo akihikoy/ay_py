@@ -23,8 +23,10 @@ class TMultiArmRobot(TROSUtil):
     self.currarm_locker= threading.RLock()
 
     #NOTE: the sub classes should use the following lockers during controlling/sensing.
-    #Thread locker for control:
+    #Thread locker for control (arm):
     self.control_locker= threading.RLock()
+    #Thread locker for gripper control:
+    self.gripper_locker= threading.RLock()
     #Thread locker for sensor:
     self.sensor_locker= threading.RLock()
 
@@ -45,6 +47,7 @@ class TMultiArmRobot(TROSUtil):
 
     #Check the thread lockers status:
     print 'Count of control_locker:',self.control_locker._RLock__count
+    print 'Count of gripper_locker:',self.gripper_locker._RLock__count
     print 'Count of sensor_locker:',self.sensor_locker._RLock__count
 
     super(TMultiArmRobot,self).Cleanup()

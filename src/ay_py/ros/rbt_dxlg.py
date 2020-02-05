@@ -151,7 +151,7 @@ class TRobotDxlGripper(TMultiArmRobot):
   def OpenGripper(self, arm=None, blocking=False):
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Open(blocking=blocking)
 
   '''Close a gripper.
@@ -160,7 +160,7 @@ class TRobotDxlGripper(TMultiArmRobot):
   def CloseGripper(self, arm=None, blocking=False):
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Close(blocking=blocking)
 
   '''High level interface to control a gripper.
@@ -173,7 +173,7 @@ class TRobotDxlGripper(TMultiArmRobot):
     if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.

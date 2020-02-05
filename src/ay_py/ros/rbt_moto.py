@@ -272,7 +272,7 @@ class TRobotMotoman(TMultiArmRobot):
 
     gripper= self.grippers[arm]
     if gripper.Is('Robotiq'):
-      with self.control_locker:
+      with self.gripper_locker:
         gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.

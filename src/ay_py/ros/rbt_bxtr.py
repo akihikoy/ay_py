@@ -287,10 +287,10 @@ class TRobotBaxter(TDualArmRobot):
 
     gripper= self.grippers[arm]
     if gripper.Is('BaxterEPG'):
-      with self.control_locker:
+      with self.gripper_locker:
         gripper.Move(pos, max_effort, speed, blocking=blocking)
     elif gripper.Is('Robotiq'):
-      with self.control_locker:
+      with self.gripper_locker:
         gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.

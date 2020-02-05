@@ -297,7 +297,7 @@ class TRobotPR2(TDualArmRobot):
   def MoveGripper(self, pos, max_effort, arm=None, blocking=False):
     if arm is None:  arm= self.Arm
 
-    with self.control_locker:
+    with self.gripper_locker:
       self.grippers[arm].Move(pos, max_effort, blocking=blocking)
 
   '''Get a fingertip height offset in meter.

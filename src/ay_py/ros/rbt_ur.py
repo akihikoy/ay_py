@@ -289,12 +289,13 @@ class TRobotUR(TMultiArmRobot):
     with self.control_locker:
       self.actc.traj.send_goal(goal)
       BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
-      q_finished= self.Q(arm=arm)
-      q_err= np.array(q_traj[-1])-q_finished
-      if np.max(np.abs(q_err)) > 0.05:
-        CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,q_err)
-        CPrint(4,'Action client result:',self.actc.traj.get_result())
-        raise Exception('TRobotUR.FollowQTraj: Unacceptable error after movement')
+      if blocking!=False:
+        q_finished= self.Q(arm=arm)
+        q_err= np.array(q_traj[-1])-q_finished
+        if np.max(np.abs(q_err)) > 0.05:
+          CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,q_err)
+          CPrint(4,'Action client result:',self.actc.traj.get_result())
+          raise Exception('TRobotUR.FollowQTraj: Unacceptable error after movement')
 
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''
@@ -312,7 +313,7 @@ class TRobotUR(TMultiArmRobot):
   def OpenGripper(self, arm=None, blocking=False):
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Open(blocking=blocking)
 
   '''Close a gripper.
@@ -321,7 +322,7 @@ class TRobotUR(TMultiArmRobot):
   def CloseGripper(self, arm=None, blocking=False):
     if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Close(blocking=blocking)
 
   '''High level interface to control a gripper.
@@ -334,7 +335,7 @@ class TRobotUR(TMultiArmRobot):
     arm= 0
 
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.

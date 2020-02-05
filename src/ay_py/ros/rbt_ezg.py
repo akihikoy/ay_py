@@ -130,7 +130,7 @@ class TRobotEZGripper(TMultiArmRobot):
   def OpenGripper(self, arm=None, blocking=False):
     arm= 0
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Open(blocking=blocking)
 
   '''Close a gripper.
@@ -139,7 +139,7 @@ class TRobotEZGripper(TMultiArmRobot):
   def CloseGripper(self, arm=None, blocking=False):
     arm= 0
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Close(blocking=blocking)
 
   '''High level interface to control a gripper.
@@ -151,7 +151,7 @@ class TRobotEZGripper(TMultiArmRobot):
   def MoveGripper(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
     arm= 0
     gripper= self.grippers[arm]
-    with self.control_locker:
+    with self.gripper_locker:
       gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.
