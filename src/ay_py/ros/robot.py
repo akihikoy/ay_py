@@ -364,6 +364,85 @@ class TGripper2F1(TROSUtil):
     pass
 
 
+'''2 finger 2 DoF gripper interface'''
+class TGripper2F2(TGripper2F1):
+  def __init__(self):
+    super(TGripper2F2,self).__init__()
+
+  '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
+  def Is(self, q):
+    if q in ('Gripper','Gripper2F2'):  return True
+    return False
+
+  '''Range of gripper positions.'''
+  def PosRange(self):
+    return None
+
+  '''Range of gripper position as an emulation of 2F1 gripper.'''
+  def PosRange2F1(self):
+    return None
+
+  '''Get fingertip height offsets in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point,
+    and the offsets are always negative.
+      pos: Gripper positions to get the offsets. '''
+  def FingertipOffset(self, pos):
+    return [0.0,0.0]
+
+  '''Get fingertip height offsets in meter as an emulation of 2F1 gripper.'''
+  def FingertipOffset2F1(self, pos):
+    return 0.0
+
+  '''Get current positions.'''
+  def Position(self):
+    return None
+
+  '''Get current positions as an emulation of 2F1 gripper.'''
+  def Position2F1(self):
+    return None
+
+  '''Activate gripper (torque is enabled).
+    Return success or not.'''
+  def Activate(self):
+    return False
+
+  '''Deactivate gripper (torque is disabled).
+    Return success or not.'''
+  def Deactivate(self):
+    return False
+
+  '''Open a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Open(self, blocking=False):
+    pass
+
+  '''Close a gripper.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Close(self, blocking=False):
+    pass
+
+  '''Control a gripper.
+    pos: target positions.
+    max_effort: maximum effort to control.
+    speed: speed of the movement.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Move(self, pos, max_effort=None, speed=None, blocking=False):
+    pass
+
+  '''Control a gripper as an emulation of 2F1 gripper.
+    pos: target position.
+    max_effort: maximum effort to control.
+    speed: speed of the movement.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Move2F1(self, pos, max_effort=None, speed=None, blocking=False):
+    pass
+
+  '''Stop the gripper motion. '''
+  def Stop(self):
+    pass
+
+
 '''Fake (dummy) gripper.
 FIXME This class should be defined as a subclass of general (not 2 finger) gripper class.'''
 class TFakeGripper(TGripper2F1):
