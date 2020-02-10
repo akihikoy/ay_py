@@ -234,6 +234,7 @@ class TRobotMikata2(TMultiArmRobot):
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
+    for gripper in self.grippers:  gripper.Cleanup()
     super(TRobotMikata2,self).Cleanup()
 
   '''Configure a state validity checker.'''

@@ -234,21 +234,24 @@ class TDxlO3(object):
   #NOTE: Don't call this function directly.  Use self.StartStateObs and self.State
   def StateObserver(self, callback):
     rate= TRate(self.hz_state_obs)
-    while self.threads['StateObserver'][0]:
-      with self.port_locker:
-        state= {
-          'stamp':time.time(),
-          'position':self.gripper_cmd2pos([dxl.Position() for dxl in self.dxl]),
-          'velocity':self.gripper_cmd2vel([dxl.Velocity() for dxl in self.dxl]),
-          'effort':[dxl.Current()/dxl.CurrentLimit*100.0 for dxl in self.dxl],  #FIXME: PWM vs. Current
-          }
-        #print state['position']
-      with self.state_locker:
-        self.state= state
-      if callback is not None:
-        callback(state)
-      rate.sleep()
-    self.threads['StateObserver'][0]= False
+    try:
+      while self.threads['StateObserver'][0]:
+        with self.port_locker:
+          state= {
+            'stamp':time.time(),
+            'position':self.gripper_cmd2pos([dxl.Position() for dxl in self.dxl]),
+            'velocity':self.gripper_cmd2vel([dxl.Velocity() for dxl in self.dxl]),
+            'effort':[dxl.Current()/dxl.CurrentLimit*100.0 for dxl in self.dxl],  #FIXME: PWM vs. Current
+            }
+          #print state['position']
+        with self.state_locker:
+          self.state= state
+        if callback is not None:
+          callback(state)
+        rate.sleep()
+    finally:
+      self.threads['StateObserver'][0]= False
+      self.state= {'stamp':0.0, 'position':[], 'velocity':[], 'effort':[]}
 
   #MoveTh controller thread.
   #NOTE: Don't call this function directly.  Use self.StartMoveTh

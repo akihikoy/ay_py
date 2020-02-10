@@ -23,8 +23,8 @@ class TRobotGen3DxlO3(TRobotGen3):
 
     if not self.is_sim:
       #The gripper module is imported here to avoid importing it in simulation mode.
-      mod= __import__('rbt_dxlo3',globals(),None,('TDxlO3',))
-      self.dxlo3_gripper= mod.TDxlO3(dev=self.dev)
+      mod= __import__('rbt_dxlo3',globals(),None,('TDxlO3Gripper',))
+      self.dxlo3_gripper= mod.TDxlO3Gripper(dev=self.dev)
     else:
       self.dxlo3_gripper= TSimGripper2F1(('DxlO3',),pos_range=[0.0,0.118])
     self.grippers= [self.dxlo3_gripper]

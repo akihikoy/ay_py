@@ -89,6 +89,7 @@ class TRobotGen3(TMultiArmRobot):
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
+    for gripper in self.grippers:  gripper.Cleanup()
     super(TRobotGen3,self).Cleanup()
 
   '''Configure a state validity checker.'''
@@ -145,6 +146,14 @@ class TRobotGen3(TMultiArmRobot):
   '''Return range of gripper.
     arm: arm id, or None (==currarm). '''
   def GripperRange(self, arm=None):
+    arm= 0
+    gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):  return gripper.PosRange()
+    elif gripper.Is('Gripper2F2'):  return gripper.PosRange2F1()
+
+  '''Return range of gripper.
+    arm: arm id, or None (==currarm). '''
+  def GripperRange2(self, arm=None):
     arm= 0
     return self.grippers[arm].PosRange()
 
@@ -307,6 +316,22 @@ class TRobotGen3(TMultiArmRobot):
     arm= 0
 
     gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):
+      with self.gripper_locker:
+        gripper.Move(pos, max_effort, speed, blocking=blocking)
+    elif gripper.Is('Gripper2F2'):
+      with self.gripper_locker:
+        gripper.Move2F1(pos, max_effort, speed, blocking=blocking)
+
+  '''Low level interface to control a gripper.
+    arm: arm id, or None (==currarm).
+    pos: target positions.
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum).
+    blocking: False: move background, True: wait until motion ends.  '''
+  def MoveGripper2(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
+    arm= 0
+    gripper= self.grippers[arm]
     with self.gripper_locker:
       gripper.Move(pos, max_effort, speed, blocking=blocking)
 
@@ -315,6 +340,19 @@ class TRobotGen3(TMultiArmRobot):
   def GripperPos(self, arm=None):
     arm= 0
 
+    gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):
+      with self.sensor_locker:
+        pos= gripper.Position()
+    elif gripper.Is('Gripper2F2'):
+      with self.sensor_locker:
+        pos= gripper.Position2F1()
+    return pos
+
+  '''Get gripper positions.
+    arm: arm id, or None (==currarm). '''
+  def GripperPos2(self, arm=None):
+    arm= 0
     gripper= self.grippers[arm]
     with self.sensor_locker:
       pos= gripper.Position()
@@ -330,5 +368,18 @@ class TRobotGen3(TMultiArmRobot):
   def FingertipOffset(self, pos=None, arm=None):
     arm= 0
     if pos is None:  pos= self.GripperPos(arm)
-    return self.grippers[arm].FingertipOffset(pos)
+    gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):  return gripper.FingertipOffset(pos)
+    elif gripper.Is('Gripper2F2'):  return gripper.FingertipOffset2F1(pos)
 
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+    NOTE: In the previous versions (before 2019-12-10), this offset was from the opened fingertip position.
+      pos: Gripper position to get the offset. None: Current position.
+      arm: arm id, or None (==currarm).'''
+  def FingertipOffset2(self, pos=None, arm=None):
+    arm= 0
+    if pos is None:  pos= self.GripperPos2(arm)
+    return self.grippers[arm].FingertipOffset(pos)

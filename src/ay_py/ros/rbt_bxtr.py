@@ -92,6 +92,7 @@ class TRobotBaxter(TDualArmRobot):
 
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
+    for gripper in self.grippers:  gripper.Cleanup()
     super(TRobotBaxter,self).Cleanup()
 
   '''Configure a state validity checker.'''

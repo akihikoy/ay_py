@@ -41,7 +41,7 @@ class TDxlO3Gripper(TGripper2F2):
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
-    if q=='DxlO3Gripper':  return True
+    if q in ('DxlO3','DxlO3Gripper'):  return True
     return super(TDxlO3Gripper,self).Is(q)
 
   '''Range of gripper positions.'''
