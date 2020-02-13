@@ -29,6 +29,9 @@ class TRobotUR(TMultiArmRobot):
     self.joint_names[0]= ['shoulder_pan_joint', 'shoulder_lift_joint', 'elbow_joint',
                           'wrist_1_joint', 'wrist_2_joint', 'wrist_3_joint']
 
+    #Tolerance of motion (FollowQTraj).  Increase this value when the payload is large.
+    self.MotionTol= 0.05
+
     #UR all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
@@ -301,7 +304,7 @@ class TRobotUR(TMultiArmRobot):
       if blocking!=False:
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
-        if np.max(np.abs(q_err)) > 0.05:
+        if np.max(np.abs(q_err)) > self.MotionTol:
           CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,q_err)
           CPrint(4,'Action client result:',self.actc.traj.get_result())
           raise Exception('TRobotUR.FollowQTraj: Unacceptable error after movement')
