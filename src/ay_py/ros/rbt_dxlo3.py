@@ -73,7 +73,8 @@ class TDxlO3Gripper(TGripper2F2):
   '''Get current positions as an emulation of 2F1 gripper.'''
   def Position2F1(self):
     pos= self.Position()
-    return self.g2f1_ang2pos(0.5*(pos[0]+pos[1]))
+    if pos is None:  return pos
+    return self.g2f1_ang2pos(0.5*(pos[0]+pos[1])) if len(pos)==2 else None
 
   '''Activate gripper (torque is enabled).
     Return success or not.'''
