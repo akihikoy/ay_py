@@ -3,45 +3,27 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Jan.28, 2020
+#\version 0.2
+#\date    Feb.28, 2020
+#         Completely modified the implementation: now we use the gripper driver ROS node.
 from const import *
 
-from robot import TGripper2F1,TMultiArmRobot
-from ..misc.dxl_dxlpo2 import TDxlpO2
+from robot import TMultiArmRobot
+from rbt_dxlg import TDxlGripper
 
 
 '''DxlpO2 gripper utility class'''
-class TDxlpO2Gripper(TGripper2F1):
-  def __init__(self, dev='/dev/ttyUSB0'):
-    super(TDxlpO2Gripper,self).__init__()
-
-    self.dxlpo2= TDxlpO2(dev=dev)
-
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self):
-    self._is_initialized= self.dxlpo2.Init()
-
-    if self._is_initialized:
-      self.dxlpo2.StartStateObs()
-      self.dxlpo2.StartMoveTh()
-
-    return self._is_initialized
+class TDxlpO2Gripper(TDxlGripper):
+  def __init__(self, node_name='gripper_driver'):
+    super(TDxlpO2Gripper,self).__init__(node_name=node_name, gripper_type='DxlpO2Gripper')
 
   def Cleanup(self):
-    if self._is_initialized:
-      self.dxlpo2.StopMoveTh()
-      self.dxlpo2.StopStateObs()
-      self.dxlpo2.Cleanup()
-      self._is_initialized= False
     super(TDxlpO2Gripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
     if q=='DxlpO2Gripper':  return True
     return super(TDxlpO2Gripper,self).Is(q)
-
-  '''Get current position.'''
-  def Position(self):
-    return self.dxlpo2.State()['position']
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
@@ -52,31 +34,16 @@ class TDxlpO2Gripper(TGripper2F1):
     #WARNING: NotImplemented
     return 0.0
 
-  def PosRange(self):
-    return self.dxlpo2.PosRange()
-  def Activate(self):
-    return self.dxlpo2.Activate()
-  def Deactivate(self):
-    return self.dxlpo2.Deactivate()
-  def Open(self, blocking=False):
-    self.Move(pos=self.dxlpo2.gripper_range[1], blocking=blocking)
-  def Close(self, blocking=False):
-    self.Move(pos=self.dxlpo2.gripper_range[0], blocking=blocking)
-  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    self.dxlpo2.MoveTh(pos, max_effort, speed, blocking)
-  def Stop(self):
-    self.dxlpo2.StopMoveTh()
-
 
 '''Robot control class for DxlpO2Gripper.
   This is defined as a subclass of TMultiArmRobot,
   but actually it does not have a body (only DxlpO2Gripper gripper).
   This virtual body is designed for a compatibility of programs.'''
 class TRobotDxlpO2Gripper(TMultiArmRobot):
-  def __init__(self, name='DxlpO2Gripper', dev='/dev/ttyUSB0'):
+  def __init__(self, name='DxlpO2Gripper', gripper_node='gripper_driver'):
     super(TRobotDxlpO2Gripper,self).__init__(name=name)
     self.currarm= 0
-    self.dev= dev
+    self.gripper_node= gripper_node
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -84,7 +51,7 @@ class TRobotDxlpO2Gripper(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
-    self.dxlpo2_gripper= TDxlpO2Gripper(dev=self.dev)
+    self.dxlpo2_gripper= TDxlpO2Gripper(node_name=self.gripper_node)
     self.grippers= [self.dxlpo2_gripper]
 
     print 'Initializing and activating DxlpO2Gripper gripper...'

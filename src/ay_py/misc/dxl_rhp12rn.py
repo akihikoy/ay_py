@@ -60,6 +60,8 @@ class TRHP12RN(object):
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
     if self._is_initialized:
+      self.StopMoveTh()
+      self.StopStateObs()
       self.Deactivate()
       with self.port_locker:
         self.dxl.Quit()

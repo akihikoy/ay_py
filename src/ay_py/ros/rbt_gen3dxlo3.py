@@ -9,9 +9,9 @@ from rbt_gen3 import TRobotGen3
 
 '''Robot control class for single Kinova Gen3 with DxlO3 Gripper.'''
 class TRobotGen3DxlO3(TRobotGen3):
-  def __init__(self, name='Gen3DxlO3', gen3ns='gen3a', is_sim=False, dev='/dev/ttyUSB0'):
+  def __init__(self, name='Gen3DxlO3', gen3ns='gen3a', is_sim=False, gripper_node='gripper_driver'):
     super(TRobotGen3DxlO3,self).__init__(name=name,gen3ns=gen3ns,is_sim=is_sim)
-    self.dev= dev
+    self.gripper_node= gripper_node
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -24,7 +24,7 @@ class TRobotGen3DxlO3(TRobotGen3):
     if not self.is_sim:
       #The gripper module is imported here to avoid importing it in simulation mode.
       mod= __import__('rbt_dxlo3',globals(),None,('TDxlO3Gripper',))
-      self.dxlo3_gripper= mod.TDxlO3Gripper(dev=self.dev)
+      self.dxlo3_gripper= mod.TDxlO3Gripper(node_name=self.gripper_node)
     else:
       self.dxlo3_gripper= TSimGripper2F1(('DxlO3',),pos_range=[0.0,0.118])
     self.grippers= [self.dxlo3_gripper]

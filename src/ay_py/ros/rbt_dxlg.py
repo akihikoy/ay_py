@@ -3,57 +3,87 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Nov.9, 2017
+#\version 0.2
+#\date    Feb.28, 2020
+#         Completely modified the implementation: now we use the gripper driver ROS node.
 from const import *
 
+import threading
+
 from robot import TGripper2F1,TMultiArmRobot
-from ..misc.dxl_gripper import TDynamixelGripper
+import sensor_msgs.msg
+import ay_util_msgs.srv
 
 
 '''3D-printed Dynamixel Gripper utility class'''
 class TDxlGripper(TGripper2F1):
-  def __init__(self, dev='/dev/ttyUSB0'):
+  def __init__(self, node_name='gripper_driver', gripper_type='DxlGripper'):
     super(TDxlGripper,self).__init__()
 
-    self.dxlg= TDynamixelGripper(dev=dev)
+    self.gripper_type= gripper_type
+    self.node_name= node_name
+    #We use an instance of low-level gripper controller without activating it (i.e. no device communication)
+    #in order to get the parameters.
+    if self.gripper_type=='DxlGripper':
+      mod= __import__('ay_py.misc.dxl_gripper',globals(),None,('TDynamixelGripper',))
+      self.gripper= mod.TDynamixelGripper(dev=None)
+      self.joint_names= ['joint0']
+    elif self.gripper_type=='RHP12RNGripper':
+      mod= __import__('ay_py.misc.dxl_rhp12rn',globals(),None,('TRHP12RN',))
+      self.gripper= mod.TRHP12RN(dev=None)
+      self.joint_names= ['joint0']
+    elif self.gripper_type=='EZGripper':
+      mod= __import__('ay_py.misc.dxl_ezg',globals(),None,('TEZG',))
+      self.gripper= mod.TEZG(dev=None)
+      self.joint_names= ['joint0']
+    elif self.gripper_type=='DxlpO2Gripper':
+      mod= __import__('ay_py.misc.dxl_dxlpo2',globals(),None,('TDxlpO2',))
+      self.gripper= mod.TDxlpO2(dev=None)
+      self.joint_names= ['joint0']
+    elif self.gripper_type=='DxlO3Gripper':
+      mod= __import__('ay_py.misc.dxl_dxlo3',globals(),None,('TDxlO3',))
+      self.gripper= mod.TDxlO3(dev=None)
+      self.joint_names= ['joint0','joint1']
+    else:
+      raise Exception('Invalid gripper type: {gripper_type}'.format(gripper_type=gripper_type))
 
-    self.dxlg.CmdMax= 2200  #Gripper closed (with FingerVision).
-    self.dxlg.CmdMin= 1200  #Gripper opened widely.
-    self.dxlg.CmdOpen= 1900  #Gripper opened moderately.
+    self.sensor_locker= threading.RLock()
+    self.port_locker= threading.RLock()
 
-    #self.PosRange     = self.dxlg.PosRange
-    #self.Activate     = self.dxlg.Activate
-    #self.Deactivate   = self.dxlg.Deactivate
-    #self.Open         = self.dxlg.Open
-    #self.Close        = self.dxlg.Close
-    #self.Move         = self.dxlg.MoveTh
-    #self.Stop         = self.dxlg.StopMoveTh
-    #self.StartHolding = self.dxlg.StartHolding
-    #self.StopHolding  = self.dxlg.StopHolding
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
-    self._is_initialized= self.dxlg.Init()
+    self._is_initialized= False
+    res= []
+    ra= lambda r: res.append(r)
 
-    if self._is_initialized:
-      self.dxlg.StartStateObs()
-      self.dxlg.StartMoveTh()
+    ra(self.AddSrvP('move', '/{0}/move'.format(self.node_name), ay_util_msgs.srv.DxlGMove, persistent=False, time_out=3.0))
+    ra(self.AddSrvP('dxl_io', '/{0}/dxl_io'.format(self.node_name), ay_util_msgs.srv.DxlIO, persistent=False, time_out=3.0))
+
+    ra(self.AddSub('joint_states', '/{0}/joint_states'.format(self.node_name), sensor_msgs.msg.JointState, self.JointStatesCallback))
 
     return self._is_initialized
 
   def Cleanup(self):
-    self.dxlg.StopMoveTh()
-    self.dxlg.StopStateObs()
-    self.dxlg.Cleanup()
     super(TDxlGripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
-    if q in ('DxlGripper',):  return True
+    if q==self.gripper_type:  return True
     return super(TDxlGripper,self).Is(q)
+
+  def JointStatesCallback(self, msg):
+    with self.sensor_locker:
+      self.x_curr= msg
+      self.q_curr= self.x_curr.position
+      self.dq_curr= self.x_curr.velocity
+      self.effort_curr= self.x_curr.effort
 
   '''Get current position.'''
   def Position(self):
-    return self.dxlg.State()['position']
+    with self.sensor_locker:
+      q= self.q_curr
+    return q[0] if len(self.joint_names)==1 else q
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
@@ -65,23 +95,95 @@ class TDxlGripper(TGripper2F1):
     return 0.0
 
   def PosRange(self):
-    return self.dxlg.PosRange()
+    return self.gripper.PosRange()
+
   def Activate(self):
-    return self.dxlg.Activate()
+    req= ay_util_msgs.srv.DxlIORequest()
+    req.joint_names= []
+    req.command= 'EnableTorque'
+    with self.port_locker:
+      res= self.srvp.dxl_io(req)
+
   def Deactivate(self):
-    return self.dxlg.Deactivate()
+    req= ay_util_msgs.srv.DxlIORequest()
+    req.joint_names= []
+    req.command= 'DisableTorque'
+    with self.port_locker:
+      res= self.srvp.dxl_io(req)
+
   def Open(self, blocking=False):
-    self.Move(pos=self.dxlg.dxlg_range[1], blocking=blocking)
+    req= ay_util_msgs.srv.DxlGMoveRequest()
+    req.command= 'Open'
+    req.blocking= blocking
+    with self.port_locker:
+      res= self.srvp.move(req)
+
   def Close(self, blocking=False):
-    self.Move(pos=self.dxlg.dxlg_range[0], blocking=blocking)
+    req= ay_util_msgs.srv.DxlGMoveRequest()
+    req.command= 'Close'
+    req.blocking= blocking
+    with self.port_locker:
+      res= self.srvp.move(req)
+
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    self.dxlg.MoveTh(pos, max_effort, speed, blocking)
+    req= ay_util_msgs.srv.DxlGMoveRequest()
+    req.command= 'Move'
+    req.pos= pos if isinstance(pos,list) else [pos]
+    req.max_effort= max_effort if isinstance(max_effort,list) else [max_effort]
+    req.speed= speed if isinstance(speed,list) else [speed]
+    req.blocking= blocking
+    with self.port_locker:
+      res= self.srvp.move(req)
+
   def Stop(self):
-    self.dxlg.StopMoveTh()
-  def StartHolding(self, rate=30):
-    self.dxlg.StartHolding(rate)
+    req= ay_util_msgs.srv.DxlGMoveRequest()
+    req.command= 'Stop'
+    req.blocking= blocking
+    with self.port_locker:
+      res= self.srvp.move(req)
+
+  def StartHolding(self):
+    req= ay_util_msgs.srv.DxlGMoveRequest()
+    req.command= 'StartHolding'
+    with self.port_locker:
+      res= self.srvp.move(req)
+
   def StopHolding(self):
-    self.dxlg.StopHolding()
+    req= ay_util_msgs.srv.DxlGMoveRequest()
+    req.command= 'StopHolding'
+    with self.port_locker:
+      res= self.srvp.move(req)
+
+  '''Dynamixel control through /gripper_driver/dxl_io'''
+
+  #Read from Dynamixel address.
+  #Return: {joint_name:value}
+  def DxlRead(self, address, joint_names=[]):
+    req= ay_util_msgs.srv.DxlIORequest()
+    req.joint_names= joint_names
+    req.command= 'Read'
+    req.data_s= address
+    with self.port_locker:
+      res= self.srvp.dxl_io(req)
+    if len(joint_names)==0:  joint_names= self.joint_names
+    return {joit_name:value for joit_name,value in zip(joint_names, res.res_ia)}
+
+  #Read to Dynamixel.  data: {joint_name:value} or [value0,value1,...]
+  def DxlWrite(self, address, data):
+    req= ay_util_msgs.srv.DxlIORequest()
+    req.command= 'Write'
+    req.data_s= address
+    if isinstance(data,dict):
+      req.joint_names= data.keys()
+      req.data_ia= data.values()
+    elif isinstance(data,list):
+      req.joint_names= []
+      req.data_ia= data
+    else:
+      req.joint_names= []
+      req.data_ia= [data]
+    with self.port_locker:
+      res= self.srvp.dxl_io(req)
 
 
 '''Robot control class for DxlGripper.
@@ -89,10 +191,10 @@ class TDxlGripper(TGripper2F1):
   but actually it does not have a body (only DxlGripper gripper).
   This virtual body is designed for a compatibility of programs.'''
 class TRobotDxlGripper(TMultiArmRobot):
-  def __init__(self, name='DxlGripper', dev='/dev/ttyUSB0'):
+  def __init__(self, name='DxlGripper', gripper_node='gripper_driver'):
     super(TRobotDxlGripper,self).__init__(name=name)
     self.currarm= 0
-    self.dev= dev
+    self.gripper_node= gripper_node
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -100,8 +202,8 @@ class TRobotDxlGripper(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
-    self.dxl_gripper= TDxlGripper(dev=self.dev)
-    self.grippers= [self.dxl_gripper, self.dxl_gripper]
+    self.dxl_gripper= TDxlGripper(node_name=self.gripper_node)
+    self.grippers= [self.dxl_gripper]
 
     print 'Initializing and activating DxlGripper gripper...'
     ra(self.dxl_gripper.Init())

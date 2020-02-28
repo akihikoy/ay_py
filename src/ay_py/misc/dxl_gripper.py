@@ -35,7 +35,8 @@ class TDynamixelGripper(object):
     self.holding= None
     self.holding_max_pwm_rate= 0.9
 
-    self.CmdMax= 2382  #Gripper closed.
+    #self.CmdMax= 2382  #Gripper closed.
+    self.CmdMax= 2200  #Gripper closed (with FingerVision).
     self.CmdMin= 1200  #Gripper opened widely.
     self.CmdOpen= 1900  #Gripper opened moderately.
 
@@ -66,6 +67,8 @@ class TDynamixelGripper(object):
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
     if self._is_initialized:
+      self.StopMoveTh()
+      self.StopStateObs()
       self.Deactivate()
       with self.port_locker:
         self.dxl.Quit()

@@ -3,45 +3,27 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Jul.13, 2019
+#\version 0.2
+#\date    Feb.28, 2020
+#         Completely modified the implementation: now we use the gripper driver ROS node.
 from const import *
 
-from robot import TGripper2F1,TMultiArmRobot
-from ..misc.dxl_ezg import TEZG
+from robot import TMultiArmRobot
+from rbt_dxlg import TDxlGripper
 
 
 '''SAKE EZGripper Gen2 utility class'''
-class TEZGripper(TGripper2F1):
+class TEZGripper(TDxlGripper):
   def __init__(self, dev='/dev/ttyUSB0'):
-    super(TEZGripper,self).__init__()
-
-    self.ezg= TEZG(dev=dev)
-
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self):
-    self._is_initialized= self.ezg.Init()
-
-    if self._is_initialized:
-      self.ezg.StartStateObs()
-      self.ezg.StartMoveTh()
-
-    return self._is_initialized
+    super(TEZGripper,self).__init__(node_name=node_name, gripper_type='EZGripper')
 
   def Cleanup(self):
-    if self._is_initialized:
-      self.ezg.StopMoveTh()
-      self.ezg.StopStateObs()
-      self.ezg.Cleanup()
-      self._is_initialized= False
     super(TEZGripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
     if q=='EZGripper':  return True
     return super(TEZGripper,self).Is(q)
-
-  '''Get current position.'''
-  def Position(self):
-    return self.ezg.State()['position']
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
@@ -52,31 +34,16 @@ class TEZGripper(TGripper2F1):
     #WARNING: NotImplemented
     return 0.0
 
-  def PosRange(self):
-    return self.ezg.PosRange()
-  def Activate(self):
-    return self.ezg.Activate()
-  def Deactivate(self):
-    return self.ezg.Deactivate()
-  def Open(self, blocking=False):
-    self.Move(pos=self.ezg.ezg_range[1], blocking=blocking)
-  def Close(self, blocking=False):
-    self.Move(pos=self.ezg.ezg_range[0], blocking=blocking)
-  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    self.ezg.MoveTh(pos, max_effort, speed, blocking)
-  def Stop(self):
-    self.ezg.StopMoveTh()
-
 
 '''Robot control class for EZGripper.
   This is defined as a subclass of TMultiArmRobot,
   but actually it does not have a body (only EZGripper gripper).
   This virtual body is designed for a compatibility of programs.'''
 class TRobotEZGripper(TMultiArmRobot):
-  def __init__(self, name='EZGripper', dev='/dev/ttyUSB0'):
+  def __init__(self, name='EZGripper', gripper_node='gripper_driver'):
     super(TRobotEZGripper,self).__init__(name=name)
     self.currarm= 0
-    self.dev= dev
+    self.gripper_node= gripper_node
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -84,7 +51,7 @@ class TRobotEZGripper(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
-    self.ez_gripper= TEZGripper(dev=self.dev)
+    self.ez_gripper= TEZGripper(node_name=self.gripper_node)
     self.grippers= [self.ez_gripper]
 
     print 'Initializing and activating EZGripper gripper...'

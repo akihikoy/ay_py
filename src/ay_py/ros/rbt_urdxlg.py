@@ -9,9 +9,9 @@ from rbt_ur import *
 
 '''Robot control class for single Universal Robots UR* with Dynamixel Gripper.'''
 class TRobotURDxlG(TRobotUR):
-  def __init__(self, name='UR', ur_series='CB', robot_ip=None, is_sim=False, dev='/dev/ttyUSB0'):
+  def __init__(self, name='UR', ur_series='CB', robot_ip=None, is_sim=False, gripper_node='gripper_driver'):
     super(TRobotURDxlG,self).__init__(name=name,ur_series=ur_series,robot_ip=robot_ip,is_sim=is_sim)
-    self.dev= dev
+    self.gripper_node= gripper_node
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -24,7 +24,7 @@ class TRobotURDxlG(TRobotUR):
     if not self.is_sim:
       #The gripper module is imported here to avoid importing it in simulation mode.
       mod= __import__('rbt_dxlg',globals(),None,('TDxlGripper',))
-      self.dxl_gripper= mod.TDxlGripper(dev=self.dev)
+      self.dxl_gripper= mod.TDxlGripper(node_name=self.gripper_node)
     else:
       self.dxl_gripper= TSimGripper2F1(pos_range=[0.0,0.095])
     self.grippers= [self.dxl_gripper]

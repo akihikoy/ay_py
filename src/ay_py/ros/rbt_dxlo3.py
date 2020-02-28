@@ -3,18 +3,19 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Feb.10, 2020
+#\version 0.2
+#\date    Feb.28, 2020
+#         Completely modified the implementation: now we use the gripper driver ROS node.
 from const import *
 
-from robot import TGripper2F2,TMultiArmRobot
-from ..misc.dxl_dxlo3 import TDxlO3
+from robot import TMultiArmRobot
+from rbt_dxlg import TDxlGripper
 
 
 '''DxlO3 gripper utility class'''
-class TDxlO3Gripper(TGripper2F2):
-  def __init__(self, dev='/dev/ttyUSB0'):
-    super(TDxlO3Gripper,self).__init__()
-
-    self.dxlo3= TDxlO3(dev=dev)
+class TDxlO3Gripper(TDxlGripper):
+  def __init__(self, node_name='gripper_driver'):
+    super(TDxlO3Gripper,self).__init__(node_name=node_name, gripper_type='DxlO3Gripper')
 
     #Gripper position-angles conversions (for 2F1 emulation mode).
     self.g2f1_ang_open= 0.6136  #cmd=+400
@@ -23,33 +24,13 @@ class TDxlO3Gripper(TGripper2F2):
     self.g2f1_ang2pos= lambda ang: max(self.g2f1_range[0], self.g2f1_range[0] + (ang-self.g2f1_ang_close)*(self.g2f1_range[1]-self.g2f1_range[0])/(self.g2f1_ang_open-self.g2f1_ang_close))
     self.g2f1_pos2ang= lambda pos: self.g2f1_ang_close + (pos-self.g2f1_range[0])*(self.g2f1_ang_open-self.g2f1_ang_close)/(self.g2f1_range[1]-self.g2f1_range[0])
 
-
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self):
-    self._is_initialized= self.dxlo3.Init()
-
-    if self._is_initialized:
-      self.dxlo3.StartStateObs()
-      self.dxlo3.StartMoveTh()
-
-    return self._is_initialized
-
   def Cleanup(self):
-    if self._is_initialized:
-      self.dxlo3.StopMoveTh()
-      self.dxlo3.StopStateObs()
-      self.dxlo3.Cleanup()
-      self._is_initialized= False
     super(TDxlO3Gripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
     if q in ('DxlO3','DxlO3Gripper'):  return True
     return super(TDxlO3Gripper,self).Is(q)
-
-  '''Range of gripper positions.'''
-  def PosRange(self):
-    return self.dxlo3.PosRange()
 
   '''Range of gripper position as an emulation of 2F1 gripper.'''
   def PosRange2F1(self):
@@ -69,43 +50,11 @@ class TDxlO3Gripper(TGripper2F2):
     #WARNING: NotImplemented
     return 0.0
 
-  '''Get current positions.'''
-  def Position(self):
-    return self.dxlo3.State()['position']
-
   '''Get current positions as an emulation of 2F1 gripper.'''
   def Position2F1(self):
     pos= self.Position()
     if pos is None:  return pos
     return self.g2f1_ang2pos(0.5*(pos[0]+pos[1])) if len(pos)==2 else None
-
-  '''Activate gripper (torque is enabled).
-    Return success or not.'''
-  def Activate(self):
-    return self.dxlo3.Activate()
-
-  '''Deactivate gripper (torque is disabled).
-    Return success or not.'''
-  def Deactivate(self):
-    return self.dxlo3.Deactivate()
-
-  '''Open a gripper.
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Open(self, blocking=False):
-    self.dxlo3.Open(blocking=blocking)
-
-  '''Close a gripper.
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Close(self, blocking=False):
-    self.dxlo3.Close(blocking=blocking)
-
-  '''Control a gripper.
-    pos: target positions.
-    max_effort: maximum effort to control.
-    speed: speed of the movement.
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
-  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    self.dxlo3.MoveTh(pos, max_effort, speed, blocking)
 
   '''Control a gripper as an emulation of 2F1 gripper.
     pos: target position.
@@ -114,11 +63,7 @@ class TDxlO3Gripper(TGripper2F2):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Move2F1(self, pos, max_effort=50.0, speed=50.0, blocking=False):
     pos= self.g2f1_pos2ang(pos)
-    self.dxlo3.MoveTh([pos,pos], max_effort, speed, blocking)
-
-  '''Stop the gripper motion. '''
-  def Stop(self):
-    self.dxlo3.StopMoveTh()
+    self.Move([pos,pos], max_effort, speed, blocking)
 
 
 '''Robot control class for DxlO3Gripper.
@@ -126,10 +71,10 @@ class TDxlO3Gripper(TGripper2F2):
   but actually it does not have a body (only DxlO3Gripper gripper).
   This virtual body is designed for a compatibility of programs.'''
 class TRobotDxlO3Gripper(TMultiArmRobot):
-  def __init__(self, name='DxlO3Gripper', dev='/dev/ttyUSB0'):
+  def __init__(self, name='DxlO3Gripper', gripper_node='gripper_driver'):
     super(TRobotDxlO3Gripper,self).__init__(name=name)
     self.currarm= 0
-    self.dev= dev
+    self.gripper_node= gripper_node
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -137,7 +82,7 @@ class TRobotDxlO3Gripper(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
-    self.dxlo3_gripper= TDxlO3Gripper(dev=self.dev)
+    self.dxlo3_gripper= TDxlO3Gripper(node_name=self.gripper_node)
     self.grippers= [self.dxlo3_gripper]
 
     print 'Initializing and activating DxlO3Gripper gripper...'

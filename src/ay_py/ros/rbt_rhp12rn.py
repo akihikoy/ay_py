@@ -3,45 +3,27 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Nov.21, 2018
+#\version 0.2
+#\date    Feb.28, 2020
+#         Completely modified the implementation: now we use the gripper driver ROS node.
 from const import *
 
-from robot import TGripper2F1,TMultiArmRobot
-from ..misc.dxl_rhp12rn import TRHP12RN
+from robot import TMultiArmRobot
+from rbt_dxlg import TDxlGripper
 
 
 '''RH-P12-RN Gripper (Thormang3 gripper) utility class'''
-class TRHP12RNGripper(TGripper2F1):
-  def __init__(self, dev='/dev/ttyUSB0'):
-    super(TRHP12RNGripper,self).__init__()
-
-    self.thg= TRHP12RN(dev=dev)
-
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self):
-    self._is_initialized= self.thg.Init()
-
-    if self._is_initialized:
-      self.thg.StartStateObs()
-      self.thg.StartMoveTh()
-
-    return self._is_initialized
+class TRHP12RNGripper(TDxlGripper):
+  def __init__(self, node_name='gripper_driver'):
+    super(TRHP12RNGripper,self).__init__(node_name=node_name, gripper_type='RHP12RNGripper')
 
   def Cleanup(self):
-    if self._is_initialized:
-      self.thg.StopMoveTh()
-      self.thg.StopStateObs()
-      self.thg.Cleanup()
-      self._is_initialized= False
     super(TRHP12RNGripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
     if q in ('RHP12RNGripper','ThGripper'):  return True
     return super(TRHP12RNGripper,self).Is(q)
-
-  '''Get current position.'''
-  def Position(self):
-    return self.thg.State()['position']
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
@@ -53,31 +35,16 @@ class TRHP12RNGripper(TGripper2F1):
     #0.067... = (145.-(145.**2-(109./2.)**2-117.**2)/(2.*145.-2.*117.))*1.e-3
     return (0.06704017857142858**2-0.25*pos*pos)**0.5 - 0.06704017857142858
 
-  def PosRange(self):
-    return self.thg.PosRange()
-  def Activate(self):
-    return self.thg.Activate()
-  def Deactivate(self):
-    return self.thg.Deactivate()
-  def Open(self, blocking=False):
-    self.Move(pos=self.thg.thg_range[1], blocking=blocking)
-  def Close(self, blocking=False):
-    self.Move(pos=self.thg.thg_range[0], blocking=blocking)
-  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    self.thg.MoveTh(pos, max_effort, speed, blocking)
-  def Stop(self):
-    self.thg.StopMoveTh()
-
 
 '''Robot control class for RHP12RNGripper.
   This is defined as a subclass of TMultiArmRobot,
   but actually it does not have a body (only RHP12RNGripper gripper).
   This virtual body is designed for a compatibility of programs.'''
 class TRobotRHP12RNGripper(TMultiArmRobot):
-  def __init__(self, name='RHP12RNGripper', dev='/dev/ttyUSB0'):
+  def __init__(self, name='RHP12RNGripper', gripper_node='gripper_driver'):
     super(TRobotRHP12RNGripper,self).__init__(name=name)
     self.currarm= 0
-    self.dev= dev
+    self.gripper_node= gripper_node
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -85,7 +52,7 @@ class TRobotRHP12RNGripper(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
-    self.th_gripper= TRHP12RNGripper(dev=self.dev)
+    self.th_gripper= TRHP12RNGripper(node_name=self.gripper_node)
     self.grippers= [self.th_gripper]
 
     print 'Initializing and activating RHP12RNGripper gripper...'

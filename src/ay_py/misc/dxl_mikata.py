@@ -71,6 +71,8 @@ class TMikata(object):
     return True
 
   def Quit(self):
+    self.StopTrajectory()
+    self.StopStateObs()
     for dxl in self.dxl.values():
       dxl.Quit()
 
