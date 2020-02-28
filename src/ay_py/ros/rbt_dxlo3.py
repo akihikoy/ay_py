@@ -8,12 +8,12 @@
 #         Completely modified the implementation: now we use the gripper driver ROS node.
 from const import *
 
-from robot import TMultiArmRobot
+from robot import TGripper2F2,TMultiArmRobot
 from rbt_dxlg import TDxlGripper
 
 
 '''DxlO3 gripper utility class'''
-class TDxlO3Gripper(TDxlGripper,Gripper2F2):
+class TDxlO3Gripper(TDxlGripper,TGripper2F2):
   def __init__(self, node_name='gripper_driver'):
     super(TDxlO3Gripper,self).__init__(node_name=node_name, gripper_type='DxlO3Gripper')
 
@@ -31,7 +31,7 @@ class TDxlO3Gripper(TDxlGripper,Gripper2F2):
   def Is(self, q):
     if q in ('DxlO3','DxlO3Gripper'):  return True
     if TDxlGripper.Is(self,q):  return True
-    return Gripper2F2.Is(self,q)
+    return TGripper2F2.Is(self,q)
 
   '''Range of gripper position as an emulation of 2F1 gripper.'''
   def PosRange2F1(self):

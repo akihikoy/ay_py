@@ -83,7 +83,7 @@ class TDxlGripper(TGripper2F1):
   def Position(self):
     with self.sensor_locker:
       q= self.q_curr
-    return q[0] if len(self.joint_names)==1 else q
+    return q[0] if len(self.joint_names)==1 else list(q)
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
