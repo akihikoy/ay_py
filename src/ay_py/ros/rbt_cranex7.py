@@ -73,7 +73,7 @@ class TRobotCraneX7(TRobotMikata2):
     self.kin[0]= TKinematics(base_link='base_link',end_link='crane_x7_gripper_base_link')
 
     ra(self.AddSrvP('robot_io', '/cranex7_driver/robot_io',
-                    ay_util_msgs.srv.MikataArmIO, persistent=False, time_out=3.0))
+                    ay_util_msgs.srv.DxlIO, persistent=False, time_out=3.0))
 
     ra(self.AddActC('traj', '/follow_joint_trajectory',
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))

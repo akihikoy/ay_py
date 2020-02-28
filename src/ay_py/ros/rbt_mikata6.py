@@ -60,7 +60,7 @@ class TRobotMikata6(TRobotMikata2):
 
     if not self.is_sim:
       ra(self.AddSrvP('robot_io', '/mikata6_driver/robot_io',
-                      ay_util_msgs.srv.MikataArmIO, persistent=False, time_out=3.0))
+                      ay_util_msgs.srv.DxlIO, persistent=False, time_out=3.0))
 
     ra(self.AddActC('traj', '/follow_joint_trajectory',
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))

@@ -1,9 +1,9 @@
 #! /usr/bin/env python
-#Robot controller for a 3D-printed Gripper with Dynamixel.
+#\brief   Robot controller for a 3D-printed Gripper with Dynamixel.
+#\author  Akihiko Yamaguchi, info@akihikoy.net
+#\version 0.1
+#\date    Nov.9, 2017
 from const import *
-#if ROS_ROBOT not in ('ANY','DxlGripper','Mikata'):
-  #raise ImportError('Stop importing: ROS_ROBOT is not DxlGripper')
-#if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
 from robot import TGripper2F1,TMultiArmRobot
 from ..misc.dxl_gripper import TDynamixelGripper

@@ -99,12 +99,18 @@ class TRHP12RN(object):
   '''Open a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
-    self.Move(pos=self.thg_range[1], blocking=blocking)
+    if not self.threads['MoveThController'][0]:
+      self.Move(pos=self.thg_range[1], blocking=blocking)
+    else:
+      self.MoveTh(pos=self.thg_range[1], blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
-    self.Move(pos=self.thg_range[0], blocking=blocking)
+    if not self.threads['MoveThController'][0]:
+      self.Move(pos=self.thg_range[0], blocking=blocking)
+    else:
+      self.MoveTh(pos=self.thg_range[0], blocking=blocking)
 
   '''Control a gripper.
     pos: target position in meter.
@@ -119,8 +125,10 @@ class TRHP12RN(object):
 
   '''Stop the gripper motion. '''
   def Stop(self):
-    with self.port_locker:
-      self.dxl.MoveTo(self.dxl.Position(), blocking=False)
+    if not self.threads['MoveThController'][0]:
+      self.Move(self.Position(), blocking=False)
+    else:
+      self.MoveTh(pos=self.State()['position'], blocking=blocking)
 
 
   #Get current state saved in memory (no port access when running this function).
@@ -214,7 +222,7 @@ class TRHP12RN(object):
         'stamp':time.time(),
         'position':self.thg_cmd2pos(p) if p is not None else None,
         'velocity':self.thg_cmd2vel(v) if v is not None else None,
-        'effort':(c/self.dxl.CurrentLimit*100.0) if c is not None else None,  #FIXME: PWM vs. Current
+        'effort':(c/self.dxl.CurrentLimit*100.0) if c is not None else None,
         }
       #print state['position']
       with self.state_locker:

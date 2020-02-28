@@ -213,7 +213,7 @@ class TRobotMikata2(TMultiArmRobot):
 
     if not self.is_sim:
       ra(self.AddSrvP('robot_io', '/mikata_driver/robot_io',
-                      ay_util_msgs.srv.MikataArmIO, persistent=False, time_out=3.0))
+                      ay_util_msgs.srv.DxlIO, persistent=False, time_out=3.0))
 
     ra(self.AddActC('traj', '/follow_joint_trajectory',
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
@@ -498,7 +498,7 @@ class TRobotMikata2(TMultiArmRobot):
   #Read from Dynamixel address.
   #Return: {joint_name:value}
   def DxlRead(self, address, joint_names):
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= joint_names
     req.command= 'Read'
     req.data_s= address
@@ -508,7 +508,7 @@ class TRobotMikata2(TMultiArmRobot):
 
   #Read to Dynamixel.  data: {joint_name:value}
   def DxlWrite(self, address, data):
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= data.keys()
     req.command= 'Write'
     req.data_s= address
@@ -518,7 +518,7 @@ class TRobotMikata2(TMultiArmRobot):
 
   def EnableTorque(self,joint_names=None):
     if self.is_sim:  return
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= joint_names if joint_names is not None else []
     req.command= 'EnableTorque'
     with self.port_locker:
@@ -526,7 +526,7 @@ class TRobotMikata2(TMultiArmRobot):
 
   def DisableTorque(self,joint_names=None):
     if self.is_sim:  return
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= joint_names if joint_names is not None else []
     req.command= 'DisableTorque'
     with self.port_locker:
@@ -534,7 +534,7 @@ class TRobotMikata2(TMultiArmRobot):
 
   def Reboot(self,joint_names=None):
     if self.is_sim:  return
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= joint_names if joint_names is not None else []
     req.command= 'Reboot'
     with self.port_locker:
@@ -545,7 +545,7 @@ class TRobotMikata2(TMultiArmRobot):
   #  blocking: True: this function waits the target position is reached.  False: this function returns immediately.
   def MoveTo(self, target, blocking=True):
     if self.is_sim:  return
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= target.keys()
     req.command= 'MoveTo'
     req.data_fa= target.values()
@@ -557,7 +557,7 @@ class TRobotMikata2(TMultiArmRobot):
   #  current: Target currents {joint_name:current(mA)}
   def SetCurrent(self, current):
     if self.is_sim:  return
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= current.keys()
     req.command= 'SetCurrent'
     req.data_fa= current.values()
@@ -568,7 +568,7 @@ class TRobotMikata2(TMultiArmRobot):
   #  velocity: Target velocities {joint_name:velocity(rad/s)}
   def SetVelocity(self, velocity):
     if self.is_sim:  return
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= velocity.keys()
     req.command= 'SetVelocity'
     req.data_fa= velocity.values()
@@ -579,7 +579,7 @@ class TRobotMikata2(TMultiArmRobot):
   #  pwm: Target PWMs {joint_name:pwm(percentage)}
   def SetPWM(self, pwm):
     if self.is_sim:  return
-    req= ay_util_msgs.srv.MikataArmIORequest()
+    req= ay_util_msgs.srv.DxlIORequest()
     req.joint_names= pwm.keys()
     req.command= 'SetPWM'
     req.data_fa= pwm.values()

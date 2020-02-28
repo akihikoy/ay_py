@@ -1,5 +1,8 @@
 #! /usr/bin/env python
-#Robot controller for RH-P12-RN Gripper (Thormang3 gripper).
+#\brief   Robot controller for RH-P12-RN Gripper (Thormang3 gripper).
+#\author  Akihiko Yamaguchi, info@akihikoy.net
+#\version 0.1
+#\date    Nov.21, 2018
 from const import *
 
 from robot import TGripper2F1,TMultiArmRobot

@@ -105,12 +105,18 @@ class TDynamixelGripper(object):
   '''Open a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
-    self.Move(pos=self.dxlg_range[1], blocking=blocking)
+    if not self.threads['MoveThController'][0]:
+      self.Move(pos=self.dxlg_range[1], blocking=blocking)
+    else:
+      self.MoveTh(pos=self.dxlg_range[1], blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
-    self.Move(pos=self.dxlg_range[0], blocking=blocking)
+    if not self.threads['MoveThController'][0]:
+      self.Move(pos=self.dxlg_range[0], blocking=blocking)
+    else:
+      self.MoveTh(pos=self.dxlg_range[0], blocking=blocking)
 
   '''Control a gripper.
     pos: target position in meter.
@@ -131,7 +137,10 @@ class TDynamixelGripper(object):
 
   '''Stop the gripper motion. '''
   def Stop(self):
-    self.Move(self.Position(), blocking=False)
+    if not self.threads['MoveThController'][0]:
+      self.Move(self.Position(), blocking=False)
+    else:
+      self.MoveTh(pos=self.State()['position'], blocking=blocking)
 
   ##Low level position control.
   #def low_move(self, cmd, blocking):
@@ -240,13 +249,14 @@ class TDynamixelGripper(object):
     rate= TRate(self.hz_state_obs)
     while self.threads['StateObserver'][0]:
       with self.port_locker:
-        state= {
-          'stamp':time.time(),
-          'position':self.dxlg_cmd2pos(self.dxl.Position()),
-          'velocity':self.dxlg_cmd2vel(self.dxl.Velocity()),
-          'effort':self.dxl.ConvPWM(self.dxl.PWM()),  #FIXME: PWM vs. Current
-          }
-        #print state['position']
+        p,v,c= self.dxl.Position(),self.dxl.Velocity(),self.dxl.Current()
+      state= {
+        'stamp':time.time(),
+        'position':self.dxlg_cmd2pos(p) if p is not None else None,
+        'velocity':self.dxlg_cmd2vel(v) if v is not None else None,
+        'effort':(c/self.dxl.CurrentLimit*100.0) if c is not None else None,
+        }
+      #print state['position']
       with self.state_locker:
         self.state= state
       if callback is not None:

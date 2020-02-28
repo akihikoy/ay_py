@@ -1,5 +1,8 @@
 #! /usr/bin/env python
-#Robot controller for SAKE EZGripper Gen2.
+#\brief   Robot controller for SAKE EZGripper Gen2.
+#\author  Akihiko Yamaguchi, info@akihikoy.net
+#\version 0.1
+#\date    Jul.13, 2019
 from const import *
 
 from robot import TGripper2F1,TMultiArmRobot

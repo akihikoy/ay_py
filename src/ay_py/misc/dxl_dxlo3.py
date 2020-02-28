@@ -111,12 +111,18 @@ class TDxlO3(object):
   '''Open a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
-    self.Move(pos=self.pos_open, blocking=blocking)
+    if not self.threads['MoveThController'][0]:
+      self.Move(pos=self.pos_open, blocking=blocking)
+    else:
+      self.MoveTh(pos=self.pos_open, blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
-    self.Move(pos=self.pos_close, blocking=blocking)
+    if not self.threads['MoveThController'][0]:
+      self.Move(pos=self.pos_close, blocking=blocking)
+    else:
+      self.MoveTh(pos=self.pos_close, blocking=blocking)
 
   '''Control a gripper.
     pos: target position in meter.
@@ -146,9 +152,10 @@ class TDxlO3(object):
 
   '''Stop the gripper motion. '''
   def Stop(self):
-    with self.port_locker:
-      for dxl in self.dxl:
-        dxl.MoveTo(dxl.Position(), blocking=False)
+    if not self.threads['MoveThController'][0]:
+      self.Move(self.Position(), blocking=False)
+    else:
+      self.MoveTh(pos=self.State()['position'], blocking=blocking)
 
 
   #Get current state saved in memory (no port access when running this function).
@@ -234,24 +241,22 @@ class TDxlO3(object):
   #NOTE: Don't call this function directly.  Use self.StartStateObs and self.State
   def StateObserver(self, callback):
     rate= TRate(self.hz_state_obs)
-    try:
-      while self.threads['StateObserver'][0]:
-        with self.port_locker:
-          state= {
-            'stamp':time.time(),
-            'position':self.gripper_cmd2pos([dxl.Position() for dxl in self.dxl]),
-            'velocity':self.gripper_cmd2vel([dxl.Velocity() for dxl in self.dxl]),
-            'effort':[dxl.Current()/dxl.CurrentLimit*100.0 for dxl in self.dxl],  #FIXME: PWM vs. Current
-            }
-          #print state['position']
-        with self.state_locker:
-          self.state= state
-        if callback is not None:
-          callback(state)
-        rate.sleep()
-    finally:
-      self.threads['StateObserver'][0]= False
-      self.state= {'stamp':0.0, 'position':[], 'velocity':[], 'effort':[]}
+    while self.threads['StateObserver'][0]:
+      with self.port_locker:
+        p,v,c= [dxl.Position() for dxl in self.dxl],[dxl.Velocity() for dxl in self.dxl],[dxl.Current() for dxl in self.dxl]
+      state= {
+        'stamp':time.time(),
+        'position':self.gripper_cmd2pos(p) if None not in p else None,
+        'velocity':self.gripper_cmd2vel(v) if None not in v else None,
+        'effort':[ci/dxl.CurrentLimit*100.0 for ci,dxl in zip(c,self.dxl)] if None not in c else None,
+        }
+      #print state['position']
+      with self.state_locker:
+        self.state= state
+      if callback is not None:
+        callback(state)
+      rate.sleep()
+    self.threads['StateObserver'][0]= False
 
   #MoveTh controller thread.
   #NOTE: Don't call this function directly.  Use self.StartMoveTh

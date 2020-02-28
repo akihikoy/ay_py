@@ -1,5 +1,8 @@
 #! /usr/bin/env python
-#Robot controller for DxlO3 gripper.
+#\brief   Robot controller for DxlO3 gripper.
+#\author  Akihiko Yamaguchi, info@akihikoy.net
+#\version 0.1
+#\date    Feb.10, 2020
 from const import *
 
 from robot import TGripper2F2,TMultiArmRobot
