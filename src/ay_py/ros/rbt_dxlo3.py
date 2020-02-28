@@ -13,7 +13,7 @@ from rbt_dxlg import TDxlGripper
 
 
 '''DxlO3 gripper utility class'''
-class TDxlO3Gripper(TDxlGripper):
+class TDxlO3Gripper(TDxlGripper,Gripper2F2):
   def __init__(self, node_name='gripper_driver'):
     super(TDxlO3Gripper,self).__init__(node_name=node_name, gripper_type='DxlO3Gripper')
 
@@ -30,7 +30,8 @@ class TDxlO3Gripper(TDxlGripper):
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
     if q in ('DxlO3','DxlO3Gripper'):  return True
-    return super(TDxlO3Gripper,self).Is(q)
+    if TDxlGripper.Is(self,q):  return True
+    return Gripper2F2.Is(self,q)
 
   '''Range of gripper position as an emulation of 2F1 gripper.'''
   def PosRange2F1(self):
