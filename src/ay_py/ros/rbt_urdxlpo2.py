@@ -9,9 +9,10 @@ from rbt_ur import *
 
 '''Robot control class for single Universal Robots UR* with DxlpO2 gripper.'''
 class TRobotURDxlpO2(TRobotUR):
-  def __init__(self, name='UR', ur_series='CB', robot_ip=None, is_sim=False, gripper_node='gripper_driver'):
+  def __init__(self, name='UR', ur_series='CB', robot_ip=None, is_sim=False, gripper_node='gripper_driver', finger_type=None):
     super(TRobotURDxlpO2,self).__init__(name=name,ur_series=ur_series,robot_ip=robot_ip,is_sim=is_sim)
     self.gripper_node= gripper_node
+    self.finger_type= finger_type
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -24,9 +25,19 @@ class TRobotURDxlpO2(TRobotUR):
     if not self.is_sim:
       #The gripper module is imported here to avoid importing it in simulation mode.
       mod= __import__('rbt_dxlpo2',globals(),None,('TDxlpO2Gripper',))
-      self.dxlpo2_gripper= mod.TDxlpO2Gripper(node_name=self.gripper_node)
+      self.dxlpo2_gripper= mod.TDxlpO2Gripper(node_name=self.gripper_node, finger_type=self.finger_type)
     else:
-      self.dxlpo2_gripper= TSimGripper2F1(pos_range=[0.0,0.30])  #WARNING:0.30 is inaccurate.
+      if self.finger_type=='Straight1':
+        self.gripper_range= [0.0,0.300]  #FIXME: 0.3 is inaccurate.
+      elif self.finger_type=='SRound1':  #Small, round finger (yellow)
+        self.gripper_range= [0.0,0.1950]
+      elif self.finger_type=='Fork1':
+        self.gripper_range= [0.03,0.230]
+      elif self.finger_type=='???':
+        self.gripper_range= [0.0,0.2200]
+      else:
+        raise Exception('TDxlpO2: Unknown finger_type: {finger_type}'.format(finger_type=self.finger_type))
+      self.dxlpo2_gripper= TSimGripper2F1(pos_range=self.gripper_range)
     self.grippers= [self.dxlpo2_gripper]
 
     print 'Initializing and activating DxlGripper gripper...'

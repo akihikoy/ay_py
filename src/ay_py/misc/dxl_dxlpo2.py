@@ -12,7 +12,7 @@ import copy
 
 '''DxlpO2 gripper utility class'''
 class TDxlpO2(object):
-  def __init__(self, dev='/dev/ttyUSB0'):
+  def __init__(self, dev='/dev/ttyUSB0', finger_type=None):
     self.dxl_type= 'PH54-200-S500'
     self.dev= dev
     self.baudrate= 2e6
@@ -30,13 +30,45 @@ class TDxlpO2(object):
       'StateObserver':[False,None],
       'MoveThController':[False,None],}
 
-    self.CmdMax= 0  #Gripper opened widely.
-    self.CmdMin= -250962  #Gripper closed.
-    self.CmdOpen= -150000  #Gripper opened.
-    self.CmdClose= -250962  #Gripper closed.
+    if finger_type is None:
+      raise Exception('TDxlpO2: finger_type is not specified. Set finger type such as Straight1.')
+
+    elif finger_type=='Straight1':
+      self.CmdMax= 0  #Gripper opened widely.
+      self.CmdMin= -250962  #Gripper closed.
+      self.CmdOpen= -150000  #Gripper opened.
+      self.CmdClose= -250962  #Gripper closed.
+      #Gripper range in meter:
+      self.gripper_range= [0.0,0.300]  #FIXME: 0.3 is inaccurate.
+
+    elif finger_type=='SRound1':  #Small, round finger (yellow)
+      self.CmdMax= 0  #Gripper opened widely.
+      self.CmdMin= -250962  #Gripper closed.
+      self.CmdOpen= -150000  #Gripper opened.
+      self.CmdClose= -250962  #Gripper closed.
+      #Gripper range in meter:
+      self.gripper_range= [0.0,0.1950]
+
+    elif finger_type=='Fork1':
+      self.CmdMax= 0  #Gripper opened widely.
+      self.CmdMin= -200962  #Gripper closed.
+      self.CmdOpen= -150000  #Gripper opened.
+      self.CmdClose= -200962  #Gripper closed.
+      #Gripper range in meter:
+      self.gripper_range= [0.03,0.230]
+
+    elif finger_type=='???':
+      self.CmdMax= 0  #Gripper opened widely.
+      self.CmdMin= -160000  #Gripper closed.
+      self.CmdOpen= -150000  #Gripper opened.
+      self.CmdClose= -160000  #Gripper closed.
+      #Gripper range in meter:
+      self.gripper_range= [0.0,0.2200]
+
+    else:
+      raise Exception('TDxlpO2: Unknown finger_type: {finger_type}'.format(finger_type=finger_type))
 
     #Gripper command-position conversions.
-    self.gripper_range= [0.0,0.300]  #FIXME: 0.3 is inaccurate.
     self.gripper_cmd2pos= lambda cmd: max(self.gripper_range[0], self.gripper_range[0] + (cmd-self.CmdClose)*(self.gripper_range[1]-self.gripper_range[0])/(self.CmdOpen-self.CmdClose))
     self.gripper_pos2cmd= lambda pos: self.CmdClose + (pos-self.gripper_range[0])*(self.CmdOpen-self.CmdClose)/(self.gripper_range[1]-self.gripper_range[0])
     #WARNING: The following functions are not considered well (coped from other gripper).

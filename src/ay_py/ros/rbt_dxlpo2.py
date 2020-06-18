@@ -14,8 +14,8 @@ from rbt_dxlg import TDxlGripper
 
 '''DxlpO2 gripper utility class'''
 class TDxlpO2Gripper(TDxlGripper):
-  def __init__(self, node_name='gripper_driver'):
-    super(TDxlpO2Gripper,self).__init__(node_name=node_name, gripper_type='DxlpO2Gripper')
+  def __init__(self, node_name='gripper_driver', finger_type=None):
+    super(TDxlpO2Gripper,self).__init__(node_name=node_name, gripper_type='DxlpO2Gripper', finger_type=finger_type)
 
   def Cleanup(self):
     super(TDxlpO2Gripper,self).Cleanup()
@@ -40,10 +40,11 @@ class TDxlpO2Gripper(TDxlGripper):
   but actually it does not have a body (only DxlpO2Gripper gripper).
   This virtual body is designed for a compatibility of programs.'''
 class TRobotDxlpO2Gripper(TMultiArmRobot):
-  def __init__(self, name='DxlpO2Gripper', gripper_node='gripper_driver'):
+  def __init__(self, name='DxlpO2Gripper', gripper_node='gripper_driver', finger_type=None):
     super(TRobotDxlpO2Gripper,self).__init__(name=name)
     self.currarm= 0
     self.gripper_node= gripper_node
+    self.finger_type= finger_type
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -51,7 +52,7 @@ class TRobotDxlpO2Gripper(TMultiArmRobot):
     res= []
     ra= lambda r: res.append(r)
 
-    self.dxlpo2_gripper= TDxlpO2Gripper(node_name=self.gripper_node)
+    self.dxlpo2_gripper= TDxlpO2Gripper(node_name=self.gripper_node, finger_type=self.finger_type)
     self.grippers= [self.dxlpo2_gripper]
 
     print 'Initializing and activating DxlpO2Gripper gripper...'

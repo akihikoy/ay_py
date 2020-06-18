@@ -17,8 +17,11 @@ import ay_util_msgs.srv
 
 '''3D-printed Dynamixel Gripper utility class'''
 class TDxlGripper(TGripper2F1):
-  def __init__(self, node_name='gripper_driver', gripper_type='DxlGripper'):
+  def __init__(self, node_name='gripper_driver', gripper_type='DxlGripper', finger_type=None):
     super(TDxlGripper,self).__init__()
+
+    #FIXME:gripper_type and finger_type can be obtained from a topic from node_name,
+    #  which will reduce the configuration complexity without loss of generality.
 
     self.gripper_type= gripper_type
     self.node_name= node_name
@@ -38,7 +41,7 @@ class TDxlGripper(TGripper2F1):
       self.joint_names= ['joint0']
     elif self.gripper_type=='DxlpO2Gripper':
       mod= __import__('ay_py.misc.dxl_dxlpo2',globals(),None,('TDxlpO2',))
-      self.gripper= mod.TDxlpO2(dev=None)
+      self.gripper= mod.TDxlpO2(dev=None, finger_type=finger_type)
       self.joint_names= ['joint0']
     elif self.gripper_type=='DxlO3Gripper':
       mod= __import__('ay_py.misc.dxl_dxlo3',globals(),None,('TDxlO3',))
