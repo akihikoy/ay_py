@@ -56,6 +56,12 @@ def GetAngle(p1,p2):
   elif cos_th<-1.0:  cos_th=-1.0
   return math.acos(cos_th)
 
+#Calculating an angle [-pi,pi] between two 2-D vectors
+def GetAngle2(p1,p2):
+  cross,dot= np.cross(p1,p2),np.dot(p1,p2)
+  if abs(dot)<1.0e-8:  return 0.0
+  return math.atan2(cross,dot)
+
 #Return axis,angle with which p1 is rotated to p2's direction
 def GetAxisAngle(p1,p2):
   p1xp2= np.cross(p1,p2)
