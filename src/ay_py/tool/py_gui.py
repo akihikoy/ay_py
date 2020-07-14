@@ -16,9 +16,9 @@ import signal
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
-  def __init__(self,title,widgets,exit_command):
+  def __init__(self,title,widgets,exit_command,size=(800,400)):
     QtGui.QWidget.__init__(self)
-    self.InitUI(title,widgets,exit_command)
+    self.InitUI(title,widgets,exit_command,size)
 
   # Get a dict of option name: option content
   def ExpandOpt(self):
@@ -32,9 +32,9 @@ class TTerminalTab(QtGui.QWidget):
     if cmd[0]==':all':  return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
     return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
 
-  def InitUI(self,title,widgets,exit_command):
+  def InitUI(self,title,widgets,exit_command,size):
     # Set window size.
-    self.resize(800, 400)
+    self.resize(*size)
     self.Processes= []
 
     # Set window title
@@ -188,9 +188,9 @@ class TTerminalTab(QtGui.QWidget):
     else:
       event.ignore()
 
-def RunTerminalTab(title,widgets,exit_command):
+def RunTerminalTab(title,widgets,exit_command,size=(800,400)):
   app= QtGui.QApplication(sys.argv)
-  win= TTerminalTab(title,widgets,exit_command)
+  win= TTerminalTab(title,widgets,exit_command,size=size)
   signal.signal(signal.SIGINT, lambda signum,frame,win=win: (win.Exit(),QtGui.QApplication.quit()) )
   timer= QtCore.QTimer()
   timer.start(500)  # You may change this if you wish.
