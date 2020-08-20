@@ -9,6 +9,31 @@ from scipy.optimize import minimize as scipy_minimize
 from util import *
 from geom import *
 
+#Return an intersection between (p1,p2) and (pA,pB).
+#Return None if there is no intersection.
+#Based on: https://www.cs.hmc.edu/ACM/lectures/intersections.html
+def LineLineIntersection(p1, p2, pA, pB, tol=1e-8):
+  x1, y1 = p1;   x2, y2 = p2
+  dx1 = x2 - x1;  dy1 = y2 - y1
+  xA, yA = pA;   xB, yB = pB;
+  dxA = xB - xA;  dyA = yB - yA;
+
+  DET = (-dx1 * dyA + dy1 * dxA)
+  if math.fabs(DET) < tol: return None
+
+  DETinv = 1.0/DET
+  r = DETinv * (-dyA * (xA-x1) + dxA * (yA-y1))
+  s = DETinv * (-dy1 * (xA-x1) + dx1 * (yA-y1))
+  if r<0.0 or s<0.0 or r>1.0 or s>1.0:  return None
+
+  xi = (x1 + r*dx1 + xA + s*dxA)/2.0
+  yi = (y1 + r*dy1 + yA + s*dyA)/2.0
+  return [xi,yi]
+
+def LinePolygonIntersection(p1, p2, points):
+  pIs= [LineLineIntersection(p1,p2,pA,pB) for pA,pB in zip(points, points[1:]+[points[0]])]
+  return filter(None,pIs)
+
 #Closest point on a line (p1,p2) from a reference point
 def LineClosestPoint(p1, p2, point_ref):
   a= Vec(p2)-Vec(p1)

@@ -92,10 +92,13 @@ def GetOrthogonalAxisOf(axis,preferable=[0.0,0.0,1.0],fault=None):
   else:
     return fault
 
+#Get quaternion from axis and angle.
 def QFromAxisAngle(axis,angle):
   axis= axis / la.norm(axis)
   return _rostf.quaternion_about_axis(angle,axis)
 
+#Get R from axis and angle.
+#NOTE: This function is equivalent to Rodrigues(angle*axis).
 def RFromAxisAngle(axis,angle):
   return QToRot(QFromAxisAngle(axis,angle))
 
@@ -177,12 +180,15 @@ def GetWedge(w):
   wedge[2,0]=-w[1];  wedge[2,1]=w[0];   wedge[2,2]=0.0
   return wedge
 
+#Rodrigues formula to get R from w (=angle*axis) where angle is in radian and axis is 3D unit vector.
+#NOTE: This function is equivalent to RFromAxisAngle(axis,angle).
 def Rodrigues(w, epsilon=1.0e-6):
   th= la.norm(w)
   if th<epsilon:  return np.identity(3)
   w_wedge= GetWedge(np.array(w) *(1.0/th))
   return np.identity(3) + w_wedge * math.sin(th) + np.dot(w_wedge,w_wedge) * (1.0-math.cos(th))
 
+#Inverse of Rodrigues, i.e. returns w (=angle*axis) from R where angle is in radian and axis is 3D unit vector.
 def InvRodrigues(R, epsilon=1.0e-6):
   alpha= (R[0,0]+R[1,1]+R[2,2] - 1.0) / 2.0
 
