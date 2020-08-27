@@ -126,7 +126,7 @@ class TRHP12RN(object):
       self.dxl.MoveToC(cmd, trg_curr, blocking=True if blocking else False)
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     if not self.threads['MoveThController'][0]:
       self.Move(self.Position(), blocking=False)
     else:

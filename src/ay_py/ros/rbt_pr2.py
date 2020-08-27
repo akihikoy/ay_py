@@ -403,7 +403,7 @@ class TPR2Gripper(TGripper2F1):
     BlockAction(actc, blocking=blocking, duration=0.0)
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     pass  #Do nothing.
 
 

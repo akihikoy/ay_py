@@ -6,7 +6,7 @@
 #\date    Jul.12, 2019
 #         NOTE: Dynamixel MX-64AR of EZGripper is originally protocol 1.0; update the firmware.
 from dxl_util import TDynamixel1
-from ..core.util import TRate
+from ..core.util import TRate, CPrint
 import time
 import threading
 import copy
@@ -131,7 +131,7 @@ class TEZG(object):
       self.dxl.MoveToC(cmd, trg_curr, blocking=True if blocking else False)
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     if not self.threads['MoveThController'][0]:
       self.Move(self.Position(), blocking=False)
     else:

@@ -5,7 +5,7 @@
 #\version 0.1
 #\date    Jan.30, 2018
 import threading
-from ..core.util import TRate
+from ..core.util import TRate, CPrint
 
 '''
 Holding controller for Dynamixel.

@@ -5,7 +5,7 @@
 #\version 0.1
 #\date    Jan.28, 2020
 from dxl_util import TDynamixel1
-from ..core.util import TRate
+from ..core.util import TRate, CPrint
 import time
 import threading
 import copy
@@ -49,13 +49,24 @@ class TDxlpO2(object):
       #Gripper range in meter:
       self.gripper_range= [0.0,0.1950]
 
-    elif finger_type=='Fork1':
-      self.CmdMax= 0  #Gripper opened widely.
-      self.CmdMin= -200962  #Gripper closed.
-      self.CmdOpen= -150000  #Gripper opened.
-      self.CmdClose= -200962  #Gripper closed.
+    #elif finger_type=='Fork1':
+      #self.CmdMax= 0  #Gripper opened widely.
+      #self.CmdMin= -200962  #Gripper closed.
+      #self.CmdOpen= -150000  #Gripper opened.
+      #self.CmdClose= -200962  #Gripper closed.
+      ##Gripper range in meter:
+      #self.gripper_range= [0.03,0.230]
+
+    elif finger_type=='Fork1':  #TODO:FIXME:Change this name to Fork2
+      self.CmdMax= 0        #Gripper opened widely.  #DxlPo2f1
+      #self.CmdMin= -234000  #Gripper closed.
+      self.CmdMin= -243160  #Gripper closed.
+      #self.CmdOpen= -124100  #Gripper opened.
+      self.CmdOpen= -134500  #Gripper opened.
+      #self.CmdClose= -234000  #Gripper closed.
+      self.CmdClose= -243160  #Gripper closed.
       #Gripper range in meter:
-      self.gripper_range= [0.03,0.230]
+      self.gripper_range= [0.0,0.23]
 
     elif finger_type=='???':
       self.CmdMax= 0  #Gripper opened widely.
@@ -161,7 +172,7 @@ class TDxlpO2(object):
       self.dxl.MoveToC(cmd, trg_curr, blocking=True if blocking else False)
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     if not self.threads['MoveThController'][0]:
       self.Move(self.Position(), blocking=False)
     else:

@@ -423,6 +423,6 @@ class TBaxterEPG(TGripper2F1):
     self.epgripper.command_position(clip(cmd),block=blocking)
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     pass  #Do nothing.
 

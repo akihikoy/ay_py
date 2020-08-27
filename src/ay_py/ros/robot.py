@@ -360,7 +360,7 @@ class TGripper2F1(TROSUtil):
     pass
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     pass
 
 
@@ -439,7 +439,7 @@ class TGripper2F2(TGripper2F1):
     pass
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     pass
 
 

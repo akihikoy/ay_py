@@ -6,7 +6,7 @@
 #\date    Oct.29, 2017
 from dxl_util import TDynamixel1
 from ..misc.dxl_holding import TDxlHolding
-from ..core.util import TRate
+from ..core.util import TRate, CPrint
 import time
 import threading
 import copy
@@ -139,7 +139,7 @@ class TDynamixelGripper(object):
       self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     if not self.threads['MoveThController'][0]:
       self.Move(self.Position(), blocking=False)
     else:

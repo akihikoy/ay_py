@@ -5,7 +5,7 @@
 #\version 0.1
 #\date    Jan.28, 2020
 from dxl_util import TDynamixel1
-from ..core.util import TRate
+from ..core.util import TRate, CPrint
 import time
 import threading
 import copy
@@ -153,7 +153,7 @@ class TDxlO3(object):
 
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     if not self.threads['MoveThController'][0]:
       self.Move(self.Position(), blocking=False)
     else:

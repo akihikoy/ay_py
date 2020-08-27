@@ -162,7 +162,7 @@ class TRobotiq(TGripper2F1):
       #self.Stop()
 
   '''Stop the gripper motion. '''
-  def Stop(self):
+  def Stop(self, blocking=False):
     cmd= robotiq_msgs.CModel_robot_output();
     cmd.rACT= 1
     cmd.rGTO= 0

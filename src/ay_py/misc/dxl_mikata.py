@@ -10,7 +10,7 @@ import math
 import time
 import threading
 import copy
-from ..core.util import TRate
+from ..core.util import TRate, CPrint
 from ..core.traj import TCubicHermiteSpline
 
 class TMikata(object):

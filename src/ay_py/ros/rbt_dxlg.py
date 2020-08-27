@@ -138,7 +138,7 @@ class TDxlGripper(TGripper2F1):
     with self.port_locker:
       res= self.srvp.move(req)
 
-  def Stop(self):
+  def Stop(self, blocking=False):
     req= ay_util_msgs.srv.DxlGMoveRequest()
     req.command= 'Stop'
     req.blocking= blocking
