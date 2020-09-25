@@ -305,7 +305,7 @@ class TRobotUR(TMultiArmRobot):
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
         if np.max(np.abs(q_err)) > self.MotionTol:
-          CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,q_err)
+          CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,list(q_err))
           CPrint(4,'Action client result:',self.actc.traj.get_result())
           raise Exception('TRobotUR.FollowQTraj: Unacceptable error after movement')
 
