@@ -5,10 +5,12 @@ from const import *
 import roslib
 import rospy
 import actionlib
+import std_msgs.msg
+import controller_manager_msgs.srv
 import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
-import ur_msgs.msg
+import ur_dashboard_msgs.msg
 import copy
 
 from robot import *
@@ -22,7 +24,7 @@ class TRobotUR(TMultiArmRobot):
     super(TRobotUR,self).__init__(name=name)
     self.is_sim= is_sim
     self.ur_series= ur_series
-    self.robot_ip= robot_ip  #If robot_ip is None, Init() fills it from the /ur_driver/robot_ip_address parameter.
+    self.robot_ip= robot_ip  #If robot_ip is None, Init() fills it from the /ur_hardware_interface/robot_ip parameter.
 
     self.joint_names= [[]]
     #self.joint_names[0]= rospy.get_param('controller_joint_names')
@@ -39,8 +41,10 @@ class TRobotUR(TMultiArmRobot):
     self.links['r_arm']= ['shoulder_link', 'upper_arm_link', 'forearm_link', 'wrist_1_link', 'wrist_2_link', 'wrist_3_link']
     self.links['robot']= self.links['base'] + self.links['r_arm']
 
-    #Thread locker for robot_mode_state:
-    self.robotmodestate_locker= threading.RLock()
+    #Thread lockers for robot_mode, safety_mode, robot_program_running:
+    self.robot_mode_locker= threading.RLock()
+    self.safety_mode_locker= threading.RLock()
+    self.robot_program_running_locker= threading.RLock()
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -49,7 +53,7 @@ class TRobotUR(TMultiArmRobot):
     ra= lambda r: res.append(r)
 
     if self.robot_ip is None and not self.is_sim:
-      self.robot_ip= rospy.get_param('/ur_driver/robot_ip_address')
+      self.robot_ip= rospy.get_param('/ur_hardware_interface/robot_ip')
 
     #Check the validity of joint positions:
     try:
@@ -72,27 +76,20 @@ class TRobotUR(TMultiArmRobot):
     self.kin= [None]
     self.kin[0]= TKinematics(base_link='base_link',end_link='tool0')
 
-    #ra(self.AddPub('joint_path_command', '/joint_path_command', trajectory_msgs.msg.JointTrajectory))
+    ra(self.AddPub('joint_vel', '/joint_group_vel_controller/command', std_msgs.msg.Float64MultiArray, queue_size=10))
+    ra(self.AddSrvP('sw_ctrl', '/controller_manager/switch_controller', controller_manager_msgs.srv.SwitchController, time_out=3.0))
 
-    ra(self.AddActC('traj', '/follow_joint_trajectory',
+    ra(self.AddActC('traj', '/scaled_pos_joint_traj_controller/follow_joint_trajectory',
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
-
-    #if self.is_sim:
-      #ra(self.AddPub('joint_states', '/joint_states', sensor_msgs.msg.JointState))
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
     if not self.is_sim:
-      ra(self.AddSub('robot_mode_state', '/ur_driver/robot_mode_state', ur_msgs.msg.RobotModeDataMsg, self.RobotModeStateCallback))
+      ra(self.AddSub('robot_mode', '/ur_hardware_interface/robot_mode', ur_dashboard_msgs.msg.RobotMode, self.RobotModeCallback))
+      ra(self.AddSub('safety_mode', '/ur_hardware_interface/safety_mode', ur_dashboard_msgs.msg.SafetyMode, self.SafetyModeCallback))
+      ra(self.AddSub('robot_program_running', '/ur_hardware_interface/robot_program_running', std_msgs.msg.Bool, self.RobotProgramRunningCallback))
 
-    #self.robotiq= TRobotiq()  #Robotiq controller
-    #self.grippers= [self.robotiq]
     self.grippers= [TFakeGripper()]
-
-    #print 'Enabling the robot...'
-
-    #print 'Initializing and activating Robotiq gripper...'
-    #ra(self.robotiq.Init())
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
@@ -122,9 +119,8 @@ class TRobotUR(TMultiArmRobot):
   #Check if the robot is normal state (i.e. running properly without stopping).
   def IsNormal(self):
     if self.is_sim:  return True
-    with self.robotmodestate_locker:
-      #return all((self.robot_mode_state.is_ready, not self.robot_mode_state.is_emergency_stopped, not self.robot_mode_state.is_protective_stopped))
-      return all((self.robot_mode_state.is_real_robot_enabled, not self.robot_mode_state.is_emergency_stopped, not self.robot_mode_state.is_protective_stopped))
+    with self.robot_mode_locker, self.safety_mode_locker, self.robot_program_running_locker:
+      return all((self.robot_mode.mode==self.robot_mode.RUNNING, self.safety_mode.mode==self.safety_mode.NORMAL, self.robot_program_running.data))
 
   def RobotIP(self):
     return self.robot_ip
@@ -182,14 +178,23 @@ class TRobotUR(TMultiArmRobot):
     return self.grippers[arm]
 
   def JointStatesCallback(self, msg):
+    arm= 0
     with self.sensor_locker:
       self.x_curr= msg
-      self.q_curr= self.x_curr.position
-      self.dq_curr= self.x_curr.velocity
+      q_map= {name:position for name,position in zip(self.x_curr.name,self.x_curr.position)}
+      dq_map= {name:velocity for name,velocity in zip(self.x_curr.name,self.x_curr.velocity)}
+      self.q_curr= [q_map[name] for name in self.joint_names[arm]]
+      self.dq_curr= [dq_map[name] for name in self.joint_names[arm]]
 
-  def RobotModeStateCallback(self, msg):
-    with self.robotmodestate_locker:
-      self.robot_mode_state= msg
+  def RobotModeCallback(self, msg):
+    with self.robot_mode_locker:
+      self.robot_mode= msg
+  def SafetyModeCallback(self, msg):
+    with self.safety_mode_locker:
+      self.safety_mode= msg
+  def RobotProgramRunningCallback(self, msg):
+    with self.robot_program_running_locker:
+      self.robot_program_running= msg
 
   '''Return joint angles of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
@@ -305,7 +310,7 @@ class TRobotUR(TMultiArmRobot):
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
         if np.max(np.abs(q_err)) > self.MotionTol:
-          CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,q_err)
+          CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,q_err.tolist())
           CPrint(4,'Action client result:',self.actc.traj.get_result())
           raise Exception('TRobotUR.FollowQTraj: Unacceptable error after movement')
 
