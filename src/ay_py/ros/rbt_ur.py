@@ -10,7 +10,6 @@ import controller_manager_msgs.srv
 import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
-import ur_dashboard_msgs.msg
 import copy
 
 from robot import *
@@ -76,15 +75,21 @@ class TRobotUR(TMultiArmRobot):
     self.kin= [None]
     self.kin[0]= TKinematics(base_link='base_link',end_link='tool0')
 
-    ra(self.AddPub('joint_vel', '/joint_group_vel_controller/command', std_msgs.msg.Float64MultiArray, queue_size=10))
-    ra(self.AddSrvP('sw_ctrl', '/controller_manager/switch_controller', controller_manager_msgs.srv.SwitchController, time_out=3.0))
+    if not self.is_sim:
+      ra(self.AddPub('joint_vel', '/joint_group_vel_controller/command', std_msgs.msg.Float64MultiArray, queue_size=10))
+      ra(self.AddSrvP('sw_ctrl', '/controller_manager/switch_controller', controller_manager_msgs.srv.SwitchController, time_out=3.0))
 
-    ra(self.AddActC('traj', '/scaled_pos_joint_traj_controller/follow_joint_trajectory',
-                    control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
+    if not self.is_sim:
+      ra(self.AddActC('traj', '/scaled_pos_joint_traj_controller/follow_joint_trajectory',
+                      control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
+    else:
+      ra(self.AddActC('traj', '/follow_joint_trajectory',
+                      control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
     if not self.is_sim:
+      ur_dashboard_msgs= __import__('ur_dashboard_msgs',globals(),None,('msg',))
       ra(self.AddSub('robot_mode', '/ur_hardware_interface/robot_mode', ur_dashboard_msgs.msg.RobotMode, self.RobotModeCallback))
       ra(self.AddSub('safety_mode', '/ur_hardware_interface/safety_mode', ur_dashboard_msgs.msg.SafetyMode, self.SafetyModeCallback))
       ra(self.AddSub('robot_program_running', '/ur_hardware_interface/robot_program_running', std_msgs.msg.Bool, self.RobotProgramRunningCallback))
