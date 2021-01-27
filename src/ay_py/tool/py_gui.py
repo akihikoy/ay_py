@@ -16,9 +16,9 @@ import signal
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
-  def __init__(self,title,widgets,exit_command,size=(800,400)):
+  def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True):
     QtGui.QWidget.__init__(self)
-    self.InitUI(title,widgets,exit_command,size)
+    self.InitUI(title,widgets,exit_command,size,horizontal)
 
   # Get a dict of option name: option content
   def ExpandOpt(self):
@@ -32,7 +32,7 @@ class TTerminalTab(QtGui.QWidget):
     if cmd[0]==':all':  return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
     return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
 
-  def InitUI(self,title,widgets,exit_command,size):
+  def InitUI(self,title,widgets,exit_command,size,horizontal):
     # Set window size.
     self.resize(*size)
     self.Processes= []
@@ -49,17 +49,18 @@ class TTerminalTab(QtGui.QWidget):
     self.term_to_idx= {term:r for r,(term,row) in enumerate(self.Terminals)}
 
     # Horizontal box layout
-    hBoxlayout= QtGui.QHBoxLayout()
-    self.setLayout(hBoxlayout)
+    if horizontal:  boxlayout= QtGui.QHBoxLayout()
+    else:           boxlayout= QtGui.QVBoxLayout()
+    self.setLayout(boxlayout)
 
     self.qttabs= self.MakeTabs()
-    hBoxlayout.addWidget(self.qttabs)
+    boxlayout.addWidget(self.qttabs)
 
     # Grid layout
     grid= QtGui.QGridLayout()
     wg= QtGui.QWidget()
     wg.setLayout(grid)
-    hBoxlayout.addWidget(wg)
+    boxlayout.addWidget(wg)
 
     # Add widgets on grid
     for r,line in enumerate(self.Widgets):
@@ -188,9 +189,9 @@ class TTerminalTab(QtGui.QWidget):
     else:
       event.ignore()
 
-def RunTerminalTab(title,widgets,exit_command,size=(800,400)):
+def RunTerminalTab(title,widgets,exit_command,size=(800,400),horizontal=True):
   app= QtGui.QApplication(sys.argv)
-  win= TTerminalTab(title,widgets,exit_command,size=size)
+  win= TTerminalTab(title,widgets,exit_command,size=size,horizontal=horizontal)
   signal.signal(signal.SIGINT, lambda signum,frame,win=win: (win.Exit(),QtGui.QApplication.quit()) )
   timer= QtCore.QTimer()
   timer.start(500)  # You may change this if you wish.
@@ -212,4 +213,4 @@ if __name__=='__main__':
       ('topics',['rosnode list',E]) ]),
     ]
   exit_command= [E,'C-c']
-  RunTerminalTab('Sample Launcher',widgets,exit_command)
+  RunTerminalTab('Sample Launcher',widgets,exit_command,horizontal=False)
