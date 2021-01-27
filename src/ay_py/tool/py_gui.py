@@ -213,4 +213,4 @@ if __name__=='__main__':
       ('topics',['rosnode list',E]) ]),
     ]
   exit_command= [E,'C-c']
-  RunTerminalTab('Sample Launcher',widgets,exit_command,horizontal=False)
+  RunTerminalTab('Sample Launcher',widgets,exit_command)
