@@ -16,9 +16,9 @@ import signal
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
-  def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True):
+  def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True):
     QtGui.QWidget.__init__(self)
-    self.InitUI(title,widgets,exit_command,size,horizontal)
+    self.InitUI(title,widgets,exit_command,size,horizontal,no_focus)
 
   # Get a dict of option name: option content
   def ExpandOpt(self):
@@ -32,7 +32,7 @@ class TTerminalTab(QtGui.QWidget):
     if cmd[0]==':all':  return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
     return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
 
-  def InitUI(self,title,widgets,exit_command,size,horizontal):
+  def InitUI(self,title,widgets,exit_command,size,horizontal,no_focus):
     # Set window size.
     self.resize(*size)
     self.Processes= []
@@ -74,7 +74,7 @@ class TTerminalTab(QtGui.QWidget):
         for i,opt in enumerate(options):
           radbtn= QtGui.QRadioButton(opt)
           radbtn.setCheckable(True)
-          radbtn.setFocusPolicy(QtCore.Qt.NoFocus)
+          if no_focus:  radbtn.setFocusPolicy(QtCore.Qt.NoFocus)
           if i==0:  radbtn.setChecked(True)
           group.addButton(radbtn,1)
           grid.addWidget(radbtn, r, 1+i)
@@ -95,7 +95,7 @@ class TTerminalTab(QtGui.QWidget):
         term,row= line
         btn0= QtGui.QPushButton('({term})'.format(term=term))
         btn0.setFlat(True)
-        btn0.setFocusPolicy(QtCore.Qt.NoFocus)
+        if no_focus:  btn0.setFocusPolicy(QtCore.Qt.NoFocus)
         btn0.clicked.connect(lambda clicked,term=term:self.ShowTermTab(term))
         grid.addWidget(btn0, r, 0)
         for c,commands in enumerate(row):
@@ -104,14 +104,14 @@ class TTerminalTab(QtGui.QWidget):
             name2,f2= commands[2][0],self.CmdToLambda(term,commands[2][1])
             btn= QtGui.QPushButton(name1)
             btn.setCheckable(True)
-            btn.setFocusPolicy(QtCore.Qt.NoFocus)
+            if no_focus:  btn.setFocusPolicy(QtCore.Qt.NoFocus)
             btn.clicked.connect(lambda b,btn=btn,name1=name1,f1=f1,name2=name2,f2=f2:
                                   (f1(),btn.setText(name2)) if btn.isChecked() else (f2(),btn.setText(name1)))
             grid.addWidget(btn, r, 1+c)
           else:
             name,f= commands[0],self.CmdToLambda(term,commands[1])
             btn= QtGui.QPushButton(name)
-            btn.setFocusPolicy(QtCore.Qt.NoFocus)
+            if no_focus:  btn.setFocusPolicy(QtCore.Qt.NoFocus)
             btn.clicked.connect(f)
             grid.addWidget(btn, r, 1+c)
       else:
@@ -189,9 +189,9 @@ class TTerminalTab(QtGui.QWidget):
     else:
       event.ignore()
 
-def RunTerminalTab(title,widgets,exit_command,size=(800,400),horizontal=True):
+def RunTerminalTab(title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True):
   app= QtGui.QApplication(sys.argv)
-  win= TTerminalTab(title,widgets,exit_command,size=size,horizontal=horizontal)
+  win= TTerminalTab(title,widgets,exit_command,size=size,horizontal=horizontal,no_focus=no_focus)
   signal.signal(signal.SIGINT, lambda signum,frame,win=win: (win.Exit(),QtGui.QApplication.quit()) )
   timer= QtCore.QTimer()
   timer.start(500)  # You may change this if you wish.
