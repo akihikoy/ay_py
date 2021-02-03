@@ -32,6 +32,19 @@ class TSimpleVisualizer(object):
     if viz_dt!=None:
       self.viz_dt= viz_dt
 
+  def DeleteMarker(self, mid):
+    marker= visualization_msgs.msg.Marker()
+    marker.header.frame_id= self.viz_frame
+    marker.ns= self.viz_ns
+    marker.id= mid
+    marker.action= visualization_msgs.msg.Marker.DELETE
+    self.viz_pub.publish(marker)
+    #marker.header.frame_id= self.viz_frame
+    #marker.ns= self.viz_ns
+    #marker.action= visualization_msgs.msg.Marker.DELETEALL
+    #self.viz_pub.publish(marker)
+    self.added_ids.remove(mid)
+
   def DeleteAllMarkers(self):
     #print '[Viz]Deleting all markers:',self.added_ids
     marker= visualization_msgs.msg.Marker()
