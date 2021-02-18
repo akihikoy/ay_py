@@ -77,6 +77,7 @@ class TRobotUR(TMultiArmRobot):
 
     if not self.is_sim:
       ra(self.AddPub('joint_vel', '/joint_group_vel_controller/command', std_msgs.msg.Float64MultiArray, queue_size=10))
+      ra(self.AddPub('urscript','/ur_hardware_interface/script_command',std_msgs.msg.String, queue_size=10))
       ra(self.AddSrvP('sw_ctrl', '/controller_manager/switch_controller', controller_manager_msgs.srv.SwitchController, time_out=3.0))
 
     if not self.is_sim:
