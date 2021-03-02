@@ -141,6 +141,13 @@ class TSimpleVisualizer(object):
     self.viz_pub.publish(marker)
     return mid2
 
+  #Visualize a cylinder at x along its axis ('x','y','z').  If mid is None, the id is automatically assigned
+  def AddCylinderX(self, x, axis, diameter, l1, l2, rgb=[1,1,1], alpha=1.0, mid=None):
+    e= RotToExyz(QToRot(x[3:]))[{'x':0,'y':1,'z':2}[axis]]
+    p1= x[:3]+l1*e
+    p2= x[:3]+l2*e
+    return self.AddCylinder(p1,p2, diameter, rgb=rgb, alpha=alpha, mid=mid)
+
   #Visualize a points [[x,y,z]*N].  If mid is None, the id is automatically assigned
   def AddPoints(self, points, scale=[0.03,0.03], rgb=[1,1,1], alpha=1.0, mid=None):
     x= [0,0,0, 0,0,0,1]
