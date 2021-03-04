@@ -523,6 +523,7 @@ def BoxLineIntersection(box, x_box, p1, p2):
   return Transform(x_box,ray_o+tmin*ray_d),Transform(x_box,ray_o+tmax*ray_d)
 
 def BoxPlaneIntersection(box, x_box, x_plane):
+  EPS= 1.0e-100
   W,D,H= box
   box_points= [[-W*0.5, -D*0.5, -H*0.5],
                [ W*0.5, -D*0.5, -H*0.5 ],
@@ -543,7 +544,7 @@ def BoxPlaneIntersection(box, x_box, x_plane):
   box_edges= filter(lambda (i1,i2): l_box_points[i1][2]<=0<=l_box_points[i2][2] or l_box_points[i2][2]<=0<=l_box_points[i1][2], box_edges)
   if len(box_edges)==0:  return []
   #Calculate intersection points.
-  f_intersect= lambda p1,p2: [(p1[0]*p2[2]-p1[2]*p2[0])/(p2[2]-p1[2]), (p1[1]*p2[2]-p1[2]*p2[1])/(p2[2]-p1[2])]
+  f_intersect= lambda p1,p2: [(p1[0]*p2[2]-p1[2]*p2[0])/(p2[2]-p1[2]), (p1[1]*p2[2]-p1[2]*p2[1])/(p2[2]-p1[2])] if abs(p2[2]-p1[2])>EPS else [(p1[0]+p2[0])*0.5, (p1[1]+p2[1])*0.5]
   l_p_intersect= map(lambda (i1,i2):f_intersect(l_box_points[i1],l_box_points[i2]), box_edges)
 
   #Make it convex:
