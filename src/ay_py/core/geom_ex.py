@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-#Basic tools (extended geometry).
+#Basic tools (advanced geometry).
 import numpy as np
 import numpy.linalg as la
 import math
@@ -457,3 +457,103 @@ def CircleFitX(marker_data):
   p_file.close()
 
   return x_center, radius
+
+
+
+'''
+Based on the Ray-box intersection algorithm described in:
+    Amy Williams, Steve Barrus, R. Keith Morley, and Peter Shirley
+    "An Efficient and Robust Ray-Box Intersection Algorithm"
+    Journal of graphics tools, 10(1):49-54, 2005
+
+ray_o: Origin of the ray (x,y,z)
+ray_d: Direction of the ray (x,y,z)
+box_min: Min position of the box (x,y,z)
+box_max: Max position of the box (x,y,z)
+'''
+def BoxRayIntersection(ray_o, ray_d, box_min, box_max):
+  sign= lambda x: 1 if x<0 else 0
+  INF= 1.0e100
+  EPS= 1.0e-100
+  ray_id= [(1.0/d if abs(d)>EPS else (INF if d>=0.0 else -INF)) for d in ray_d]
+  ray_sign= [sign(id) for id in ray_id]
+  box= [box_min, box_max]
+
+  tmin= (box[ray_sign[0]][0] - ray_o[0]) * ray_id[0]
+  tmax= (box[1-ray_sign[0]][0] - ray_o[0]) * ray_id[0]
+  tymin= (box[ray_sign[1]][1] - ray_o[1]) * ray_id[1]
+  tymax= (box[1-ray_sign[1]][1] - ray_o[1]) * ray_id[1]
+  if (tmin > tymax) or (tymin > tmax):
+    return None,None
+  if tymin > tmin:
+    tmin= tymin
+  if tymax < tmax:
+    tmax= tymax
+  tzmin= (box[ray_sign[2]][2] - ray_o[2]) * ray_id[2]
+  tzmax= (box[1-ray_sign[2]][2] - ray_o[2]) * ray_id[2]
+  if (tmin > tzmax) or (tzmin > tmax):
+    return None,None
+  if tzmin > tmin:
+    tmin= tzmin;
+  if tzmax < tmax:
+    tmax= tzmax;
+  return tmin, tmax
+
+def BoxLineIntersection(box, x_box, p1, p2):
+  W,D,H= box
+  l_p1= TransformLeftInv(x_box,p1)
+  l_p2= TransformLeftInv(x_box,p2)
+  ray_o= np.array(l_p1)
+  ray_d= np.array(l_p2)-ray_o
+  line_len= np.linalg.norm(ray_d)
+  ray_d/= line_len
+  box_min= [-W*0.5, -D*0.5, -H*0.5]
+  box_max= [ W*0.5,  D*0.5,  H*0.5]
+  tmin,tmax= BoxRayIntersection(ray_o, ray_d, box_min, box_max)
+  #print 'p1,p2:',p1,p2
+  #print 'ray_o:',ray_o
+  #print 'ray_d:',ray_d
+  #print 'box_min:',box_min
+  #print 'box_max:',box_max
+  #print 'tmin,tmax:',tmin,tmax
+  if tmin is None:  return None,None
+  if tmax<0 or tmin>line_len:  return None,None
+  if tmin<0:  tmin= 0.0
+  if tmax>line_len:  tmax= line_len
+  return Transform(x_box,ray_o+tmin*ray_d),Transform(x_box,ray_o+tmax*ray_d)
+
+def BoxPlaneIntersection(box, x_box, x_plane):
+  W,D,H= box
+  box_points= [[-W*0.5, -D*0.5, -H*0.5],
+               [ W*0.5, -D*0.5, -H*0.5 ],
+               [ W*0.5,  D*0.5, -H*0.5],
+               [-W*0.5,  D*0.5, -H*0.5],
+               [-W*0.5, -D*0.5,  H*0.5],
+               [ W*0.5, -D*0.5,  H*0.5 ],
+               [ W*0.5,  D*0.5,  H*0.5],
+               [-W*0.5,  D*0.5,  H*0.5]]
+  #Project box_points onto the x_plane frame:
+  l_box_points= map(lambda p: TransformLeftInv(x_plane,Transform(x_box,p)), box_points)
+
+  #Indexes of box edges.
+  box_edges= [[0,1],[1,2],[2,3],[3,0],
+              [4,5],[5,6],[6,7],[7,4],
+              [1,5],[4,0],[3,7],[6,2]]
+  #Extract box edges that have an intersection with the plane.
+  box_edges= filter(lambda (i1,i2): l_box_points[i1][2]<=0<=l_box_points[i2][2] or l_box_points[i2][2]<=0<=l_box_points[i1][2], box_edges)
+  if len(box_edges)==0:  return []
+  #Calculate intersection points.
+  f_intersect= lambda p1,p2: [(p1[0]*p2[2]-p1[2]*p2[0])/(p2[2]-p1[2]), (p1[1]*p2[2]-p1[2]*p2[1])/(p2[2]-p1[2])]
+  l_p_intersect= map(lambda (i1,i2):f_intersect(l_box_points[i1],l_box_points[i2]), box_edges)
+
+  #Make it convex:
+  hull= scipy_ConvexHull(l_p_intersect)
+  #print hull.vertices
+  l_p_intersect= np.array(l_p_intersect)[hull.vertices]
+
+  return l_p_intersect
+
+def BoxPolyIntersection(box, x_box, x_poly, l_points2d_poly):
+  l_points2d_boxpolyintersect= BoxPlaneIntersection(box, x_box, x_poly)
+  l_points2d_intersect= ClipPolygon(l_points2d_boxpolyintersect, l_points2d_poly)
+  return l_points2d_intersect
