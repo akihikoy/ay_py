@@ -34,6 +34,29 @@ def LinePolygonIntersection(p1, p2, points):
   pIs= [LineLineIntersection(p1,p2,pA,pB) for pA,pB in zip(points, points[1:]+[points[0]])]
   return filter(None,pIs)
 
+#Get intersections of a line segment (p1,p2) and a circle (pc,rad).
+#  Return [t1,t2] or [t1] or [] where tN is a scolar representing an intersection:
+#    p= (1.0-t)*p1+t*p2
+def LineCircleIntersections(p1, p2, pc, rad):
+  p,q= p2[0]-p1[0],p2[1]-p1[1]
+  r,s= pc[0]-p1[0],pc[1]-p1[1]
+  len12_sq= p*p+q*q
+  DET= len12_sq*rad*rad - (p*s-q*r)**2
+  if DET<0:  return []
+  elif DET==0:
+    t= (r*p+s*q)/len12_sq
+    if 0<=t<=1:  return [t]
+    return []
+  else:
+    rp_sq= r*p+s*q
+    DET= np.sqrt(DET)
+    t1= (rp_sq-DET)/len12_sq
+    t2= (rp_sq+DET)/len12_sq
+    sol= []
+    if 0<=t1<=1:  sol.append(t1)
+    if 0<=t2<=1:  sol.append(t2)
+    return sol
+
 #Closest point on a line (p1,p2) from a reference point
 def LineClosestPoint(p1, p2, point_ref):
   a= Vec(p2)-Vec(p1)
