@@ -5,6 +5,7 @@ import numpy.linalg as la
 import math
 import random
 from scipy.spatial import ConvexHull as scipy_ConvexHull
+from scipy.spatial.qhull import QhullError as scipy_QhullError
 from scipy.optimize import minimize as scipy_minimize
 from util import *
 from geom import *
@@ -571,7 +572,10 @@ def BoxPlaneIntersection(box, x_box, x_plane):
   l_p_intersect= map(lambda (i1,i2):f_intersect(l_box_points[i1],l_box_points[i2]), box_edges)
 
   #Make it convex:
-  hull= scipy_ConvexHull(l_p_intersect)
+  try:
+    hull= scipy_ConvexHull(l_p_intersect)
+  except scipy_QhullError:
+    return []
   #print hull.vertices
   l_p_intersect= np.array(l_p_intersect)[hull.vertices]
 
