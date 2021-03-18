@@ -4,6 +4,7 @@ import roslib; roslib.load_manifest('rospy')
 import rospy
 import visualization_msgs.msg
 import geometry_msgs.msg
+import std_msgs.msg
 from base import *
 from const import *
 from ..core.geom import *
@@ -71,13 +72,11 @@ class TSimpleVisualizer(object):
     #marker.id= self.curr_id
     marker.action= visualization_msgs.msg.Marker.ADD  # or DELETE
     marker.lifetime= self.viz_dt
-    marker.scale.x= scale[0]
-    marker.scale.y= scale[1]
-    marker.scale.z= scale[2]
-    marker.color.a= alpha
-    marker.color.r = rgb[0]
-    marker.color.g = rgb[1]
-    marker.color.b = rgb[2]
+    marker.scale= geometry_msgs.msg.Vector3(*scale[:3])
+    if isinstance(rgb[0],(int,float)):
+      marker.color= std_msgs.msg.ColorRGBA(rgb[0],rgb[1],rgb[2],alpha)
+    else:
+      marker.colors= [std_msgs.msg.ColorRGBA(r,g,b,alpha) for r,g,b in rgb]
     marker.pose= XToGPose(x)
     #self.curr_id+= 1
     return marker
@@ -106,6 +105,23 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, scale, rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.ARROW  # or CUBE, SPHERE, ARROW, CYLINDER
+    self.viz_pub.publish(marker)
+    return mid2
+
+  #Visualize a list of arrows.  If mid is None, the id is automatically assigned
+  def AddArrowList(self, x_list, axis='x', scale=[0.05,0.002], rgb=[1,1,1], alpha=1.0, mid=None):
+    iex,iey= {'x':(0,1),'y':(1,2),'z':(2,0)}[axis]
+    def point_on_arrow(x,l):
+      exyz= RotToExyz(QToRot(x[3:]))
+      ex,ey= exyz[iex],exyz[iey]
+      pt= x[:3]+l*ex
+      return [x[:3], pt, pt, x[:3]+0.7*l*ex+0.15*l*ey, pt, x[:3]+0.7*l*ex-0.15*l*ey]
+    x= [0,0,0, 0,0,0,1]
+    if not isinstance(rgb[0],(int,float)):  rgb= np.repeat(rgb,6,axis=0)
+    marker= self.GenMarker(x, [scale[1],0.0,0.0], rgb, alpha)
+    mid2= self.SetID(marker,mid)
+    marker.type= visualization_msgs.msg.Marker.LINE_LIST
+    marker.points= [geometry_msgs.msg.Point(*p) for x in x_list for p in point_on_arrow(x,scale[0])]
     self.viz_pub.publish(marker)
     return mid2
 
@@ -154,16 +170,11 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, list(scale)+[0.0], rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.POINTS
-    for p in points:
-      gp= geometry_msgs.msg.Point()
-      gp.x= p[0]
-      gp.y= p[1]
-      gp.z= p[2]
-      marker.points.append(gp)
+    marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
     self.viz_pub.publish(marker)
     return mid2
 
-  #Visualize a coordinate system at x.  If mid is None, the id is automatically assigned
+  #Visualize a coordinate system at x with arrows.  If mid is None, the id is automatically assigned
   def AddCoord(self, x, scale=[0.05,0.002], alpha=1.0, mid=None):
     scale= [scale[0],scale[1],scale[1]]
     p,R= XToPosRot(x)
@@ -174,18 +185,34 @@ class TSimpleVisualizer(object):
     mid= self.AddArrow(PosRotToX(p,Rz), scale=scale, rgb=self.ICol(2), alpha=alpha, mid=mid)
     return mid
 
+  #Visualize a coordinate system at x with cylinders.  If mid is None, the id is automatically assigned
+  def AddCoordC(self, x, scale=[0.05,0.002], alpha=1.0, mid=None):
+    scale= [scale[0],scale[1],scale[1]]
+    p,R= XToPosRot(x)
+    Ry= np.array([R[:,1],R[:,2],R[:,0]]).T
+    Rz= np.array([R[:,2],R[:,0],R[:,1]]).T
+    mid= self.AddCylinderX(x, 'x', scale[1], 0, scale[0], rgb=self.ICol(0), alpha=alpha, mid=mid)
+    mid= self.AddCylinderX(x, 'y', scale[1], 0, scale[0], rgb=self.ICol(1), alpha=alpha, mid=mid)
+    mid= self.AddCylinderX(x, 'z', scale[1], 0, scale[0], rgb=self.ICol(2), alpha=alpha, mid=mid)
+    return mid
+
   #Visualize a polygon [[x,y,z]*N].  If mid is None, the id is automatically assigned
   def AddPolygon(self, points, scale=[0.02], rgb=[1,1,1], alpha=1.0, mid=None):
     x= [0,0,0, 0,0,0,1]
     marker= self.GenMarker(x, list(scale)+[0.0,0.0], rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.LINE_STRIP
-    for p in points:
-      gp= geometry_msgs.msg.Point()
-      gp.x= p[0]
-      gp.y= p[1]
-      gp.z= p[2]
-      marker.points.append(gp)
+    marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
+    self.viz_pub.publish(marker)
+    return mid2
+
+  #Visualize a list of lines [[x,y,z]*N] (2i-th and (2i+1)-th points are pair).  If mid is None, the id is automatically assigned
+  def AddLineList(self, points, scale=[0.02], rgb=[1,1,1], alpha=1.0, mid=None):
+    x= [0,0,0, 0,0,0,1]
+    marker= self.GenMarker(x, list(scale)+[0.0,0.0], rgb, alpha)
+    mid2= self.SetID(marker,mid)
+    marker.type= visualization_msgs.msg.Marker.LINE_LIST
+    marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
     self.viz_pub.publish(marker)
     return mid2
 
