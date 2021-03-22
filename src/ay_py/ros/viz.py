@@ -10,8 +10,8 @@ from const import *
 from ..core.geom import *
 
 class TSimpleVisualizer(object):
-  def __init__(self, viz_dt=rospy.Duration(), name_space='visualizer', frame=None):
-    self.viz_pub= rospy.Publisher('visualization_marker', visualization_msgs.msg.Marker, queue_size=10)
+  def __init__(self, viz_dt=rospy.Duration(), name_space='visualizer', frame=None, queue_size=0):
+    self.viz_pub= rospy.Publisher('visualization_marker', visualization_msgs.msg.Marker, queue_size=queue_size)
     self.curr_id= 0
     self.added_ids= set()
     self.viz_frame= 'base' if frame is None else frame
@@ -133,6 +133,16 @@ class TSimpleVisualizer(object):
     self.viz_pub.publish(marker)
     return mid2
 
+  #Visualize a list of cubes [[x,y,z]*N].  If mid is None, the id is automatically assigned
+  def AddCubeList(self, points, scale=[0.05,0.03,0.03], rgb=[1,1,1], alpha=1.0, mid=None):
+    x= [0,0,0, 0,0,0,1]
+    marker= self.GenMarker(x, scale, rgb, alpha)
+    mid2= self.SetID(marker,mid)
+    marker.type= visualization_msgs.msg.Marker.CUBE_LIST
+    marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
+    self.viz_pub.publish(marker)
+    return mid2
+
   #Visualize a sphere at p=[x,y,z].  If mid is None, the id is automatically assigned
   def AddSphere(self, p, scale=[0.05,0.05,0.05], rgb=[1,1,1], alpha=1.0, mid=None):
     if len(p)==3:
@@ -142,6 +152,16 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, scale, rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.SPHERE  # or CUBE, SPHERE, ARROW, CYLINDER
+    self.viz_pub.publish(marker)
+    return mid2
+
+  #Visualize a list of spheres [[x,y,z]*N].  If mid is None, the id is automatically assigned
+  def AddSphereList(self, points, scale=[0.05,0.05,0.05], rgb=[1,1,1], alpha=1.0, mid=None):
+    x= [0,0,0, 0,0,0,1]
+    marker= self.GenMarker(x, scale, rgb, alpha)
+    mid2= self.SetID(marker,mid)
+    marker.type= visualization_msgs.msg.Marker.SPHERE_LIST
+    marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
     self.viz_pub.publish(marker)
     return mid2
 
@@ -213,6 +233,19 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.LINE_LIST
     marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
+    self.viz_pub.publish(marker)
+    return mid2
+
+  #Visualize a text.  If mid is None, the id is automatically assigned
+  def AddText(self, p, text, scale=[0.02], rgb=[1,1,1], alpha=1.0, mid=None):
+    if len(p)==3:
+      x= list(p)+[0,0,0,1]
+    else:
+      x= p
+    marker= self.GenMarker(x, [0.0,0.0]+list(scale), rgb, alpha)
+    mid2= self.SetID(marker,mid)
+    marker.type= visualization_msgs.msg.Marker.TEXT_VIEW_FACING
+    marker.text= text
     self.viz_pub.publish(marker)
     return mid2
 
