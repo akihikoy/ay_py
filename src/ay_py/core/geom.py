@@ -259,6 +259,17 @@ def TransformLeftInv(x_l,x_r):
     R= np.dot(Rl.T, Rr)
     return PosRotToX(p,R)
 
+#List version of TransformLeftInv.
+#Equivalent to [TransformLeftInv(x_l,x_r) for x_r in x_r_list]
+def TransformLeftInvList(x_l,x_r_list):
+  if len(x_r_list)==0:  return []
+  if len(x_r_list[0])==3:
+    pl,Rl= XToPosRot(x_l)
+    p_list= np.dot((np.array(x_r_list)-pl), Rl)
+    return p_list
+  elif len(x_r_list[0])==7:
+    raise Exception('Not Implemented Yet')
+
 #This solves for trans_x in "x_l = trans_x * x_r", i.e. return "x_l*inv(x_r)"
 #For example, get a transformation, x_r to x_l
 #x_* are [x,y,z,quaternion] form
@@ -303,6 +314,31 @@ def Transform(x2, x1):
     R1= QToRot(x1)
     R= np.dot(R2, R1)
     return RotToQ(R)
+
+#List version of Transform.
+#Equivalent to [Transform(x2,x1) for x1 in x1_list]
+def TransformList(x2, x1_list):
+  if len(x1_list)==0:  return []
+  if len(x2)==3:
+    if len(x1_list[0])==7:
+      return np.array(x1_list) + np.lib.pad(x2, ((0,4),), 'constant', constant_values=(0))
+    if len(x1_list[0])==3:  #i.e. [x,y,z]
+      return np.array(x1_list) + x2
+    if len(x1_list[0])==4:  #i.e. [quaternion]
+      raise Exception('invalid Transform: point * quaternion')
+
+  if len(x2)==7:
+    p2,R2= XToPosRot(x2)
+  elif len(x2)==4:  #i.e. [quaternion]
+    p2= Vec([0.0,0.0,0.0])
+    R2= QToRot(x2)
+
+  if len(x1_list[0])==7:
+    raise Exception('Not Implemented Yet')
+  if len(x1_list[0])==3:  #i.e. [x,y,z]
+    return np.dot(x1_list,R2.T)+p2
+  if len(x1_list[0])==4:  #i.e. [quaternion]
+    raise Exception('Not Implemented Yet')
 
 #Get weighted average of two rotation matrices (intuitively, (1-w2)*R1 + w2*R2)
 def AverageRot(R1, R2, w2):
