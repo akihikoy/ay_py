@@ -28,7 +28,7 @@ def CopyFile(src, dst, dst_file=None, interactive=True):
 
 #Detecting a keyboard hit without interrupting
 #cf: http://code.activestate.com/recipes/572182-how-to-implement-kbhit-on-linux/
-class TKBHit:
+class TKBHit(object):
   def __init__(self,activate=True):
     self.is_curses_term= False
     self.termios= termios  #Ensure to use termios in __del__
@@ -51,6 +51,11 @@ class TKBHit:
 
   #Activate a new terminal for kbhit
   def Activate(self):
+    if not hasattr(sys.stdin,'fileno'):  #Not a regular stdin.
+      sys.stdin.is_curses_term= True
+      self.is_curses_term= True
+      return
+
     # save the terminal settings
     self.fd= sys.stdin.fileno()
     self.new_term= termios.tcgetattr(self.fd)
@@ -68,6 +73,11 @@ class TKBHit:
 
   #Switch to normal terminal
   def SetNormalTerm(self):
+    if not hasattr(sys.stdin,'fileno'):  #Not a regular stdin.
+      sys.stdin.is_curses_term= False
+      self.is_curses_term= False
+      return
+
     if self.is_curses_term:
       self.termios.tcsetattr(self.fd, self.termios.TCSAFLUSH, self.old_term)
       del self.fd
@@ -98,6 +108,8 @@ class TKBHit:
 
   #Check a keyboard hit
   def CheckKBHit(self, timeout=0):
+    if not hasattr(sys.stdin,'fileno'):  #Not a regular stdin.
+      return sys.stdin.wait_readable(timeout)
     dr,dw,de= select([sys.stdin], [], [], timeout)
     #print 'dr:',dr
     #print 'dw:',dw
