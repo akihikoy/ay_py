@@ -289,9 +289,10 @@ class TSimplePanel(QtGui.QWidget):
 
     self.show()
 
-  def ApplyCommonConfig(self, widget, param):
-    widget.font_size_range= param['font_size_range']
-    widget.setFont(QtGui.QFont('', widget.font_size_range[0]))
+  def ApplyCommonWidgetConfig(self, widget, param):
+    if hasattr(widget,'setFont') and param['font_size_range'] is not None:
+      widget.font_size_range= param['font_size_range']
+      widget.setFont(QtGui.QFont('', widget.font_size_range[0]))
     if param['enabled'] is not None:  widget.setEnabled(param['enabled'])
     if param['minimum_size'] is not None:
       if param['minimum_size'][0]:  widget.setMinimumWidth(param['minimum_size'][0])
@@ -314,12 +315,12 @@ class TSimplePanel(QtGui.QWidget):
       obj.setMinimumHeight(rect.height()+15)
     elif isinstance(obj,QtGui.QComboBox):
       obj.resize(obj.sizeHint().width(),obj.height())
-    obj.setFont(f)
+    if hasattr(obj,'setFont'):  obj.setFont(f)
 
   def ResizeText(self, event):
     s= self.rect().height()/self.font_height_scale
     for name,obj in self.widgets.iteritems():
-      if 'font_size_range' not in obj.__dict__:  continue
+      if not hasattr(obj,'font_size_range'):  continue
       self.ResizeTextOfObj(obj, obj.font_size_range, s)
 
   #Duplicate a widget (regenerate a widget with the same parameter).
@@ -343,7 +344,7 @@ class TSimplePanel(QtGui.QWidget):
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(100, 150)
-    self.ApplyCommonConfig(btn, param)
+    self.ApplyCommonWidgetConfig(btn, param)
     return btn
 
   def AddButtonCheckable(self, w_param):
@@ -360,7 +361,7 @@ class TSimplePanel(QtGui.QWidget):
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(220, 100)
-    self.ApplyCommonConfig(btn, param)
+    self.ApplyCommonWidgetConfig(btn, param)
     return btn
 
   def AddComboBox(self, w_param):
@@ -378,7 +379,7 @@ class TSimplePanel(QtGui.QWidget):
     #cmbbx.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     cmbbx.resize(cmbbx.sizeHint())
     #cmbbx.move(10, 60)
-    self.ApplyCommonConfig(cmbbx, param)
+    self.ApplyCommonWidgetConfig(cmbbx, param)
     return cmbbx
 
   def AddLineEdit(self, w_param):
@@ -393,7 +394,7 @@ class TSimplePanel(QtGui.QWidget):
     #edit.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
     edit.resize(edit.sizeHint())
     #edit.move(10, 60)
-    self.ApplyCommonConfig(edit, param)
+    self.ApplyCommonWidgetConfig(edit, param)
     return edit
 
   def AddRadioBox(self, w_param):
@@ -407,7 +408,7 @@ class TSimplePanel(QtGui.QWidget):
     if param['onclick']:  clicked= lambda _,radiobox=radiobox:param['onclick'](self,radiobox)
     else:  clicked= None
     radiobox.Construct(param['layout'], param['options'], index=param['index'], onclick=clicked)
-    self.ApplyCommonConfig(radiobox, param)
+    self.ApplyCommonWidgetConfig(radiobox, param)
     return radiobox
 
   def AddSliderH(self, w_param):
@@ -423,16 +424,20 @@ class TSimplePanel(QtGui.QWidget):
     else:  onvaluechange= None
     slider.Construct(param['range'], n_labels=param['n_labels'], slider_style=param['slider_style'], onvaluechange=onvaluechange)
     if param['value'] is not None:  slider.setValue(param['value'])
-    self.ApplyCommonConfig(slider, param)
+    self.ApplyCommonWidgetConfig(slider, param)
     return slider
 
   def AddSpacer(self, w_param):
     param= MergeDict2(copy.deepcopy(self.param_common), {
-      'w':1,
-      'h':1,
+      'w': 1,
+      'h': 1,
+      'size_policy': ('expanding', 'expanding'),
       }, w_param)
-    spacer= QtGui.QSpacerItem(param['w'], param['h'], QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
-    #self.ApplyCommonConfig(spacer, param)
+    if isinstance(param['size_policy'],str):
+      spacer= QtGui.QSpacerItem(param['w'], param['h'], self.size_policies[param['size_policy']], self.size_policies[param['size_policy']])
+    else:
+      spacer= QtGui.QSpacerItem(param['w'], param['h'], self.size_policies[param['size_policy'][0]], self.size_policies[param['size_policy'][1]])
+    #self.ApplyCommonWidgetConfig(spacer, param)
     return spacer
 
   def AddLabel(self, w_param):
@@ -444,7 +449,7 @@ class TSimplePanel(QtGui.QWidget):
     #label.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     if param['selectable_by_mouse']:
       label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
-    self.ApplyCommonConfig(label, param)
+    self.ApplyCommonWidgetConfig(label, param)
     return label
 
   def AddTextEdit(self, w_param):
@@ -456,7 +461,7 @@ class TSimplePanel(QtGui.QWidget):
     text.setText(param['text'])
     text.setReadOnly(param['read_only'])
     #text.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
-    self.ApplyCommonConfig(text, param)
+    self.ApplyCommonWidgetConfig(text, param)
     return text
 
   def AddPrimitivePainter(self, w_param):
@@ -466,7 +471,7 @@ class TSimplePanel(QtGui.QWidget):
       'color':(0,0,255),
       }, w_param)
     primitive= TPrimitivePainter(param['shape'],param['margin'],param['color'],self)
-    self.ApplyCommonConfig(primitive, param)
+    self.ApplyCommonWidgetConfig(primitive, param)
     return primitive
 
   def AddLayouts(self, layout):
