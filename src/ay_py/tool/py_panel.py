@@ -275,6 +275,8 @@ class TSimplePanel(QtGui.QWidget):
   #Add widgets from widget description dict.
   def AddWidgets(self, widgets):
     for name,(w_type, w_param) in widgets.iteritems():
+      if name in self.widgets_in:
+        raise Exception('TSimplePanel.AddWidgets: widget already exists: {0}'.format(name))
       self.widgets_in[name]= (w_type, w_param)
     for name in widgets.iterkeys():
       w_type, w_param= self.widgets_in[name]
