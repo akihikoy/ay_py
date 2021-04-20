@@ -45,6 +45,10 @@ class TRobotUR(TMultiArmRobot):
     self.safety_mode_locker= threading.RLock()
     self.robot_program_running_locker= threading.RLock()
 
+    self.io_states= None
+    self.io_states_callback= None  #User defined callback f(ur_msgs.msg.IOStates).
+    self.io_states_locker= threading.RLock()
+
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= False
@@ -94,6 +98,9 @@ class TRobotUR(TMultiArmRobot):
       ra(self.AddSub('robot_mode', '/ur_hardware_interface/robot_mode', ur_dashboard_msgs.msg.RobotMode, self.RobotModeCallback))
       ra(self.AddSub('safety_mode', '/ur_hardware_interface/safety_mode', ur_dashboard_msgs.msg.SafetyMode, self.SafetyModeCallback))
       ra(self.AddSub('robot_program_running', '/ur_hardware_interface/robot_program_running', std_msgs.msg.Bool, self.RobotProgramRunningCallback))
+      #roslib.load_manifest('ur_msgs')
+      ur_msgs= __import__('ur_msgs',globals(),None,('msg',))
+      ra(self.AddSub('io_states', '/ur_hardware_interface/io_states', ur_msgs.msg.IOStates, self.IOStatesCallback))
 
     self.grippers= [TFakeGripper()]
 
@@ -201,6 +208,16 @@ class TRobotUR(TMultiArmRobot):
   def RobotProgramRunningCallback(self, msg):
     with self.robot_program_running_locker:
       self.robot_program_running= msg
+
+  def IOStates(self):
+    with self.io_states_locker:
+      io_states= self.io_states
+    return io_states
+  def IOStatesCallback(self, msg):
+    with self.io_states_locker:
+      self.io_states= msg
+    if self.io_states_callback:
+      self.io_states_callback(self.io_states)
 
   '''Return joint angles of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
