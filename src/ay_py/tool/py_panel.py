@@ -316,8 +316,8 @@ class TSimplePanel(QtGui.QWidget):
       rect= obj.fontMetrics().boundingRect(text if text!='' else '0')
       obj.setMinimumWidth(rect.width()+15)
       obj.setMinimumHeight(rect.height()+15)
-    elif isinstance(obj,QtGui.QComboBox):
-      obj.resize(obj.sizeHint().width(),obj.height())
+    #elif isinstance(obj,QtGui.QComboBox):
+      #obj.resize(obj.sizeHint().width(),obj.height())
     if hasattr(obj,'setFont'):  obj.setFont(f)
 
   def ResizeText(self, event):

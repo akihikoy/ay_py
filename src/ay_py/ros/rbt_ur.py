@@ -133,7 +133,12 @@ class TRobotUR(TMultiArmRobot):
   def IsNormal(self):
     if self.is_sim:  return True
     with self.robot_mode_locker, self.safety_mode_locker, self.robot_program_running_locker:
-      return all((self.robot_mode.mode==self.robot_mode.RUNNING, self.safety_mode.mode==self.safety_mode.NORMAL, self.robot_program_running.data))
+      return all((self.robot_mode.mode==self.robot_mode.RUNNING, self.safety_mode.mode==self.safety_mode.NORMAL, self.robot_program_running))
+
+  def PrintStatus(self):
+    print 'robot_mode: {0} ({1})'.format(self.robot_mode.mode, 'running' if self.robot_mode.mode==self.robot_mode.RUNNING else 'not running')
+    print 'safety_mode: {0} ({1})'.format(self.safety_mode.mode, 'normal' if self.safety_mode.mode==self.safety_mode.NORMAL else 'not normal')
+    print 'robot_program_running: {0}'.format(self.robot_program_running)
 
   def RobotIP(self):
     return self.robot_ip
@@ -207,7 +212,7 @@ class TRobotUR(TMultiArmRobot):
       self.safety_mode= msg
   def RobotProgramRunningCallback(self, msg):
     with self.robot_program_running_locker:
-      self.robot_program_running= msg
+      self.robot_program_running= msg.data
 
   def IOStates(self):
     with self.io_states_locker:
@@ -309,6 +314,7 @@ class TRobotUR(TMultiArmRobot):
     arm= 0
 
     if not self.IsNormal():
+      self.PrintStatus()
       raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
     self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
