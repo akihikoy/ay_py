@@ -256,6 +256,7 @@ class TSimplePanel(QtGui.QWidget):
       'duplicate': self.DuplicateWidget,
       'button': self.AddButton,
       'buttonchk': self.AddButtonCheckable,
+      'checkbox': self.AddCheckBox,
       'combobox': self.AddComboBox,
       'lineedit': self.AddLineEdit,
       'radiobox': self.AddRadioBox,
@@ -366,10 +367,24 @@ class TSimplePanel(QtGui.QWidget):
     self.ApplyCommonWidgetConfig(btn, param)
     return btn
 
+  def AddCheckBox(self, w_param):
+    param= MergeDict2(copy.deepcopy(self.param_common), {
+      'text': 'checkbox',
+      'checked': False,
+      'onclick': None,
+      }, w_param)
+    chkbx= QtGui.QCheckBox(param['text'], self)
+    chkbx.setChecked(param['checked'])
+    chkbx.setFocusPolicy(QtCore.Qt.NoFocus)
+    if param['onclick']:  chkbx.clicked.connect(lambda chkbx=chkbx: param['onclick'](self,chkbx))
+    self.ApplyCommonWidgetConfig(chkbx, param)
+    return chkbx
+
   def AddComboBox(self, w_param):
     param= MergeDict2(copy.deepcopy(self.param_common), {
       'options': [],
       'index': 0,
+      'size_adjust_policy': None,  #'all_contents','first_content','min_content'
       'onactivated': None,
       }, w_param)
     cmbbx= QtGui.QComboBox(self)
@@ -377,6 +392,11 @@ class TSimplePanel(QtGui.QWidget):
     for option in param['options']:
       cmbbx.addItem(option)
     if param['index'] is not None:  cmbbx.setCurrentIndex(param['index'])
+    if param['size_adjust_policy'] is not None:
+      policy= {'all_contents':  QtGui.QComboBox.AdjustToContents,
+               'first_content': QtGui.QComboBox.AdjustToContentsOnFirstShow,
+               'min_content':   QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon}[param['size_adjust_policy']]
+      cmbbx.setSizeAdjustPolicy(policy)
     if param['onactivated']:  cmbbx.activated[str].connect(lambda _,cmbbx=cmbbx:param['onactivated'](self,cmbbx))
     #cmbbx.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     cmbbx.resize(cmbbx.sizeHint())
@@ -634,6 +654,9 @@ if __name__=='__main__':
         'minimum_size': (None,20),
         'maximum_size': (None,20),
         'size_policy': ('expanding', 'fixed')}),
+    'checkbox1': (
+      'checkbox',{
+        'text': 'Please check!'}),
     'spacer1': ('spacer', {}),
     }
   #Layout option: vbox, hbox, grid, tab
@@ -655,7 +678,7 @@ if __name__=='__main__':
                   ('boxh',None, ('btn_totab20', 'btn_totab30') ),
                   'spacer1',
                 )) ),
-            ('tab2', ('boxv',None, ('label_tab2', 'btn_totab10', 'btn_totab31') ) ),
+            ('tab2', ('boxv',None, ('label_tab2', 'btn_totab10', 'btn_totab31', 'checkbox1') ) ),
             ('tab3', ('boxv',None, ('primitive_painer1','btn_totab11', 'btn_totab21', 'textedit1') ) ),
             ))
 
