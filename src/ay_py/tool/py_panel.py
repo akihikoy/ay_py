@@ -343,7 +343,7 @@ class TSimplePanel(QtGui.QWidget):
     btn.setFocusPolicy(QtCore.Qt.NoFocus)
     #btn.setFlat(True)
     #btn.setToolTip('Click to make something happen')
-    if param['onclick']:  btn.clicked.connect(lambda btn=btn: param['onclick'](self,btn))
+    if param['onclick']:  btn.clicked.connect(lambda checked=False,btn=btn: param['onclick'](self,btn))
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(100, 150)
@@ -360,7 +360,7 @@ class TSimplePanel(QtGui.QWidget):
     btn.setFocusPolicy(QtCore.Qt.NoFocus)
     btn.setCheckable(True)
     btn.setChecked(param['checked'])
-    if param['onclick']:  btn.clicked.connect(lambda bnt=btn: (param['onclick'][0](self,btn) if param['onclick'][0] else None, btn.setText(param['text'][1])) if btn.isChecked() else (param['onclick'][1](self,btn) if param['onclick'][1] else None, btn.setText(param['text'][0])) )
+    if param['onclick']:  btn.clicked.connect(lambda checked=False,bnt=btn: (param['onclick'][0](self,btn) if param['onclick'][0] else None, btn.setText(param['text'][1])) if btn.isChecked() else (param['onclick'][1](self,btn) if param['onclick'][1] else None, btn.setText(param['text'][0])) )
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(220, 100)
@@ -376,7 +376,7 @@ class TSimplePanel(QtGui.QWidget):
     chkbx= QtGui.QCheckBox(param['text'], self)
     chkbx.setChecked(param['checked'])
     chkbx.setFocusPolicy(QtCore.Qt.NoFocus)
-    if param['onclick']:  chkbx.clicked.connect(lambda chkbx=chkbx: param['onclick'](self,chkbx))
+    if param['onclick']:  chkbx.clicked.connect(lambda checked=False,chkbx=chkbx: param['onclick'](self,chkbx))
     self.ApplyCommonWidgetConfig(chkbx, param)
     return chkbx
 
