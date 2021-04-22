@@ -229,6 +229,7 @@ class TPrimitivePainter(QtGui.QWidget):
 class TSimplePanel(QtGui.QWidget):
   def __init__(self, title, size=(800,400), font_height_scale=100.0):
     QtGui.QWidget.__init__(self)
+    self.close_callback= None
     self.font_height_scale= font_height_scale
     self.alignments= {
       '': QtCore.Qt.Alignment(),
@@ -253,7 +254,7 @@ class TSimplePanel(QtGui.QWidget):
       'size_policy': ('expanding', 'expanding'),  #(horizontal_size_policy, vertical_size_policy), or size_policy
       }
     self.widget_generator= {
-      'duplicate': self.DuplicateWidget,
+      #'duplicate': self.DuplicateWidget,
       'button': self.AddButton,
       'buttonchk': self.AddButtonCheckable,
       'checkbox': self.AddCheckBox,
@@ -275,10 +276,16 @@ class TSimplePanel(QtGui.QWidget):
 
   #Add widgets from widget description dict.
   def AddWidgets(self, widgets):
+    duplicate_req= []
     for name,(w_type, w_param) in widgets.iteritems():
       if name in self.widgets_in:
         raise Exception('TSimplePanel.AddWidgets: widget already exists: {0}'.format(name))
-      self.widgets_in[name]= (w_type, w_param)
+      if w_type=='duplicate':
+        duplicate_req.append((name, w_param))
+      else:
+        self.widgets_in[name]= (w_type, w_param)
+    for name,w_param in duplicate_req:
+      self.widgets_in[name]= self.widgets_in[w_param]
     for name in widgets.iterkeys():
       w_type, w_param= self.widgets_in[name]
       self.widgets[name]= self.widget_generator[w_type](w_param)
@@ -326,13 +333,13 @@ class TSimplePanel(QtGui.QWidget):
       if not hasattr(obj,'font_size_range'):  continue
       self.ResizeTextOfObj(obj, obj.font_size_range, s)
 
-  #Duplicate a widget (regenerate a widget with the same parameter).
-  #NOTE: w_param is a widget name to be copied.
-  def DuplicateWidget(self, w_param):
-    src_widget_name= w_param
-    w_type, w_param= self.widgets_in[src_widget_name]
-    widget= self.widget_generator[w_type](w_param)
-    return widget
+  ##Duplicate a widget (regenerate a widget with the same parameter).
+  ##NOTE: w_param is a widget name to be copied.
+  #def DuplicateWidget(self, w_param):
+    #src_widget_name= w_param
+    #w_type, w_param= self.widgets_in[src_widget_name]
+    #widget= self.widget_generator[w_type](w_param)
+    #return widget
 
   def AddButton(self, w_param):
     param= MergeDict2(copy.deepcopy(self.param_common), {
@@ -560,6 +567,17 @@ class TSimplePanel(QtGui.QWidget):
 
     self.layouts[name]= layout
     return layout
+
+  # Override closing event
+  def closeEvent(self, event):
+    if self.close_callback is not None:
+      res= self.close_callback(event)
+      if res in (None,True):
+        event.accept()
+      else:
+        event.ignore()
+    else:
+      event.accept()
 
 
 app= None
