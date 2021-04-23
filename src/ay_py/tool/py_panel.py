@@ -173,13 +173,19 @@ class TPrimitivePainter(QtGui.QWidget):
     size_policy.setHeightForWidth(True)
     self.setSizePolicy(size_policy)
 
+  def setPaintColor(self, rgb):
+    self.color= rgb
+    self.update()
+
   def setRandomColor(self):
-    self.color= [255*random.random(),255*random.random(),255*random.random()]
+    self.setPaintColor([255*random.random(),255*random.random(),255*random.random()])
 
   def setShape(self, shape):
+    self.update()
     self.shape= shape
 
   def setMargin(self, margin):
+    self.update()
     self.shape= margin
 
   def minimumSizeHint(self):
