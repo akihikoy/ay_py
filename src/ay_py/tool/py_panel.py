@@ -6,8 +6,28 @@
 #\version 0.1
 #\date    Apr.14, 2021
 
-import sys, copy
-from PyQt4 import QtCore,QtGui
+import os, sys, copy
+
+if 'PYQT_VERSION' not in os.environ:
+  os.environ['PYQT_VERSION']= '5'
+if str(os.environ['PYQT_VERSION'])=='4':
+  from PyQt4 import QtCore,QtGui
+elif str(os.environ['PYQT_VERSION'])=='5':
+  from PyQt5 import QtCore,QtWidgets
+  import PyQt5.QtGui as PyQt5QtGui
+  QtGui= QtWidgets
+  for component in ('QFont', 'QIntValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter'):
+    setattr(QtGui,component, getattr(PyQt5QtGui,component))
+else:
+  raise Exception('Failed to import the requested version of PyQt:',os.environ['PYQT_VERSION'])
+
+try:
+  import roslib
+  roslib.load_manifest('rviz')
+  import rviz
+except:
+  print 'Failed to import rviz'
+
 
 def MergeDict(d_base, d_new):
   for k_new,v_new in d_new.iteritems():
@@ -231,6 +251,32 @@ class TPrimitivePainter(QtGui.QWidget):
     painter.setBrush(QtCore.Qt.NoBrush)
     painter.drawRect(QtCore.QRect(0, 0, self.width() - 1, self.height() - 1))
 
+if 'rviz' in sys.modules:
+  class TRVizUtil(rviz.VisualizationFrame):
+    def __init__(self):
+      super(TRVizUtil, self).__init__()
+
+      self.reader= rviz.YamlConfigReader()
+      self.config= rviz.Config()
+      self.setSplashPath('')
+      self.setMenuBar(None)
+      self.setStatusBar(None)
+      self.config_file= os.environ['HOME']+'/.rviz/default.rviz'
+      self.is_initialized= False
+
+    def setConfigFile(self, config_file):
+      self.config_file= config_file
+
+    def setup(self):
+      if not self.is_initialized:
+        self.initialize()
+        self.is_initialized= True
+      self.reader.readFile(self.config, self.config_file)
+      self.load(self.config)
+      self.setMenuBar(None)
+      self.setStatusBar(None)
+      self.setHideButtonVisibility(False)
+
 
 class TSimplePanel(QtGui.QWidget):
   def __init__(self, title, size=(800,400), font_height_scale=100.0):
@@ -272,6 +318,7 @@ class TSimplePanel(QtGui.QWidget):
       'label': self.AddLabel,
       'textedit': self.AddTextEdit,
       'primitive_painer': self.AddPrimitivePainter,
+      'rviz': self.AddRViz,
       }
     self.resize(*size)  #window size
     self.setWindowTitle(title)
@@ -509,6 +556,17 @@ class TSimplePanel(QtGui.QWidget):
     self.ApplyCommonWidgetConfig(primitive, param)
     return primitive
 
+  def AddRViz(self, w_param):
+    param= MergeDict2(copy.deepcopy(self.param_common), {
+      'config':None,
+      'setup':False,  #Setup rviz at the beginning.  roscore should be running.
+      }, w_param)
+    rviz= TRVizUtil()
+    if param['config'] is not None:  rviz.setConfigFile(param['config'])
+    if param['setup']:  rviz.setup()
+    self.ApplyCommonWidgetConfig(rviz, param)
+    return rviz
+
   def AddLayouts(self, layout):
     l_type,name,items= layout
     if name is None:
@@ -681,6 +739,9 @@ if __name__=='__main__':
     'checkbox1': (
       'checkbox',{
         'text': 'Please check!'}),
+    #'rviz1': (
+      #'rviz',{
+        #'setup': True,  }),
     'spacer1': ('spacer', {}),
     }
   #Layout option: vbox, hbox, grid, tab
@@ -704,6 +765,7 @@ if __name__=='__main__':
                 )) ),
             ('tab2', ('boxv',None, ('label_tab2', 'btn_totab10', 'btn_totab31', 'checkbox1') ) ),
             ('tab3', ('boxv',None, ('primitive_painer1','btn_totab11', 'btn_totab21', 'textedit1') ) ),
+            #('tab4', ('boxv',None, ('rviz1',) ) ),
             ))
 
   InitPanelApp()
