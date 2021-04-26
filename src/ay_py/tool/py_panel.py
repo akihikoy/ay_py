@@ -415,12 +415,15 @@ class TSimplePanel(QtGui.QWidget):
       'text': ('button','button'),
       'checked': False,
       'onclick': None,
+      'ontoggled': None,
       }, w_param)
     btn= QtGui.QPushButton(param['text'][0], self)
     btn.setFocusPolicy(QtCore.Qt.NoFocus)
     btn.setCheckable(True)
     btn.setChecked(param['checked'])
-    if param['onclick']:  btn.clicked.connect(lambda checked=False,bnt=btn: (param['onclick'][0](self,btn) if param['onclick'][0] else None, btn.setText(param['text'][1])) if btn.isChecked() else (param['onclick'][1](self,btn) if param['onclick'][1] else None, btn.setText(param['text'][0])) )
+    if param['onclick']:  btn.clicked.connect(lambda checked=False,bnt=btn: (param['onclick'][0](self,btn) if param['onclick'][0] else None) if btn.isChecked() else (param['onclick'][1](self,btn) if param['onclick'][1] else None) )
+    if param['ontoggled']:  btn.toggled.connect(lambda checked=False,bnt=btn: (param['ontoggled'][0](self,btn) if param['ontoggled'][0] else None, btn.setText(param['text'][1])) if btn.isChecked() else (param['ontoggled'][1](self,btn) if param['ontoggled'][1] else None, btn.setText(param['text'][0])) )
+    else:  btn.toggled.connect(lambda checked=False,bnt=btn: btn.setText(param['text'][1]) if btn.isChecked() else btn.setText(param['text'][0]) )
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(220, 100)
@@ -665,7 +668,7 @@ if __name__=='__main__':
     'btn1': (
       'button',{
         'text':'Close',
-        'onclick':lambda w,obj:w.close()}),
+        'onclick':lambda w,obj:w.close() if w.widgets['btn2'].isChecked() else w.widgets['btn2'].setChecked(True)}),
     'btn2': (
       'buttonchk',{
         'text':('TurnOn','TurnOff'),
