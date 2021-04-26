@@ -32,7 +32,7 @@ class TRobotURDxlpO2(TRobotUR):
       elif self.finger_type=='SRound1':  #Small, round finger (yellow)
         self.gripper_range= [0.0,0.1950]
       elif self.finger_type=='Fork1':
-        self.gripper_range= [0.0,0.200]
+        self.gripper_range= [-0.0189,0.200]
       elif self.finger_type=='???':
         self.gripper_range= [0.0,0.2200]
       else:

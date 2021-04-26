@@ -77,14 +77,14 @@ class TDxlpO2(object):
       #self.gripper_range= [0.0,0.23]
 
     elif finger_type=='Fork1':  #TODO:FIXME:Change this name to Fork2cross
-      self.CmdMax=  152775  #Gripper opened widely.  #DxlPo2f1
-      self.CmdMin=   16103  #Gripper over-closed (crossed).
-      self.CmdOpen= 111319  #Gripper opened.
-      self.CmdClose= 19768  #Gripper closed.
+      self.CmdMax=  150000  #Gripper opened widely.  #DxlPo2f1
+      self.CmdMin=   10000  #Gripper over-closed (crossed).
+      self.CmdOpen= 111181  #Gripper opened.
+      self.CmdClose= 18732  #Gripper closed.
       #Gripper range in meter:
       self.GrpClose= 0.0
       self.GrpOpen= 0.20
-      self.gripper_range= [-0.008,0.20]  #-0.008 is obtained by gripper_cmd2pos(CmdMin) w/o gripper_range.
+      self.gripper_range= [-0.0189,0.20]  #-0.008 is obtained by gripper_cmd2pos(CmdMin) w/o gripper_range.
 
     elif finger_type=='???':
       self.CmdMax= 0  #Gripper opened widely.
