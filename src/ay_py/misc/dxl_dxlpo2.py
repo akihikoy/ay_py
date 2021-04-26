@@ -39,6 +39,8 @@ class TDxlpO2(object):
       self.CmdOpen= -150000  #Gripper opened.
       self.CmdClose= -250962  #Gripper closed.
       #Gripper range in meter:
+      self.GrpClose= 0.0
+      self.GrpOpen= 0.300
       self.gripper_range= [0.0,0.300]  #FIXME: 0.3 is inaccurate.
 
     elif finger_type=='SRound1':  #Small, round finger (yellow)
@@ -47,6 +49,8 @@ class TDxlpO2(object):
       self.CmdOpen= -150000  #Gripper opened.
       self.CmdClose= -250962  #Gripper closed.
       #Gripper range in meter:
+      self.GrpClose= 0.0
+      self.GrpOpen= 0.1950
       self.gripper_range= [0.0,0.1950]
 
     #elif finger_type=='Fork1':
@@ -55,18 +59,32 @@ class TDxlpO2(object):
       #self.CmdOpen= -150000  #Gripper opened.
       #self.CmdClose= -200962  #Gripper closed.
       ##Gripper range in meter:
+      #self.GrpClose= 0.03
+      #self.GrpOpen= 0.23
       #self.gripper_range= [0.03,0.230]
 
-    elif finger_type=='Fork1':  #TODO:FIXME:Change this name to Fork2
-      self.CmdMax= 0        #Gripper opened widely.  #DxlPo2f1
-      #self.CmdMin= -234000  #Gripper closed.
-      self.CmdMin= -243160  #Gripper closed.
-      #self.CmdOpen= -124100  #Gripper opened.
-      self.CmdOpen= -134500  #Gripper opened.
-      #self.CmdClose= -234000  #Gripper closed.
-      self.CmdClose= -243160  #Gripper closed.
+    #elif finger_type=='Fork1':  #TODO:FIXME:Change this name to Fork2
+      #self.CmdMax= 0        #Gripper opened widely.  #DxlPo2f1
+      ##self.CmdMin= -234000  #Gripper closed.
+      #self.CmdMin= -243160  #Gripper closed.
+      ##self.CmdOpen= -124100  #Gripper opened.
+      #self.CmdOpen= -134500  #Gripper opened.
+      ##self.CmdClose= -234000  #Gripper closed.
+      #self.CmdClose= -243160  #Gripper closed.
+      ##Gripper range in meter:
+      #self.GrpClose= 0.0
+      #self.GrpOpen= 0.23
+      #self.gripper_range= [0.0,0.23]
+
+    elif finger_type=='Fork1':  #TODO:FIXME:Change this name to Fork2cross
+      self.CmdMax=  152775  #Gripper opened widely.  #DxlPo2f1
+      self.CmdMin=   16103  #Gripper over-closed (crossed).
+      self.CmdOpen= 111319  #Gripper opened.
+      self.CmdClose= 19768  #Gripper closed.
       #Gripper range in meter:
-      self.gripper_range= [0.0,0.23]
+      self.GrpClose= 0.0
+      self.GrpOpen= 0.20
+      self.gripper_range= [-0.008,0.20]  #-0.008 is obtained by gripper_cmd2pos(CmdMin) w/o gripper_range.
 
     elif finger_type=='???':
       self.CmdMax= 0  #Gripper opened widely.
@@ -74,17 +92,19 @@ class TDxlpO2(object):
       self.CmdOpen= -150000  #Gripper opened.
       self.CmdClose= -160000  #Gripper closed.
       #Gripper range in meter:
+      self.GrpClose= 0.0
+      self.GrpOpen= 0.2200
       self.gripper_range= [0.0,0.2200]
 
     else:
       raise Exception('TDxlpO2: Unknown finger_type: {finger_type}'.format(finger_type=finger_type))
 
     #Gripper command-position conversions.
-    self.gripper_cmd2pos= lambda cmd: max(self.gripper_range[0], self.gripper_range[0] + (cmd-self.CmdClose)*(self.gripper_range[1]-self.gripper_range[0])/(self.CmdOpen-self.CmdClose))
-    self.gripper_pos2cmd= lambda pos: self.CmdClose + (pos-self.gripper_range[0])*(self.CmdOpen-self.CmdClose)/(self.gripper_range[1]-self.gripper_range[0])
+    self.gripper_cmd2pos= lambda cmd: min(self.gripper_range[1],max(self.gripper_range[0], self.GrpClose + (cmd-self.CmdClose)*(self.GrpOpen-self.GrpClose)/(self.CmdOpen-self.CmdClose) ))
+    self.gripper_pos2cmd= lambda pos: min(self.CmdMax,max(self.CmdMin, self.CmdClose + (pos-self.GrpClose)*(self.CmdOpen-self.CmdClose)/(self.GrpOpen-self.GrpClose) ))
     #WARNING: The following functions are not considered well (coped from other gripper).
-    self.gripper_cmd2vel= lambda cmd: (self.gripper_range[1]-self.gripper_range[0])/(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))*self.dxl.ConvVel(cmd)
-    self.gripper_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))/(self.gripper_range[1]-self.gripper_range[0]))
+    self.gripper_cmd2vel= lambda cmd: (self.GrpOpen-self.GrpClose)/(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))*self.dxl.ConvVel(cmd)
+    self.gripper_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))/(self.GrpOpen-self.GrpClose))
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -148,17 +168,17 @@ class TDxlpO2(object):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
     if not self.threads['MoveThController'][0]:
-      self.Move(pos=self.gripper_range[1], blocking=blocking)
+      self.Move(pos=self.GrpOpen, blocking=blocking)
     else:
-      self.MoveTh(pos=self.gripper_range[1], blocking=blocking)
+      self.MoveTh(pos=self.GrpOpen, blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
     if not self.threads['MoveThController'][0]:
-      self.Move(pos=self.gripper_range[0], blocking=blocking)
+      self.Move(pos=self.GrpClose, blocking=blocking)
     else:
-      self.MoveTh(pos=self.gripper_range[0], blocking=blocking)
+      self.MoveTh(pos=self.GrpClose, blocking=blocking)
 
   '''Control a gripper.
     pos: target position in meter.
