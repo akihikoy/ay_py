@@ -271,8 +271,8 @@ if 'rviz' in sys.modules:
       if not self.is_initialized:
         self.initialize()
         self.is_initialized= True
-      self.reader.readFile(self.config, self.config_file)
-      self.load(self.config)
+        self.reader.readFile(self.config, self.config_file)  #NOTE: Reloading causes abort.
+        self.load(self.config)
       self.setMenuBar(None)
       self.setStatusBar(None)
       self.setHideButtonVisibility(False)
