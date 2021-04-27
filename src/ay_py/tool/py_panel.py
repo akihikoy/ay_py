@@ -42,6 +42,9 @@ def MergeDict2(d_base, *d_new):
     MergeDict(d_base, d)
   return d_base  #NOTE: d_base is overwritten. Returning it is for the convenience.
 
+def AskYesNoDialog(parent, message, title='Inquiry'):
+  return QtGui.QMessageBox.question(parent, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
+
 class TRadioBox(QtGui.QWidget):
   def __init__(self, *args, **kwargs):
     super(TRadioBox, self).__init__(*args, **kwargs)
@@ -668,7 +671,7 @@ if __name__=='__main__':
     'btn1': (
       'button',{
         'text':'Close',
-        'onclick':lambda w,obj:w.close() if w.widgets['btn2'].isChecked() else w.widgets['btn2'].setChecked(True)}),
+        'onclick':lambda w,obj:w.close() if w.widgets['btn2'].isChecked() and AskYesNoDialog(w,'Are you sure to quit?') else w.widgets['btn2'].setChecked(True)}),
     'btn2': (
       'buttonchk',{
         'text':('TurnOn','TurnOff'),
