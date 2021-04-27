@@ -13,6 +13,7 @@ import datetime
 import random
 import traceback
 import importlib
+import hashlib
 
 #Speedup YAML using CLoader/CDumper
 from yaml import load as yamlload
@@ -504,6 +505,11 @@ def LoadYAML(file_name):
 #Save a dictionary as a YAML
 def SaveYAML(d, file_name, except_cnv=lambda y:y, interactive=True):
   OpenW(file_name,interactive=interactive).write(yamldump(ToStdType(d,except_cnv), Dumper=YDumper))
+
+#Get an SHA-1 hash of a dictionary d.
+def GetSHA1HashOfDict(d):
+  d_yaml= yamldump(d, Dumper=YDumper)
+  return hashlib.sha1(d_yaml).hexdigest()
 
 #Load a YAML and insert the data into a dictionary
 def InsertYAML(d_base, file_name):
