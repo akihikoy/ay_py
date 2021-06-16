@@ -85,6 +85,11 @@ class TDxlpO2(object):
       self.GrpClose= 0.0
       self.GrpOpen= 0.20
       self.gripper_range= [-0.0189,0.20]  #-0.008 is obtained by gripper_cmd2pos(CmdMin) w/o gripper_range.
+      #FIXME:Overwirting for the tong attachment:
+      self.CmdMin=   -9500  #Gripper over-closed (crossed).
+      self.CmdClose= -2805  #Gripper closed.
+      self.CmdOpen=  75678  #Gripper opened.
+      self.gripper_range= [-0.017,0.20]  #min is obtained by gripper_cmd2pos(CmdMin) w/o gripper_range.
 
     elif finger_type=='???':
       self.CmdMax= 0  #Gripper opened widely.
