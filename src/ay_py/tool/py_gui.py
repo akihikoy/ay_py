@@ -11,13 +11,14 @@
 #         Option (combobox) interface is added.
 #Requirements: tmux rxvt-unicode-256color
 
-import sys
+import sys, os
 import signal
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
   def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True):
     QtGui.QWidget.__init__(self)
+    self.pid= str(os.getpid())+'-'
     self.InitUI(title,widgets,exit_command,size,horizontal,no_focus)
 
   # Get a dict of option name: option content
@@ -36,6 +37,7 @@ class TTerminalTab(QtGui.QWidget):
     # Set window size.
     self.resize(*size)
     self.Processes= []
+    self.TermProcesses= []
 
     # Set window title
     self.WinTitle= title
@@ -141,42 +143,47 @@ class TTerminalTab(QtGui.QWidget):
     self.qttabs.setCurrentIndex(self.term_to_idx[term])
 
   def StartProc(self, prog, args):
-      child= QtCore.QProcess()
-      self.Processes.append(child)
-      child.start(prog, args)
+    child= QtCore.QProcess()
+    self.Processes.append(child)
+    child.start(prog, args)
+    return child
 
   def SendCmd(self, term, cmd):
     self.ShowTermTab(term)
-    self.StartProc('tmux', ['send-keys', '-t', term+':0'] + list(cmd))
+    self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + list(cmd))
 
   def SendCmdToAll(self, cmd):
     for r,(term,row) in enumerate(self.Terminals):
       self.ShowTermTab(term)
-      self.StartProc('tmux', ['send-keys', '-t', term+':0'] + list(cmd))
+      self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + list(cmd))
 
   def CreateTerminals(self):
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
-      self.StartProc(
+      self.TermProcesses.append(
+        self.StartProc(
           'urxvt',
           ['-embed', str(self.qtterm[term].winId()),
-            '-e', 'tmux', 'new', '-s', term])
+            '-e', 'tmux', 'new', '-s', self.pid+term]) )
+      #print 'new terminal proc:',self.pid+term,self.TermProcesses[-1].pid()
       #QtTest.QTest.qWait(100)
     QtTest.QTest.qWait(200)
     #QtTest.QTest.qWait(200*len(self.Terminals))
     #for r,(term,row) in enumerate(self.Terminals):
-      #self.StartProc('tmux', ['send-keys', '-t', term+':0'] + self.InitCommand)
+      #self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + self.InitCommand)
     self.qttabs.setCurrentIndex(0)
 
   def Exit(self):
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
-      self.StartProc('tmux', ['send-keys', '-t', term+':0'] + self.ExitCommand)
+      self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + self.ExitCommand)
     QtTest.QTest.qWait(200)
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
-      self.StartProc('tmux', ['send-keys', '-t', term+':0', 'exit', 'Enter'])
-    QtTest.QTest.qWait(500)
+      self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0', 'exit', 'Enter'])
+    QtTest.QTest.qWait(200)
+    for proc in self.TermProcesses:
+      os.kill(proc.pid(), signal.SIGTERM)
 
   # Override closing event
   def closeEvent(self, event):
