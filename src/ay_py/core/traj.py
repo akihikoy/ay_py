@@ -84,25 +84,45 @@ def LimitQTrajVel(q_start, q_traj, t_traj, qvel_limits, acc_phase=9):
     vel_limits= [v*dv*float(i_term-i) for v in qvel_limits]
     t_offset,t_prev,q_prev= sub_proc(qt, i_term+i_middle+i, t_offset, t_prev, q_prev, vel_limits)
 
-#Check the velocity consistency between x_traj and q_traj
-#  where x_traj is target Cartesian trajectory,
-#  q_traj is corresponding joint angle trajectory solved by IK.
-#If the norm of inconsistency is greater than err_thresh,
-#  return None immediately, otherwise, return the maximum of the norms.
-def IKTrajCheck(x_traj, q_traj, err_thresh=0.01):
-  #Compute velocities
-  xd_traj= [Vec(x_traj[i])-Vec(x_traj[i-1]) for i in range(1,len(x_traj))]
-  qd_traj= [Vec(q_traj[i])-Vec(q_traj[i-1]) for i in range(1,len(q_traj))]
-  max_err= 0.0
-  for i in range(3,len(xd_traj)):
-    #Roughly estimate the next Cartesian velocity
-    xd_est= np.dot(Vec([xd_traj[i-3],xd_traj[i-2],xd_traj[i-1]]).T,
-                   np.dot(la.pinv(Vec([qd_traj[i-3],qd_traj[i-2],qd_traj[i-1]]).T),
-                          qd_traj[i]) )
-    err= la.norm(xd_traj[i]-xd_est)
-    if err>err_thresh:  return None
-    if err>max_err:  max_err= err
-  return max_err
+#DEPRECATED:
+#  IKTrajCheck was deprecated due to its inaccuracy.
+#  Use CheckXQTrajValidity instead.
+##Check the velocity consistency between x_traj and q_traj
+##  where x_traj is target Cartesian trajectory,
+##  q_traj is corresponding joint angle trajectory solved by IK.
+##If the norm of inconsistency is greater than err_thresh,
+##  return None immediately, otherwise, return the maximum of the norms.
+#def IKTrajCheck(x_traj, q_traj, err_thresh=0.01):
+  ##Compute velocities
+  #xd_traj= [Vec(x_traj[i])-Vec(x_traj[i-1]) for i in range(1,len(x_traj))]
+  #qd_traj= [Vec(q_traj[i])-Vec(q_traj[i-1]) for i in range(1,len(q_traj))]
+  #max_err= 0.0
+  #for i in range(3,len(xd_traj)):
+    ##Roughly estimate the next Cartesian velocity
+    #xd_est= np.dot(Vec([xd_traj[i-3],xd_traj[i-2],xd_traj[i-1]]).T,
+                   #np.dot(la.pinv(Vec([qd_traj[i-3],qd_traj[i-2],qd_traj[i-1]]).T),
+                          #qd_traj[i]) )
+    #err= la.norm(xd_traj[i]-xd_est)
+    #if err>err_thresh:  return None
+    #if err>max_err:  max_err= err
+  #return max_err
+
+'''Check the validity of the corresponding joint and Cartesian trajectories.
+Validity: For corresponding trajectories q_traj and x_traj (f_fk(q_traj)==x_traj),
+  the interpolated trajectories q_traj_int and x_traj_int also should satisfy
+  f_fk(q_traj_int)~x_traj_int where we allow the position and orientation errors dp_lim, dq_lim.
+Return True if the trajectories are valid.
+f_fK: Forward kinematics (x=f_fk(q)).
+N_int: Number of interpolation.
+dp_lim, dq_lim: Max position and orientation errors (meters, radians).
+'''
+def CheckXQTrajValidity(q_traj, x_traj, f_fk, dp_lim=np.inf, dq_lim=0.1, N_int=5):
+  if len(q_traj)<=1:  return True
+  x_traj_int= [list(x_traj[0])] + sum([XInterpolation(x1,x2,N_int) for x1,x2 in zip(x_traj[:-1],x_traj[1:])], [])
+  q_traj_int= [q_traj[0]] + sum([(q1+(np.array(q2)-q1)*np.linspace(0,1,N_int+1)[1:].reshape(-1,1)).tolist() for q1,q2 in zip(q_traj[:-1],q_traj[1:])], [])
+  x_traj_est= map(f_fk, q_traj_int)
+  x_diff= map(lambda d: np.linalg.norm(d[:3])<dp_lim and np.linalg.norm(d[3:])<dq_lim, [DiffX(xi,xe) for xi,xe in zip(x_traj_int,x_traj_est)])
+  return all(x_diff)
 
 #Return the interpolation from x1 to x2 with N points
 #p1 is not included
