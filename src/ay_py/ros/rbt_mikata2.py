@@ -20,8 +20,9 @@ from ..misc.dxl_holding import TDxlHolding
 '''Mikata2 Gripper utility class'''
 class TMikataGripper2(TDxlGripper):
   def __init__(self):
-    super(TMikataGripper2,self).__init__(dev=None)
+    super(TMikataGripper2,self).__init__()
     self.joint_name= 'gripper_joint_5'
+    self.dxlg= self.gripper  #For the backward compatibility
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self, mikata):

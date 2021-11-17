@@ -24,7 +24,7 @@ from kdl_kin import *
 '''Mikata Gripper utility class (the same as TDxlGripper)'''
 class TMikataGripper(TDxlGripper):
   def __init__(self):
-    super(TMikataGripper,self).__init__(dev=None)
+    super(TMikataGripper,self).__init__()
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self, mikata):
