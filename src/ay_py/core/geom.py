@@ -417,12 +417,27 @@ Camera is at [0,0,0] and the image plane is z=1.
 def ProjectPointToImage(pt3d, P, zmin=0.001):
   if pt3d[2]<zmin:  return None
   pt2d= np.dot(P[:3,:3], pt3d)
-  return [pt2d[0]/pt2d[2], pt2d[1]/pt2d[2]]
+  pt2d= pt2d[:2]/pt2d[2]
+  return pt2d
+
+#ProjectPointToImage for multiple input points pts3d.
+def ProjectPointToImageList(pts3d, P, zmin=0.001):
+  pts3d= np.array(pts3d)
+  if np.any(pts3d[:,2]<zmin):  return None
+  pts2d= np.dot(pts3d, P[:3,:3].T)
+  pts2d= pts2d[:,:2]/pts2d[:,2:]
+  return pts2d
 
 #Inverse project a point pt2d=[xp,yp] on image to 3D point pt3d=[xc,yc,1]
 def InvProjectFromImage(pt2d, P):
   Fx,Fy,Cx,Cy= P[0,0],P[1,1],P[0,2],P[1,2]
   return [(pt2d[0]-Cx)/Fx, (pt2d[1]-Cy)/Fy, 1.0]
+
+#InvProjectFromImage for multiple input points pts2d.
+def InvProjectFromImageList(pts2d, P):
+  pts2d= np.array(pts2d)
+  Fx,Fy,Cx,Cy= P[0,0],P[1,1],P[0,2],P[1,2]
+  return np.column_stack(((pts2d[:,0]-Cx)/Fx, (pts2d[:,1]-Cy)/Fy, np.ones(pts2d.shape[0])))
 
 #Get a projection matrix for resized image.
 def GetProjMatForResizedImg(P, resize_ratio):
