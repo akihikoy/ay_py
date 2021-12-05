@@ -44,7 +44,7 @@ class TSimpleVisualizer(object):
     #marker.ns= self.viz_ns
     #marker.action= visualization_msgs.msg.Marker.DELETEALL
     #self.viz_pub.publish(marker)
-    self.added_ids.remove(mid)
+    if mid in self.added_ids:  self.added_ids.remove(mid)
 
   def DeleteAllMarkers(self):
     #print '[Viz]Deleting all markers:',self.added_ids
