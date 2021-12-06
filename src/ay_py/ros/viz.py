@@ -10,7 +10,7 @@ from const import *
 from ..core.geom import *
 
 class TSimpleVisualizer(object):
-  def __init__(self, viz_dt=rospy.Duration(), name_space='visualizer', frame=None, queue_size=0):
+  def __init__(self, viz_dt=rospy.Duration(), name_space='visualizer', frame=None, queue_size=1):
     self.viz_pub= rospy.Publisher('visualization_marker', visualization_msgs.msg.Marker, queue_size=queue_size)
     self.curr_id= 0
     self.added_ids= set()
