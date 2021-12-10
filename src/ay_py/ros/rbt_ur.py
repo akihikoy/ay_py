@@ -342,7 +342,7 @@ class TRobotUR(TMultiArmRobot):
           CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement:',q_traj[-1],q_finished,q_err.tolist())
           CPrint(4,'Info:q_traj:',q_traj)
           CPrint(4,'Info:t_traj:',t_traj)
-          CPrint(4,'Info:dq_traj:',qd_traj)
+          CPrint(4,'Info:dq_traj:',dq_traj)
           CPrint(4,'Action client result:',self.actc.traj.get_result())
           raise Exception('TRobotUR.FollowQTraj: Unacceptable error after movement')
 
