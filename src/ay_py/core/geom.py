@@ -445,3 +445,43 @@ def GetProjMatForResizedImg(P, resize_ratio):
   P[2,2]= 1.0
   return P
 
+'''
+Transform a point on the image to 3D (robot frame).
+u,v: x and y values in pixel.
+depth: Depth in pixel.
+proj_mat: Camera projection matrix.
+x_cam: Camera pose in the robot frame.
+'''
+def ImgPointToRobotFrame(u, v, depth, proj_mat, x_cam):
+  #Transform the point to 3D (local point in the camera frame).
+  lc_pt2d= (u, v)
+  lc_z_3d= depth*1.0e-3
+  lc_dir_3d= InvProjectFromImage(lc_pt2d, proj_mat)
+  lc_pt3d= [lc_dir_3d[0]*lc_z_3d, lc_dir_3d[1]*lc_z_3d, lc_z_3d]
+  #Transform the local point to the robot frame.
+  pt3d= Transform(x_cam, lc_pt3d)
+  return pt3d
+
+'''
+Transform points on the image to 3D (robot frame).
+points_img: List of [u,v,depth].
+  u,v: x and y values in pixel.
+  depth: Depth in pixel.
+proj_mat: Camera projection matrix.
+x_cam: Camera pose in the robot frame.
+'''
+def ImgPointsToRobotFrame(points_img, proj_mat, x_cam):
+  if len(points_img)==0:  return []
+  #Transform the point to 3D (local point in the camera frame).
+  #lc_points_3d= [np.array(InvProjectFromImage([u,v], proj_mat))*depth*1.0e-3 for u,v,depth in points_img]
+  points_img= np.array(points_img)
+  Fx,Fy,Cx,Cy= proj_mat[0,0],proj_mat[1,1],proj_mat[0,2],proj_mat[1,2]
+  func= lambda x,y,z: [(x-Cx)/Fx*z, (y-Cy)/Fy*z, z]
+  lc_points_3d= np.dstack(func(points_img[:,0], points_img[:,1], points_img[:,2]*1.0e-3))
+  lc_points_3d= lc_points_3d.reshape((-1, 3))
+
+  #Transform the local point to the robot frame.
+  #points_3d= [Transform(x_cam, lc_pt3d) for lc_pt3d in lc_points_3d]
+  points_3d= np.dot(lc_points_3d, QToRot(x_cam[3:]).T)+x_cam[:3]
+  return points_3d
+

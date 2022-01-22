@@ -26,6 +26,91 @@ def TTrajFromXTraj(x_traj, linear_speed, angular_speed):
     t_traj.append(t_traj[-1]+duration(x0,x1))
   return t_traj
 
+'''
+Generate t_traj (time trajectory) from x_traj (trajectory of position+quaternion) and speed and acceleration.
+t_traj[0] is zero.
+'''
+def TTrajFromXTraj2(x_traj, linear_speed, angular_speed, linear_acceleration):
+  lin_ang_ratio= linear_speed / angular_speed
+  def dist(x0,x1):
+    diff= DiffX(x1,x0)
+    return la.norm([la.norm(diff[:3]), lin_ang_ratio*la.norm(diff[3:])])
+  d_traj= [0.0]
+  for x0,x1 in zip(x_traj[:-1],x_traj[1:]):
+    d_traj.append(d_traj[-1]+dist(x0,x1))
+  d_T3= d_traj[-1]
+  if linear_acceleration*d_T3 > linear_speed*linear_speed:
+    T1= linear_speed / linear_acceleration
+    T2= d_T3 / linear_speed
+    T3= T2 + T1
+    d_T1= linear_speed*linear_speed / (2.0*linear_acceleration)
+    d_T2= d_T3 - d_T1
+    def t_from_start(d):
+      if d<d_T1:    return np.sqrt(2.0*d/linear_acceleration)
+      elif d<d_T2:  return d/linear_speed + linear_speed/(2.0*linear_acceleration)
+      else:         return T3 - np.sqrt(2.0*max(0.0,d_T3-d)/linear_acceleration)
+    t_traj= map(t_from_start, d_traj)
+    #print [('T1' if d1<d_T1 else ('T2' if d1<d_T2 else 'T3'), t1-t0) for t0,t1,d0,d1 in zip(t_traj[:-1],t_traj[1:],d_traj[:-1],d_traj[1:])]
+  else:  #There is no constant-velocity phase.
+    T1= np.sqrt(d_T3/linear_acceleration)
+    T3= 2.0*T1
+    d_T1= d_T3 / 2.0
+    def t_from_start(d):
+      if d<d_T1:    return np.sqrt(2.0*d/linear_acceleration)
+      else:         return T3 - np.sqrt(2.0*max(0.0,d_T3-d)/linear_acceleration)
+    t_traj= map(t_from_start, d_traj)
+    #print [('_T1' if d1<d_T1 else '_T3', t1-t0) for t0,t1,d0,d1 in zip(t_traj[:-1],t_traj[1:],d_traj[:-1],d_traj[1:])]
+  return t_traj
+
+'''
+Generate t_traj (time trajectory) from a set of trajectories x_trajs in different spaces, and speed and acceleration.
+t_traj[0] is zero.
+x_trajs: List of trajectories.  Each trajectory should have the same length, i.e. map(len,x_trajs)=[len(x_trajs[0])]*len(x_trajs).
+speed_ratios: Speed ratios of x_trajs[1:] components over the speed of x_trajs[0].
+  Speed of x_trajs[0]: speed.
+  Speed of x_trajs[i]: speed*speed_ratios[i-1].
+  len(x_trajs)==len(speed_ratios)+1.
+speed, acceleration: Speed and acceleration of x_trajs[0].
+dist_criteria: List of criteria to calculate distances for each points on trajectories.
+  dist_criteria should have the same length as x_trajs, and each element can be:
+  'E': Euclidean distance (L2 norm).
+  'Q': Quaternion distance (DiffQ).
+'''
+def TTrajFromXTraj3(x_trajs, speed, speed_ratios, acceleration, dist_criteria):
+  if len(x_trajs)==0:  return []
+  speed_ratios= [1.0]+list(speed_ratios)
+  def dist(x0,x1,dist_criterion):
+    if dist_criterion=='E':  return Dist(x0,x1)
+    if dist_criterion=='Q':  return np.linalg.norm(DiffQ(x0,x1))
+  d_traj= [0.0]
+  for k in range(len(x_trajs[0])-1):
+    dists= [dist(x_traj[k],x_traj[k+1],dc)/sr for x_traj,sr,dc in zip(x_trajs,speed_ratios,dist_criteria)]
+    d_traj.append(d_traj[-1]+max(dists))
+    #d_traj.append(d_traj[-1]+np.linalg.norm(dists))
+  d_T3= d_traj[-1]
+  if acceleration*d_T3 > speed*speed:
+    T1= speed / acceleration
+    T2= d_T3 / speed
+    T3= T2 + T1
+    d_T1= speed*speed / (2.0*acceleration)
+    d_T2= d_T3 - d_T1
+    def t_from_start(d):
+      if d<d_T1:    return np.sqrt(2.0*d/acceleration)
+      elif d<d_T2:  return d/speed + speed/(2.0*acceleration)
+      else:         return T3 - np.sqrt(2.0*max(0.0,d_T3-d)/acceleration)
+    t_traj= map(t_from_start, d_traj)
+    #print [('T1' if d1<d_T1 else ('T2' if d1<d_T2 else 'T3'), t1-t0) for t0,t1,d0,d1 in zip(t_traj[:-1],t_traj[1:],d_traj[:-1],d_traj[1:])]
+  else:  #There is no constant-velocity phase.
+    T1= np.sqrt(d_T3/acceleration)
+    T3= 2.0*T1
+    d_T1= d_T3 / 2.0
+    def t_from_start(d):
+      if d<d_T1:    return np.sqrt(2.0*d/acceleration)
+      else:         return T3 - np.sqrt(2.0*max(0.0,d_T3-d)/acceleration)
+    t_traj= map(t_from_start, d_traj)
+    #print [('_T1' if d1<d_T1 else '_T3', t1-t0) for t0,t1,d0,d1 in zip(t_traj[:-1],t_traj[1:],d_traj[:-1],d_traj[1:])]
+  return t_traj
+
 #Remove radian jumping in a joint angle trajectory.
 def SmoothQTraj(q_traj):
   if len(q_traj)==0:  return
