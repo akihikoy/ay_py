@@ -8,14 +8,15 @@
 #         Completely modified the implementation: now we use the gripper driver ROS node.
 from const import *
 
-from robot import TGripper2F2,TMultiArmRobot
+from robot import TGripper2FN,TMultiArmRobot
 from rbt_dxlg import TDxlGripper
 
 
 '''DxlO3 gripper utility class'''
-class TDxlO3Gripper(TDxlGripper,TGripper2F2):
+class TDxlO3Gripper(TDxlGripper,TGripper2FN):
   def __init__(self, node_name='gripper_driver'):
-    super(TDxlO3Gripper,self).__init__(node_name=node_name, gripper_type='DxlO3Gripper')
+    TDxlGripper.__init__(self, node_name=node_name, gripper_type='DxlO3Gripper')
+    TGripper2FN.__iadd__(self, dof=2)
 
     #Gripper position-angles conversions (for 2F1 emulation mode).
     self.g2f1_ang_open= 0.6136  #cmd=+400
@@ -25,13 +26,13 @@ class TDxlO3Gripper(TDxlGripper,TGripper2F2):
     self.g2f1_pos2ang= lambda pos: self.g2f1_ang_close + (pos-self.g2f1_range[0])*(self.g2f1_ang_open-self.g2f1_ang_close)/(self.g2f1_range[1]-self.g2f1_range[0])
 
   def Cleanup(self):
-    super(TDxlO3Gripper,self).Cleanup()
+    TDxlGripper.Cleanup(self)
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
     if q in ('DxlO3','DxlO3Gripper'):  return True
     if TDxlGripper.Is(self,q):  return True
-    return TGripper2F2.Is(self,q)
+    return TGripper2FN.Is(self,q)
 
   '''Range of gripper position as an emulation of 2F1 gripper.'''
   def PosRange2F1(self):

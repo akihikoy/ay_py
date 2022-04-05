@@ -364,14 +364,15 @@ class TGripper2F1(TROSUtil):
     pass
 
 
-'''2 finger 2 DoF gripper interface'''
-class TGripper2F2(TGripper2F1):
-  def __init__(self):
-    super(TGripper2F2,self).__init__()
+'''2 finger N DoF gripper interface'''
+class TGripper2FN(TGripper2F1):
+  def __init__(self, dof=2):
+    super(TGripper2FN,self).__init__()
+    self.dof= dof
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
-    if q in ('Gripper','Gripper2F2'):  return True
+    if q in ('Gripper','Gripper2FN'):  return True
     return False
 
   '''Range of gripper positions.'''
@@ -388,7 +389,7 @@ class TGripper2F2(TGripper2F1):
     and the offsets are always negative.
       pos: Gripper positions to get the offsets. '''
   def FingertipOffset(self, pos):
-    return [0.0,0.0]
+    return [0.0]*self.dof
 
   '''Get fingertip height offsets in meter as an emulation of 2F1 gripper.'''
   def FingertipOffset2F1(self, pos):
