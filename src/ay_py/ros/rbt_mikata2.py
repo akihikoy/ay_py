@@ -107,8 +107,9 @@ class TMikataGripper2(TDxlGripper):
 '''Gripper utility class of TDummyMikata'''
 class TDummyMikataGripper2(TDxlGripper):
   def __init__(self):
-    super(TDummyMikataGripper2,self).__init__(dev=None)
+    super(TDummyMikataGripper2,self).__init__()
     self.joint_name= 'gripper_joint_5'
+    self.dxlg= self.gripper  #For the backward compatibility
 
     conv_pos= lambda value: (value-2048.0)*0.0015339808
     self.dxlg.CmdMax= conv_pos(2200)  #Gripper closed (with FingerVision).
