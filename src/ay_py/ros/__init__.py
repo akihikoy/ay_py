@@ -5,6 +5,7 @@ __PACKAGES__= [
   'kdl_kin',
   'pointcloud',
   'robot',
+  'rs',
   'viz',
   ]
 
@@ -16,4 +17,5 @@ try:  from kdl_kin      import *
 except ImportError as e:  print str(e)
 from pointcloud   import *
 from robot        import *
+from rs           import *
 from viz          import *
