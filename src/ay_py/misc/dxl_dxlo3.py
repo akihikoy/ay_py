@@ -17,6 +17,7 @@ class TDxlO3(object):
     self.dxl_ids= [1,2]
     self.dev= dev
     self.baudrate= 2e6
+    self.op_mode= None  #Using default
     self.dxl= [TDynamixel1(dxl_type,dev=self.dev) for dxl_type in self.dxl_type]
 
     #Thread locker:
@@ -57,6 +58,7 @@ class TDxlO3(object):
     with self.port_locker:
       for dxl,id in zip(self.dxl,self.dxl_ids):
         dxl.Baudrate= self.baudrate
+        if self.op_mode is not None:  dxl.OpMode= self.op_mode
         dxl.Id= id
         ra(dxl.Setup())
 
@@ -87,7 +89,7 @@ class TDxlO3(object):
     with self.port_locker:
       pos= [dxl.Position() for dxl in self.dxl]
     if None in pos:
-      print 'DxlO3: Failed to read position;',pos
+      print 'DxlG: Failed to read position;',pos
       return None
     pos= self.gripper_cmd2pos(pos)
     return pos
@@ -148,7 +150,7 @@ class TDxlO3(object):
       if all([abs(c-p)<=dxl.GoalThreshold for c,p,dxl in zip(cmd,p_log[-1],self.dxl)]):  break
       #Detecting stuck:
       if len(p_log)>=50 and all([abs(p0-p1)<=dxl.GoalThreshold for p0,p1,dxl in zip(p_log[0],p_log[-1],self.dxl)]):
-        print 'TDxlO3.Move: Control gets stuck. Abort.'
+        print 'DxlG: Control gets stuck. Abort.'
         break
 
 

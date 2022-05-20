@@ -14,8 +14,6 @@ import copy
 
 from robot import *
 from kdl_kin import *
-#from rbt_dxlg import TDxlGripper
-#from rbt_rq import TRobotiq
 
 '''Robot control class for single Universal Robots UR* with an empty gripper.'''
 class TRobotUR(TMultiArmRobot):
@@ -157,7 +155,7 @@ class TRobotUR(TMultiArmRobot):
 
   '''Names of joints of an arm.'''
   def JointNames(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.joint_names[arm]
 
   def DoF(self, arm=None):
@@ -166,7 +164,7 @@ class TRobotUR(TMultiArmRobot):
   '''Return limits (lower, upper) of joint angles.
     arm: arm id, or None (==currarm). '''
   def JointLimits(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.kin[arm].joint_limits_lower, self.kin[arm].joint_limits_upper
 
   '''Return limits of joint angular velocity.
@@ -179,7 +177,7 @@ class TRobotUR(TMultiArmRobot):
   '''Return range of gripper.
     arm: arm id, or None (==currarm). '''
   def GripperRange(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
     if gripper.Is('Gripper2F1'):  return gripper.PosRange()
     elif gripper.Is('Gripper2F2'):  return gripper.PosRange2F1()
@@ -187,16 +185,16 @@ class TRobotUR(TMultiArmRobot):
   '''Return range of gripper.
     arm: arm id, or None (==currarm). '''
   def GripperRange2(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.grippers[arm].PosRange()
 
   '''End effector of an arm.'''
   def EndEff(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.grippers[arm]
 
   def JointStatesCallback(self, msg):
-    arm= 0
+    if arm is None:  arm= self.Arm
     with self.sensor_locker:
       self.x_curr= msg
       q_map= {name:position for name,position in zip(self.x_curr.name,self.x_curr.position)}
@@ -247,7 +245,7 @@ class TRobotUR(TMultiArmRobot):
       If not None, the returned pose is x_ext on self.BaseFrame.
     with_st: whether return FK status. '''
   def FK(self, q=None, x_ext=None, arm=None, with_st=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if q is None:  q= self.Q(arm)
 
     angles= {joint:q[j] for j,joint in enumerate(self.joint_names[arm])}  #Deserialize
@@ -266,7 +264,7 @@ class TRobotUR(TMultiArmRobot):
       If not None, we do not consider an offset.
     with_st: whether return the solver status. '''
   def J(self, q=None, x_ext=None, arm=None, with_st=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if q is None:  q= self.Q(arm)
 
     if x_ext is not None:
@@ -290,7 +288,7 @@ class TRobotUR(TMultiArmRobot):
     start_angles: initial joint angles for IK solver, or None (==self.Q(arm)).
     with_st: whether return IK status. '''
   def IK(self, x_trg, x_ext=None, start_angles=None, arm=None, with_st=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if start_angles is None:  start_angles= self.Q(arm)
 
     x_trg[3:]/= la.norm(x_trg[3:])  #Normalize the orientation:
@@ -311,7 +309,7 @@ class TRobotUR(TMultiArmRobot):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
     assert(len(q_traj)==len(t_traj))
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     if not self.IsNormal():
       self.PrintStatus()
@@ -352,7 +350,7 @@ class TRobotUR(TMultiArmRobot):
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''
   def StopMotion(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     with self.control_locker:
       self.actc.traj.cancel_goal()
@@ -384,7 +382,7 @@ class TRobotUR(TMultiArmRobot):
     speed: speed of the movement; 0 (minimum), 100 (maximum).
     blocking: False: move background, True: wait until motion ends.  '''
   def MoveGripper(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
     if gripper.Is('Gripper2F1'):
@@ -401,7 +399,7 @@ class TRobotUR(TMultiArmRobot):
     speed: speed of the movement; 0 (minimum), 100 (maximum).
     blocking: False: move background, True: wait until motion ends.  '''
   def MoveGripper2(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
     with self.gripper_locker:
       gripper.Move(pos, max_effort, speed, blocking=blocking)
@@ -409,7 +407,7 @@ class TRobotUR(TMultiArmRobot):
   '''Get a gripper position in meter.
     arm: arm id, or None (==currarm). '''
   def GripperPos(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
     if gripper.Is('Gripper2F1'):
@@ -423,7 +421,7 @@ class TRobotUR(TMultiArmRobot):
   '''Get gripper positions.
     arm: arm id, or None (==currarm). '''
   def GripperPos2(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
     with self.sensor_locker:
       pos= gripper.Position()
@@ -437,7 +435,7 @@ class TRobotUR(TMultiArmRobot):
       pos: Gripper position to get the offset. None: Current position.
       arm: arm id, or None (==currarm).'''
   def FingertipOffset(self, pos=None, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if pos is None:  pos= self.GripperPos(arm)
     gripper= self.grippers[arm]
     if gripper.Is('Gripper2F1'):  return gripper.FingertipOffset(pos)
@@ -451,6 +449,6 @@ class TRobotUR(TMultiArmRobot):
       pos: Gripper position to get the offset. None: Current position.
       arm: arm id, or None (==currarm).'''
   def FingertipOffset2(self, pos=None, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if pos is None:  pos= self.GripperPos2(arm)
     return self.grippers[arm].FingertipOffset(pos)

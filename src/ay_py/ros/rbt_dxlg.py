@@ -47,6 +47,10 @@ class TDxlGripper(TGripper2F1):
       mod= __import__('ay_py.misc.dxl_dxlo3',globals(),None,('TDxlO3',))
       self.gripper= mod.TDxlO3(dev=None)
       self.joint_names= ['joint0','joint1']
+    elif self.gripper_type=='DxlpY1Gripper':
+      mod= __import__('ay_py.misc.dxl_dxlpy1',globals(),None,('TDxlpY1',))
+      self.gripper= mod.TDxlpY1(dev=None, finger_type=finger_type)
+      self.joint_names= ['joint0']
     else:
       raise Exception('Invalid gripper type: {gripper_type}'.format(gripper_type=gripper_type))
 
@@ -199,26 +203,29 @@ class TRobotDxlGripper(TMultiArmRobot):
     self.currarm= 0
     self.gripper_node= gripper_node
 
-  '''Initialize (e.g. establish ROS connection).'''
-  def Init(self):
+  def internal_init(self, dxl_gripper):
     self._is_initialized= False
     res= []
     ra= lambda r: res.append(r)
 
-    self.dxl_gripper= TDxlGripper(node_name=self.gripper_node)
+    self.dxl_gripper= dxl_gripper
     self.grippers= [self.dxl_gripper]
 
-    print 'Initializing and activating DxlGripper gripper...'
+    print 'Initializing and activating {} gripper...'.format(self.Name)
     ra(self.dxl_gripper.Init())
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
 
+  '''Initialize (e.g. establish ROS connection).'''
+  def Init(self):
+    dxl_gripper= TDxlGripperdxl_gripper(node_name=self.gripper_node)
+    return self.internal_init(dxl_gripper)
+
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
-    if self._is_initialized:
-      self.dxl_gripper.Cleanup()
-      self._is_initialized= False
+    for gripper in self.grippers:  gripper.Cleanup()
+    self._is_initialized= False
     super(TRobotDxlGripper,self).Cleanup()
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
@@ -238,10 +245,18 @@ class TRobotDxlGripper(TMultiArmRobot):
     arm: arm id, or None (==currarm). '''
   def GripperRange(self, arm=None):
     if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):  return gripper.PosRange()
+    elif gripper.Is('Gripper2F2'):  return gripper.PosRange2F1()
+
+  '''Return range of gripper.
+    arm: arm id, or None (==currarm). '''
+  def GripperRange2(self, arm=None):
+    if arm is None:  arm= self.Arm
     return self.grippers[arm].PosRange()
 
   '''End effector of an arm.'''
-  def EndEff(self, arm):
+  def EndEff(self, arm=None):
     if arm is None:  arm= self.Arm
     return self.grippers[arm]
 
@@ -278,6 +293,22 @@ class TRobotDxlGripper(TMultiArmRobot):
     if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):
+      with self.gripper_locker:
+        gripper.Move(pos, max_effort, speed, blocking=blocking)
+    elif gripper.Is('Gripper2F2'):
+      with self.gripper_locker:
+        gripper.Move2F1(pos, max_effort, speed, blocking=blocking)
+
+  '''Low level interface to control a gripper.
+    arm: arm id, or None (==currarm).
+    pos: target positions.
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum).
+    blocking: False: move background, True: wait until motion ends.  '''
+  def MoveGripper2(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
+    if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
     with self.gripper_locker:
       gripper.Move(pos, max_effort, speed, blocking=blocking)
 
@@ -286,6 +317,19 @@ class TRobotDxlGripper(TMultiArmRobot):
   def GripperPos(self, arm=None):
     if arm is None:  arm= self.Arm
 
+    gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):
+      with self.sensor_locker:
+        pos= gripper.Position()
+    elif gripper.Is('Gripper2F2'):
+      with self.sensor_locker:
+        pos= gripper.Position2F1()
+    return pos
+
+  '''Get gripper positions.
+    arm: arm id, or None (==currarm). '''
+  def GripperPos2(self, arm=None):
+    if arm is None:  arm= self.Arm
     gripper= self.grippers[arm]
     with self.sensor_locker:
       pos= gripper.Position()
@@ -301,5 +345,19 @@ class TRobotDxlGripper(TMultiArmRobot):
   def FingertipOffset(self, pos=None, arm=None):
     if arm is None:  arm= self.Arm
     if pos is None:  pos= self.GripperPos(arm)
+    gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):  return gripper.FingertipOffset(pos)
+    elif gripper.Is('Gripper2F2'):  return gripper.FingertipOffset2F1(pos)
+
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+    NOTE: In the previous versions (before 2019-12-10), this offset was from the opened fingertip position.
+      pos: Gripper position to get the offset. None: Current position.
+      arm: arm id, or None (==currarm).'''
+  def FingertipOffset2(self, pos=None, arm=None):
+    if arm is None:  arm= self.Arm
+    if pos is None:  pos= self.GripperPos2(arm)
     return self.grippers[arm].FingertipOffset(pos)
 

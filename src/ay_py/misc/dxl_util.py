@@ -20,6 +20,12 @@
 #\version 0.6
 #\date    Jan.28, 2020
 #         Added PH54-200-S500, XH540-W270.
+#\version 0.7
+#\date    Sep.30, 2021
+#         Added PM54-060-S250.
+#\version 0.8
+#\date    May.19, 2022
+#         Added XD540-T270.
 
 #cf. DynamixelSDK/python/tests/protocol2_0/read_write.py
 #DynamixelSDK: https://github.com/ROBOTIS-GIT/DynamixelSDK
@@ -224,7 +230,7 @@ DxlPortHandler= TDynamixelPortHandler.new()
 class TDynamixel1(object):
   def __init__(self, type, dev='/dev/ttyUSB0'):
     # For Dynamixel XM430-W350
-    if type in ('XM430-W350','XH430-V350','XH540-W270','MX-64AR'):
+    if type in ('XM430-W350','XH430-V350','XH540-W270','MX-64AR','XD540-T270'):
       #ADDR[NAME]=(ADDRESS,SIZE)
       self.ADDR={
         'MODEL_NUMBER'        : (0,2),
@@ -239,7 +245,7 @@ class TDynamixel1(object):
         'MIN_VOLT_LIMIT'      : (34,2),
         'PWM_LIMIT'           : (36,2),
         'CURRENT_LIMIT'       : (38,2),
-        'ACC_LIMIT'           : (40,4),  #'XH540-W270' does not have this.
+        'ACC_LIMIT'           : (40,4),  #'XH540-W270','XD540-T270' does not have this.
         'VEL_LIMIT'           : (44,4),
         'MAX_POS_LIMIT'       : (48,4),
         'MIN_POS_LIMIT'       : (52,4),
@@ -262,12 +268,12 @@ class TDynamixel1(object):
         'PRESENT_IN_VOLT'     : (144,2),
         'PRESENT_TEMP'        : (146,1),
         }
-      if type=='XH540-W270':
+      if type in ('XH540-W270','XD540-T270'):
         self.ADDR['ACC_LIMIT']= (None,None)
       self.PROTOCOL_VERSION = 2  # Protocol version of Dynamixel
 
-    # For Dynamixel PH54-200-S500-R
-    elif type in ('PH54-200-S500',):
+    # For Dynamixel PH54-200-S500-R, PM54-060-S250-R
+    elif type in ('PH54-200-S500','PM54-060-S250'):
       #ADDR[NAME]=(ADDRESS,SIZE)
       self.ADDR={
         'MODEL_NUMBER'        : (0,2),
@@ -358,12 +364,13 @@ class TDynamixel1(object):
       'PWM'        : 16,  # PWM Control Mode (Voltage Control Mode)
       }
     #NOTE: 'RH-P12-RN': CURRENT and CURRPOS are available.
-    #NOTE: 'PH54-200-S500': CURRENT, VELOCITY, POSITION(default), EXTPOS, PWM are available.
+    #NOTE: 'PH54-200-S500','PM54-060-S250': CURRENT, VELOCITY, POSITION(default), EXTPOS, PWM are available.
 
     # Baud rates                                  0     1      2   3   4   5   6     7      8      9
     self.BAUD_RATE=                           [9600,57600,115200,1e6,2e6,3e6,4e6,4.5e6]
     if type=='RH-P12-RN':     self.BAUD_RATE= [9600,57600,115200,1e6,2e6,3e6,4e6,4.5e6,10.5e6]
     if type=='PH54-200-S500': self.BAUD_RATE= [9600,57600,115200,1e6,2e6,3e6,4e6,4.5e6,   6e6,10.5e6]
+    if type=='PM54-060-S250': self.BAUD_RATE= [9600,57600,115200,1e6,2e6,3e6,4e6,4.5e6,   6e6,10.5e6]
 
     self.TORQUE_ENABLE  = 1  # Value for enabling the torque
     self.TORQUE_DISABLE = 0  # Value for disabling the torque
@@ -374,20 +381,28 @@ class TDynamixel1(object):
     elif type=='PH54-200-S500':
       self.MIN_POSITION = -501433
       self.MAX_POSITION = 501433
+    elif type=='PM54-060-S250':
+      self.MIN_POSITION = -251173
+      self.MAX_POSITION = 251173
     if type=='XM430-W350':    self.MAX_CURRENT = 1193   # == Current Limit(38)
     elif type=='XH430-V350':  self.MAX_CURRENT = 689   # == Current Limit(38)
-    elif type=='XH540-W270':  self.MAX_CURRENT = 2047
+    elif type in ('XH540-W270','XD540-T270'):  self.MAX_CURRENT = 2047   # == Current Limit(38)
     elif type=='MX-64AR':     self.MAX_CURRENT = 1941   # == Current Limit(38)
     elif type=='RH-P12-RN':   self.MAX_CURRENT = 820
     elif type=='PH54-200-S500':   self.MAX_CURRENT = 22740
+    elif type=='PM54-060-S250':   self.MAX_CURRENT = 7980
     self.MAX_PWM = 885
     if type=='RH-P12-RN':  self.MAX_PWM = None
     elif type=='PH54-200-S500':  self.MAX_PWM = 2009
+    elif type=='PM54-060-S250':  self.MAX_PWM = 2009
 
     self.POSITION_UNIT= math.pi/2048.0
     self.POSITION_OFFSET= 2048.0
     if type=='PH54-200-S500':
-      self.POSITION_UNIT= math.pi/501924.0
+      self.POSITION_UNIT= math.pi/501923.0
+      self.POSITION_OFFSET= 0.0
+    elif type=='PM54-060-S250':
+      self.POSITION_UNIT= math.pi/251417.0
       self.POSITION_OFFSET= 0.0
     if type=='XM430-W350':
       self.CURRENT_UNIT= 2.69
@@ -395,7 +410,7 @@ class TDynamixel1(object):
     elif type=='XH430-V350':
       self.CURRENT_UNIT= 1.34
       self.VELOCITY_UNIT= 0.229*(2.0*math.pi)/60.0
-    elif type=='XH540-W270':
+    elif type in ('XH540-W270','XD540-T270'):
       self.CURRENT_UNIT= 2.69
       self.VELOCITY_UNIT= 0.229*(2.0*math.pi)/60.0
     elif type=='MX-64AR':
@@ -405,6 +420,9 @@ class TDynamixel1(object):
       self.CURRENT_UNIT= 4.02
       self.VELOCITY_UNIT= 0.114*(2.0*math.pi)/60.0
     elif type=='PH54-200-S500':
+      self.CURRENT_UNIT= 1.0
+      self.VELOCITY_UNIT= 0.01*(2.0*math.pi)/60.0
+    elif type=='PM54-060-S250':
       self.CURRENT_UNIT= 1.0
       self.VELOCITY_UNIT= 0.01*(2.0*math.pi)/60.0
 
@@ -544,7 +562,8 @@ class TDynamixel1(object):
 
   #Memorize the current RAM state for setting them again after reopen.
   def MemorizeState(self):
-    for address in self.ADDR:
+    for address,(addr,size) in self.ADDR.iteritems():
+      if addr is None:  continue
       self.state_memory[address]= self.Read(address)
 
   def RecallState(self):
@@ -612,8 +631,8 @@ class TDynamixel1(object):
   #Print status
   def PrintStatus(self):
     status= []
-    for address in self.ADDR.iterkeys():
-      addr= self.ADDR[address][0]
+    for address,(addr,size) in self.ADDR.iteritems():
+      if addr is None:  continue
       value= self.Read(address)
       if not self.CheckTxRxResult():  value= (value,'(error)')
       status.append([addr,address,value])
@@ -683,8 +702,9 @@ class TDynamixel1(object):
   def MoveTo(self, target, blocking=True):
     target = int(target)
     #FIXME: If OpMode allows multi turn, target could vary.
-    if target < self.MIN_POSITION:  target = self.MIN_POSITION
-    elif target > self.MAX_POSITION:  target = self.MAX_POSITION
+    if self.OpMode!='EXTPOS':
+      if target < self.MIN_POSITION:  target = self.MIN_POSITION
+      elif target > self.MAX_POSITION:  target = self.MAX_POSITION
 
     # Write goal position
     self.Write('GOAL_POSITION', target)

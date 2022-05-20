@@ -4,6 +4,9 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Oct.29, 2017
+#\version 0.2
+#\date    May.21, 2022
+#         Refactored the code.
 from dxl_util import TDynamixel1
 from ..misc.dxl_holding import TDxlHolding
 from ..core.util import TRate, CPrint
@@ -11,12 +14,14 @@ import time
 import threading
 import copy
 
-'''3D-printed Dynamixel Gripper utility class'''
-class TDynamixelGripper(object):
-  def __init__(self, dev='/dev/ttyUSB0'):
-    self.dxl_type= 'XM430-W350'
+
+'''Dynamixel Gripper base class'''
+class TDxlGripperBase(object):
+  def __init__(self, dxl_type, dev='/dev/ttyUSB0'):
+    self.dxl_type= dxl_type
     self.dev= dev
     self.baudrate= 2e6
+    self.op_mode= None  #Using default
     self.dxl= TDynamixel1(self.dxl_type,dev=self.dev)
 
     #Thread locker:
@@ -31,21 +36,21 @@ class TDynamixelGripper(object):
       'StateObserver':[False,None],
       'MoveThController':[False,None],}
 
-    #Holding controller:
-    self.holding= None
-    self.holding_max_pwm_rate= 0.9
-
-    #self.CmdMax= 2382  #Gripper closed.
-    self.CmdMax= 2200  #Gripper closed (with FingerVision).
-    self.CmdMin= 1200  #Gripper opened widely.
-    self.CmdOpen= 1900  #Gripper opened moderately.
+    self.CmdMax= None
+    self.CmdMin= None
+    self.CmdOpen= None
+    self.CmdClose= None
+    #Gripper range in meter:
+    self.GrpClose= None
+    self.GrpOpen= None
+    self.GrpMin= None
+    self.GrpMax= None
 
     #Gripper command-position conversions.
-    self.dxlg_range= [0.0,0.095]
-    self.dxlg_cmd2pos= lambda cmd: self.dxlg_range[1] + (cmd-self.CmdOpen)*(self.dxlg_range[0]-self.dxlg_range[1])/(self.CmdMax-self.CmdOpen)
-    self.dxlg_pos2cmd= lambda pos: self.CmdOpen + (pos-self.dxlg_range[1])*(self.CmdMax-self.CmdOpen)/(self.dxlg_range[0]-self.dxlg_range[1])
-    self.dxlg_cmd2vel= lambda cmd: (self.dxlg_range[0]-self.dxlg_range[1])/(self.dxl.ConvPos(self.CmdMax)-self.dxl.ConvPos(self.CmdOpen))*self.dxl.ConvVel(cmd)
-    self.dxlg_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdMax)-self.dxl.ConvPos(self.CmdOpen))/(self.dxlg_range[0]-self.dxlg_range[1]))
+    self.gripper_cmd2pos= lambda cmd: min(self.GrpMax,max(self.GrpMin, self.GrpClose + (cmd-self.CmdClose)*(self.GrpOpen-self.GrpClose)/(self.CmdOpen-self.CmdClose) ))
+    self.gripper_pos2cmd= lambda pos: min(self.CmdMax,max(self.CmdMin, self.CmdClose + (pos-self.GrpClose)*(self.CmdOpen-self.CmdClose)/(self.GrpOpen-self.GrpClose) ))
+    self.gripper_cmd2vel= lambda cmd: (self.GrpOpen-self.GrpClose)/(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))*self.dxl.ConvVel(cmd)
+    self.gripper_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))/(self.GrpOpen-self.GrpClose))
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -55,6 +60,7 @@ class TDynamixelGripper(object):
 
     #self.dxl= TDynamixel1(self.dxl_type,dev=self.dev)
     self.dxl.Baudrate= self.baudrate
+    if self.op_mode is not None:  self.dxl.OpMode= self.op_mode
 
     with self.port_locker:
       ra(self.dxl.Setup())
@@ -79,16 +85,16 @@ class TDynamixelGripper(object):
 
   '''Range of gripper position.'''
   def PosRange(self):
-    return self.dxlg_range
+    return [self.GrpMin, self.GrpMax]
 
   '''Get current position.'''
   def Position(self):
     with self.port_locker:
       pos= self.dxl.Position()
     if pos is None:
-      print 'DxlGripper: Failed to read position'
+      print 'DxlG: Failed to read position'
       return None
-    pos= self.dxlg_cmd2pos(pos)
+    pos= self.gripper_cmd2pos(pos)
     return pos
 
   '''Activate gripper (torque is enabled).
@@ -109,17 +115,17 @@ class TDynamixelGripper(object):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Open(self, blocking=False):
     if not self.threads['MoveThController'][0]:
-      self.Move(pos=self.dxlg_range[1], blocking=blocking)
+      self.Move(pos=self.GrpOpen, blocking=blocking)
     else:
-      self.MoveTh(pos=self.dxlg_range[1], blocking=blocking)
+      self.MoveTh(pos=self.GrpOpen, blocking=blocking)
 
   '''Close a gripper.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Close(self, blocking=False):
     if not self.threads['MoveThController'][0]:
-      self.Move(pos=self.dxlg_range[0], blocking=blocking)
+      self.Move(pos=self.GrpClose, blocking=blocking)
     else:
-      self.MoveTh(pos=self.dxlg_range[0], blocking=blocking)
+      self.MoveTh(pos=self.GrpClose, blocking=blocking)
 
   '''Control a gripper.
     pos: target position in meter.
@@ -127,16 +133,10 @@ class TDynamixelGripper(object):
     speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    cmd= max(self.CmdMin,min(self.CmdMax,int(self.dxlg_pos2cmd(pos))))
-    max_pwm= self.dxl.InvConvPWM(max_effort)
-    if self.holding is None:
-      with self.port_locker:
-        self.dxl.SetPWM(max_pwm)
-        self.dxl.MoveTo(cmd, blocking=True if blocking else False)
-    else:
-      with self.port_locker:
-        self.dxl.SetPWM(max_pwm)
-      self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
+    cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
+    trg_curr= self.dxl.CurrentLimit*max_effort*0.01
+    with self.port_locker:
+      self.dxl.MoveToC(cmd, trg_curr, blocking=True if blocking else False)
 
   '''Stop the gripper motion. '''
   def Stop(self, blocking=False):
@@ -144,19 +144,6 @@ class TDynamixelGripper(object):
       self.Move(self.Position(), blocking=False)
     else:
       self.MoveTh(pos=self.State()['position'], blocking=blocking)
-
-  ##Low level position control.
-  #def low_move(self, cmd, blocking):
-    #self.dxl.MoveTo(cmd, blocking=blocking)
-  ##Low level pwm control.
-  #def low_set_pwm(self, pwm):
-    #with self.port_locker:
-      #self.dxl.SetPWM(pwm)
-  ##Low level observer.
-  #def low_observe(self):
-    #with self.port_locker:
-      #pos,vel,pwm= self.dxl.Position(), self.dxl.Velocity(), self.dxl.PWM()
-    #return pos,vel,pwm
 
 
   #Get current state saved in memory (no port access when running this function).
@@ -190,44 +177,37 @@ class TDynamixelGripper(object):
       if self.threads['StateObserver'][0]:
         self.StartStateObs(self._state_observer_callback)
 
+
   '''Thread version of Move: Control a gripper.
     pos: target position in meter.
     max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
     speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
   def MoveTh(self, pos, max_effort=50.0, speed=50.0, blocking=False):
-    #self.StopMoveTh()
-    #th_func= lambda:self.MoveThController(pos, max_effort, speed)
-    #self.threads['MoveThController']= [True, threading.Thread(name='MoveThController', target=th_func)]
-    #self.threads['MoveThController'][1].start()
-    #if blocking:
-      #self.threads['MoveThController'][1].join()
-      #self.StopMoveTh()
-
-    cmd= max(self.CmdMin,min(self.CmdMax,int(self.dxlg_pos2cmd(pos))))
-    max_pwm= self.dxl.InvConvPWM(max_effort)
-    if self.holding is None:
-      with self.moveth_locker:
-        self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
-      rate= TRate(self.hz_moveth_ctrl)
-      while blocking:
-        p= self.State()['position']
-        if p is None:  return
-        if not (abs(cmd - self.dxlg_pos2cmd(p)) > self.dxl.GoalThreshold):  break
-        #print abs(cmd - self.dxlg_pos2cmd(p)) - self.dxl.GoalThreshold
-        rate.sleep()
-    else:
-      with self.moveth_locker:
-        self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
-      self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
-
+    cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
+    with self.moveth_locker:
+      self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
+    rate= TRate(self.hz_moveth_ctrl)
+    p_log= []
+    while blocking:
+      p= self.State()['position']
+      if p is None:  return
+      p_log.append(self.gripper_pos2cmd(p))
+      if len(p_log)>10:  p_log.pop(0)
+      if not (abs(cmd - p_log[-1]) > self.dxl.GoalThreshold):  break
+      #Detecting stuck:
+      if len(p_log)>=10 and not (abs(p_log[0] - p_log[-1]) > self.dxl.GoalThreshold):
+        CPrint(4,'DxlG: Control gets stuck in MoveTh. Abort.')
+        break
+      #print abs(cmd - p_log[-1]) - self.dxl.GoalThreshold
+      rate.sleep()
 
   #Start MoveTh controller.
   def StartMoveTh(self):
     self.StopMoveTh()
     with self.port_locker:
-      goal_pos= self.dxlg_cmd2pos(self.dxl.Read('GOAL_POSITION'))
-      max_effort= self.dxl.ConvPWM(self.dxl.Read('GOAL_PWM'))
+      goal_pos= self.gripper_cmd2pos(self.dxl.Read('GOAL_POSITION'))
+      max_effort= self.dxl.Read('GOAL_CURRENT')/self.dxl.CurrentLimit*100.0
     with self.moveth_locker:
       self.moveth_cmd= {'pos':goal_pos,'max_effort':max_effort}
     th_func= lambda:self.MoveThController()
@@ -255,8 +235,8 @@ class TDynamixelGripper(object):
         p,v,c= self.dxl.Position(),self.dxl.Velocity(),self.dxl.Current()
       state= {
         'stamp':time.time(),
-        'position':self.dxlg_cmd2pos(p) if p is not None else None,
-        'velocity':self.dxlg_cmd2vel(v) if v is not None else None,
+        'position':self.gripper_cmd2pos(p) if p is not None else None,
+        'velocity':self.gripper_cmd2vel(v) if v is not None else None,
         'effort':(c/self.dxl.CurrentLimit*100.0) if c is not None else None,
         }
       #print state['position']
@@ -267,31 +247,6 @@ class TDynamixelGripper(object):
       rate.sleep()
     self.threads['StateObserver'][0]= False
 
-  ##MoveTh controller thread.
-  ##NOTE: Don't call this function directly.  Use self.MoveTh
-  #def MoveThController(self, pos, max_effort, speed):
-    #cmd= max(self.CmdMin,min(self.CmdMax,int(self.dxlg_pos2cmd(pos))))
-    #max_pwm= self.dxl.InvConvPWM(max_effort)
-
-    ##print 'entry..'
-    #if self.holding is None:
-      ##print 'a..'
-      #with self.port_locker:
-        #self.dxl.SetPWM(max_pwm)
-        #self.dxl.MoveTo(cmd, blocking=False)
-      ##print 'b..'
-      #rate= TRate(self.hz_moveth_ctrl)
-      #while self.threads['MoveThController'][0]:
-        #p= self.State()['position']
-        #if p is None:  return
-        #if not (abs(cmd - self.dxlg_pos2cmd(p)) > self.dxl.GoalThreshold):  break
-        ##print abs(cmd - self.dxlg_pos2cmd(p)) - self.dxl.GoalThreshold
-        #rate.sleep()
-      #self.threads['MoveThController'][0]= False
-    #else:
-      #with self.port_locker:
-        #self.dxl.SetPWM(max_pwm)
-      #self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
 
   #MoveTh controller thread.
   #NOTE: Don't call this function directly.  Use self.StartMoveTh
@@ -301,7 +256,97 @@ class TDynamixelGripper(object):
       with self.moveth_locker:
         moveth_cmd= copy.deepcopy(self.moveth_cmd)
       pos,max_effort= moveth_cmd['pos'],moveth_cmd['max_effort']
-      cmd= max(self.CmdMin,min(self.CmdMax,int(self.dxlg_pos2cmd(pos))))
+      cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
+      trg_curr= self.dxl.CurrentLimit*max_effort*0.01
+
+      with self.port_locker:
+        self.dxl.MoveToC(cmd, trg_curr, blocking=False)
+
+      #print 'dxl_gripper:MoveThController:rate.remaining:',rate.remaining()
+      rate.sleep()
+    self.threads['MoveThController'][0]= False
+
+
+'''3D-printed Dynamixel Gripper utility class'''
+class TDynamixelGripper(TDxlGripperBase):
+  def __init__(self, dev='/dev/ttyUSB0'):
+    super(TDynamixelGripper,self).__init__(dxl_type='XM430-W350',dev=dev)
+
+    #Holding controller:
+    self.holding= None
+    self.holding_max_pwm_rate= 0.9
+
+    self.CmdMax= 2382  #Gripper closed.
+    self.CmdMin= 1200  #Gripper opened widely.
+    self.CmdOpen= 1900  #Gripper opened moderately.
+    self.CmdClose= 2200  #Gripper closed (with FingerVision).
+    #Gripper range in meter:
+    self.GrpClose= 0.0
+    self.GrpOpen= 0.095
+    self.GrpMin= 0.0
+    self.GrpMax= 0.095
+
+  '''Control a gripper.
+    pos: target position in meter.
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def Move(self, pos, max_effort=50.0, speed=50.0, blocking=False):
+    cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
+    max_pwm= self.dxl.InvConvPWM(max_effort)
+    if self.holding is None:
+      with self.port_locker:
+        self.dxl.SetPWM(max_pwm)
+        self.dxl.MoveTo(cmd, blocking=True if blocking else False)
+    else:
+      with self.port_locker:
+        self.dxl.SetPWM(max_pwm)
+      self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
+
+  '''Thread version of Move: Control a gripper.
+    pos: target position in meter.
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum); NOT_IMPLEMENTED.
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.  '''
+  def MoveTh(self, pos, max_effort=50.0, speed=50.0, blocking=False):
+    cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
+    max_pwm= self.dxl.InvConvPWM(max_effort)
+    if self.holding is None:
+      with self.moveth_locker:
+        self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
+      rate= TRate(self.hz_moveth_ctrl)
+      while blocking:
+        p= self.State()['position']
+        if p is None:  return
+        if not (abs(cmd - self.gripper_pos2cmd(p)) > self.dxl.GoalThreshold):  break
+        #print abs(cmd - self.gripper_pos2cmd(p)) - self.dxl.GoalThreshold
+        rate.sleep()
+    else:
+      with self.moveth_locker:
+        self.moveth_cmd= {'pos':pos,'max_effort':max_effort}
+      self.holding.SetTarget(cmd, self.holding_max_pwm_rate*max_pwm)
+
+  #Start MoveTh controller.
+  def StartMoveTh(self):
+    self.StopMoveTh()
+    with self.port_locker:
+      goal_pos= self.gripper_cmd2pos(self.dxl.Read('GOAL_POSITION'))
+      max_effort= self.dxl.ConvPWM(self.dxl.Read('GOAL_PWM'))
+    with self.moveth_locker:
+      self.moveth_cmd= {'pos':goal_pos,'max_effort':max_effort}
+    th_func= lambda:self.MoveThController()
+    self.threads['MoveThController']= [True, threading.Thread(name='MoveThController', target=th_func)]
+    self.threads['MoveThController'][1].start()
+
+  #MoveTh controller thread.
+  #NOTE: Don't call this function directly.  Use self.StartMoveTh
+  def MoveThController(self):
+    rate= TRate(self.hz_moveth_ctrl)
+    while self.threads['MoveThController'][0]:
+      with self.moveth_locker:
+        moveth_cmd= copy.deepcopy(self.moveth_cmd)
+      pos,max_effort= moveth_cmd['pos'],moveth_cmd['max_effort']
+      cmd= max(self.CmdMin,min(self.CmdMax,int(self.gripper_pos2cmd(pos))))
       max_pwm= self.dxl.InvConvPWM(max_effort)
 
       #print 'entry..'
@@ -321,37 +366,14 @@ class TDynamixelGripper(object):
     self.threads['MoveThController'][0]= False
 
 
-  #OBSOLETE: Old implementation holding controller.
-  ##Start holding controller with control rate (Hz).
-  #def StartHolding(self, rate=30):
-    #self.StopHolding()
-
-    #def holding_observer():
-      #with self.port_locker:
-        #pos,vel,pwm= self.dxl.Position(), self.dxl.Velocity(), self.dxl.PWM()
-      #return pos,vel,pwm
-    #def holding_controller(target_position):
-      #with self.port_locker:
-        #self.dxl.MoveTo(target_position, blocking=False)
-
-    #with self.port_locker:
-      #goal_pos= self.dxl.Read('GOAL_POSITION')
-      #max_pwm= self.dxl.Read('GOAL_PWM')
-
-    #self.holding= TDxlHolding(rate)
-    #self.holding.observer= holding_observer
-    #self.holding.controller= holding_controller
-    #self.holding.SetTarget(goal_pos, self.holding_max_pwm_rate*max_pwm)
-    #self.holding.Start()
-
   #Start holding controller with control rate (Hz).
   #Use state observer (StartStateObs).
   def StartHolding(self, rate=30):
     self.StopHolding()
 
     def holding_observer():
-      pos= self.dxlg_pos2cmd(self.State()['position'])
-      vel= self.dxlg_vel2cmd(self.State()['velocity'])
+      pos= self.gripper_pos2cmd(self.State()['position'])
+      vel= self.gripper_vel2cmd(self.State()['velocity'])
       pwm= self.dxl.InvConvPWM(self.State()['effort'])
       return pos,vel,pwm
     def holding_controller(target_position):
