@@ -194,7 +194,7 @@ class TRobotUR(TMultiArmRobot):
     return self.grippers[arm]
 
   def JointStatesCallback(self, msg):
-    if arm is None:  arm= self.Arm
+    arm= 0
     with self.sensor_locker:
       self.x_curr= msg
       q_map= {name:position for name,position in zip(self.x_curr.name,self.x_curr.position)}
