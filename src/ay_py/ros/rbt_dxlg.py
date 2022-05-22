@@ -49,7 +49,7 @@ class TDxlGripper(TGripper2F1):
       self.joint_names= ['joint0','joint1']
     elif self.gripper_type=='DxlpY1Gripper':
       mod= __import__('ay_py.misc.dxl_dxlpy1',globals(),None,('TDxlpY1',))
-      self.gripper= mod.TDxlpY1(dev=None, finger_type=finger_type)
+      self.gripper= mod.TDxlpY1(dev=None)
       self.joint_names= ['joint0']
     else:
       raise Exception('Invalid gripper type: {gripper_type}'.format(gripper_type=gripper_type))
