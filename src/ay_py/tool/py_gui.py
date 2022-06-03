@@ -33,7 +33,7 @@ class TTerminalTab(QtGui.QWidget):
     if cmd[0]==':all':  return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
     return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
 
-  def InitUI(self,title,widgets,exit_command,size,horizontal,no_focus):
+  def InitUI(self,title,widgets,exit_command,size,horizontal,no_focus,grid_type='vhbox'):
     # Set window size.
     self.resize(*size)
     self.Processes= []
@@ -59,19 +59,39 @@ class TTerminalTab(QtGui.QWidget):
     boxlayout.addWidget(self.qttabs)
 
     # Grid layout
-    grid= QtGui.QGridLayout()
+
     wg= QtGui.QWidget()
+    grid= QtGui.QGridLayout()
+    #if grid_type=='grid':  grid= QtGui.QGridLayout()
+    #elif grid_type=='vhbox':  grid= QtGui.QVBoxLayout()
     wg.setLayout(grid)
     boxlayout.addWidget(wg)
 
     # Add widgets on grid
     for r,line in enumerate(self.Widgets):
+      gcol= [0]
+      if grid_type=='grid':
+        def add_widget(w):
+          grid.addWidget(w, r, gcol[0])
+          gcol[0]+= 1
+      elif grid_type=='vhbox':
+        gline= QtGui.QHBoxLayout()
+        def add_widget(w):
+          if gcol[0]==0:
+            grid.addWidget(w, r, 0)
+            grid.addLayout(gline, r, 1)
+            gcol[0]+= 1
+          else:
+            w.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Fixed)
+            #w.setMaximumWidth(5)
+            #w.resize(w.sizeHint().width(), w.sizeHint().height()*2)
+            gline.addWidget(w)
       if isinstance(line,(tuple,list)) and len(line)>1 and line[1]==':radio':
         name,_,options= line
         label= QtGui.QLabel()
         label.setText(name)
         label.setAlignment(QtCore.Qt.AlignCenter)
-        grid.addWidget(label, r, 0)
+        add_widget(label)
         group= QtGui.QButtonGroup()
         for i,opt in enumerate(options):
           radbtn= QtGui.QRadioButton(opt)
@@ -79,19 +99,19 @@ class TTerminalTab(QtGui.QWidget):
           if no_focus:  radbtn.setFocusPolicy(QtCore.Qt.NoFocus)
           if i==0:  radbtn.setChecked(True)
           group.addButton(radbtn,1)
-          grid.addWidget(radbtn, r, 1+i)
+          add_widget(radbtn)
         self.RBOptions[name]= group
       elif isinstance(line,(tuple,list)) and len(line)>1 and line[1]==':cmb':
         name,_,options= line
         label= QtGui.QLabel()
         label.setText(name)
         label.setAlignment(QtCore.Qt.AlignCenter)
-        grid.addWidget(label, r, 0)
+        add_widget(label)
         cmbbx= QtGui.QComboBox(self)
         for opt in options:
           cmbbx.addItem(opt)
         cmbbx.setCurrentIndex(0)
-        grid.addWidget(cmbbx, r, 1)
+        add_widget(cmbbx)
         self.CBOptions[name]= cmbbx
       elif isinstance(line,(tuple,list)) and len(line)>1 and isinstance(line[1],(tuple,list)):
         term,row= line
@@ -99,25 +119,29 @@ class TTerminalTab(QtGui.QWidget):
         btn0.setFlat(True)
         if no_focus:  btn0.setFocusPolicy(QtCore.Qt.NoFocus)
         btn0.clicked.connect(lambda clicked,term=term:self.ShowTermTab(term))
-        grid.addWidget(btn0, r, 0)
-        for c,commands in enumerate(row):
+        add_widget(btn0)
+        for commands in row:
           if commands[0]==':pair':
             name1,f1= commands[1][0],self.CmdToLambda(term,commands[1][1])
             name2,f2= commands[2][0],self.CmdToLambda(term,commands[2][1])
             btn= QtGui.QPushButton(name1)
+            btn.setStyleSheet('padding:5px 10px 5px 10px')
             btn.setCheckable(True)
             if no_focus:  btn.setFocusPolicy(QtCore.Qt.NoFocus)
             btn.clicked.connect(lambda b,btn=btn,name1=name1,f1=f1,name2=name2,f2=f2:
                                   (f1(),btn.setText(name2)) if btn.isChecked() else (f2(),btn.setText(name1)))
-            grid.addWidget(btn, r, 1+c)
+            add_widget(btn)
           else:
             name,f= commands[0],self.CmdToLambda(term,commands[1])
             btn= QtGui.QPushButton(name)
+            btn.setStyleSheet('padding:5px 10px 5px 10px')
             if no_focus:  btn.setFocusPolicy(QtCore.Qt.NoFocus)
             btn.clicked.connect(f)
-            grid.addWidget(btn, r, 1+c)
+            add_widget(btn)
       else:
         raise Exception('Unknown syntax:',line)
+      if grid_type=='vhbox':
+        gline.addSpacerItem(QtGui.QSpacerItem(1, 1, QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding))
 
     # Show window
     self.show()
