@@ -44,11 +44,12 @@ class TTerminalTab(QtGui.QWidget):
     self.setWindowTitle(self.WinTitle)
 
     self.ExitCommand= exit_command
-    self.Widgets= widgets
+    self.Widgets= widgets  #Widget definitions.
     self.Terminals= [line for line in self.Widgets if isinstance(line[1],(tuple,list))]
     self.RBOptions= {}  #Option name: Option radio button group
     self.CBOptions= {}  #Option name: Option combobox
     self.term_to_idx= {term:r for r,(term,row) in enumerate(self.Terminals)}
+    self.Objects= {}  #Actual widget objects (Qt objects).
 
     # Horizontal box layout
     if horizontal:  boxlayout= QtGui.QHBoxLayout()
@@ -93,6 +94,10 @@ class TTerminalTab(QtGui.QWidget):
         label.setAlignment(QtCore.Qt.AlignCenter)
         add_widget(label)
         group= QtGui.QButtonGroup()
+        self.Objects[name]= {}
+        self.Objects[name]['label']= label
+        self.Objects[name]['group']= group
+        self.Objects[name]['radbtns']= []
         for i,opt in enumerate(options):
           radbtn= QtGui.QRadioButton(opt)
           radbtn.setCheckable(True)
@@ -100,6 +105,7 @@ class TTerminalTab(QtGui.QWidget):
           if i==0:  radbtn.setChecked(True)
           group.addButton(radbtn,1)
           add_widget(radbtn)
+          self.Objects[name]['radbtns'].append(radbtn)
         self.RBOptions[name]= group
       elif isinstance(line,(tuple,list)) and len(line)>1 and line[1]==':cmb':
         name,_,options= line
@@ -108,10 +114,13 @@ class TTerminalTab(QtGui.QWidget):
         label.setAlignment(QtCore.Qt.AlignCenter)
         add_widget(label)
         cmbbx= QtGui.QComboBox(self)
+        self.Objects[name]= {}
+        self.Objects[name]['label']= label
         for opt in options:
           cmbbx.addItem(opt)
         cmbbx.setCurrentIndex(0)
         add_widget(cmbbx)
+        self.Objects[name]['cmbbx']= cmbbx
         self.CBOptions[name]= cmbbx
       elif isinstance(line,(tuple,list)) and len(line)>1 and isinstance(line[1],(tuple,list)):
         term,row= line
@@ -120,6 +129,9 @@ class TTerminalTab(QtGui.QWidget):
         if no_focus:  btn0.setFocusPolicy(QtCore.Qt.NoFocus)
         btn0.clicked.connect(lambda clicked,term=term:self.ShowTermTab(term))
         add_widget(btn0)
+        self.Objects[term]= {}
+        self.Objects[term]['label']= btn0
+        self.Objects[term]['buttons']= {}
         for commands in row:
           if commands[0]==':pair':
             name1,f1= commands[1][0],self.CmdToLambda(term,commands[1][1])
@@ -131,13 +143,15 @@ class TTerminalTab(QtGui.QWidget):
             btn.clicked.connect(lambda b,btn=btn,name1=name1,f1=f1,name2=name2,f2=f2:
                                   (f1(),btn.setText(name2)) if btn.isChecked() else (f2(),btn.setText(name1)))
             add_widget(btn)
+            self.Objects[term]['buttons'][name1]= btn
           else:
-            name,f= commands[0],self.CmdToLambda(term,commands[1])
-            btn= QtGui.QPushButton(name)
+            name1,f= commands[0],self.CmdToLambda(term,commands[1])
+            btn= QtGui.QPushButton(name1)
             btn.setStyleSheet('padding:5px 10px 5px 10px')
             if no_focus:  btn.setFocusPolicy(QtCore.Qt.NoFocus)
             btn.clicked.connect(f)
             add_widget(btn)
+            self.Objects[term]['buttons'][name1]= btn
       else:
         raise Exception('Unknown syntax:',line)
       if grid_type=='vhbox':
@@ -220,13 +234,17 @@ class TTerminalTab(QtGui.QWidget):
     else:
       event.ignore()
 
-def RunTerminalTab(title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True):
+def RunTerminalTab(title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True,start=True):
   app= QtGui.QApplication(sys.argv)
   win= TTerminalTab(title,widgets,exit_command,size=size,horizontal=horizontal,no_focus=no_focus)
   signal.signal(signal.SIGINT, lambda signum,frame,win=win: (win.Exit(),QtGui.QApplication.quit()) )
   timer= QtCore.QTimer()
   timer.start(500)  # You may change this if you wish.
   timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
+  if start:  StartApp(app)
+  return app,win
+
+def StartApp(app):
   sys.exit(app.exec_())
 
 if __name__=='__main__':
