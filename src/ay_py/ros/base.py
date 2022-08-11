@@ -5,6 +5,7 @@ import actionlib as al
 import geometry_msgs.msg
 import trajectory_msgs.msg
 import dynamic_reconfigure.client
+import tf
 
 from ..core.util import *
 
@@ -150,6 +151,20 @@ def ToROSTrajectory(joint_names, q_traj, t_traj, dq_traj=None):
     traj.points= [ROSGetJTP(q,t) for q,t in zip(q_traj, t_traj)]
   traj.header.stamp= rospy.Time.now()
   return traj
+
+
+'''One time tf listening.  Useful when obtaining static transformation.
+  trg_frame, src_frame: Target and source frame ids. '''
+def TfOnce(trg_frame, src_frame, time_out=4.0):
+  listener= tf.TransformListener()
+  try:
+    listener.waitForTransform(trg_frame, src_frame, rospy.Time(), rospy.Duration(time_out))
+    (trans,rot)= listener.lookupTransform(trg_frame, src_frame, rospy.Time(0))
+  except Exception:
+    CPrint(0,'transformation not found:', trg_frame, src_frame)
+    return None
+  trans_rot= trans+rot
+  return trans_rot
 
 
 '''Basic ROS utility class.'''
