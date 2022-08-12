@@ -9,10 +9,12 @@ from base import *
 from const import *
 from ..core.geom import *
 
+#Utility for RViz.
 class TSimpleVisualizer(object):
   def __init__(self, viz_dt=rospy.Duration(), name_space='visualizer',
                frame=None, queue_size=1, topic='visualization_marker'):
-    self.viz_pub= rospy.Publisher(topic, visualization_msgs.msg.Marker, queue_size=queue_size)
+    if topic is not None:
+      self.viz_pub= rospy.Publisher(topic, visualization_msgs.msg.Marker, queue_size=queue_size)
     self.curr_id= 0
     self.added_ids= set()
     self.viz_frame= 'base' if frame is None else frame
@@ -21,12 +23,14 @@ class TSimpleVisualizer(object):
     #self.viz_dt= rospy.Duration()
     #ICol:r,g,b,  y,p,sb, w
     self.indexed_colors= [[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1],[1,1,1]]
+    #Wrapping the operation on the marker to make the class common to MarkerArray.
+    self.marker_operation= lambda marker: self.viz_pub.publish(marker)
 
   def __del__(self):
     if self.viz_dt in (None, rospy.Duration()):
       self.DeleteAllMarkers()
     self.Reset()
-    #self.viz_pub.publish()
+    #self.marker_operation()
     self.viz_pub.unregister()
 
   def Reset(self, viz_dt=None):
@@ -40,11 +44,11 @@ class TSimpleVisualizer(object):
     marker.ns= self.viz_ns
     marker.id= mid
     marker.action= visualization_msgs.msg.Marker.DELETE
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     #marker.header.frame_id= self.viz_frame
     #marker.ns= self.viz_ns
     #marker.action= visualization_msgs.msg.Marker.DELETEALL
-    #self.viz_pub.publish(marker)
+    #self.marker_operation(marker)
     if mid in self.added_ids:  self.added_ids.remove(mid)
 
   def DeleteAllMarkers(self):
@@ -55,11 +59,11 @@ class TSimpleVisualizer(object):
       #marker.ns= self.viz_ns
       #marker.id= mid
       #marker.action= visualization_msgs.msg.Marker.DELETE
-      #self.viz_pub.publish(marker)
+      #self.marker_operation(marker)
     marker.header.frame_id= self.viz_frame
     marker.ns= self.viz_ns
     marker.action= visualization_msgs.msg.Marker.DELETEALL
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     self.added_ids= set()
 
   def ICol(self, i):
@@ -98,7 +102,7 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, scale, rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.CUBE  # or CUBE, SPHERE, ARROW, CYLINDER
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize an arrow at x.  If mid is None, the id is automatically assigned
@@ -106,7 +110,7 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, scale, rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.ARROW  # or CUBE, SPHERE, ARROW, CYLINDER
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a list of arrows.  If mid is None, the id is automatically assigned
@@ -123,7 +127,7 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.LINE_LIST
     marker.points= [geometry_msgs.msg.Point(*p) for x in x_list for p in point_on_arrow(x,scale[0])]
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a cube at x.  If mid is None, the id is automatically assigned
@@ -131,7 +135,7 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, scale, rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.CUBE  # or CUBE, SPHERE, ARROW, CYLINDER
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a list of cubes [[x,y,z]*N].  If mid is None, the id is automatically assigned
@@ -141,7 +145,7 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.CUBE_LIST
     marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a sphere at p=[x,y,z].  If mid is None, the id is automatically assigned
@@ -153,7 +157,7 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, scale, rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.SPHERE  # or CUBE, SPHERE, ARROW, CYLINDER
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a list of spheres [[x,y,z]*N].  If mid is None, the id is automatically assigned
@@ -163,7 +167,7 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.SPHERE_LIST
     marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a cylinder whose end points are p1 and p2.  If mid is None, the id is automatically assigned
@@ -175,7 +179,7 @@ class TSimpleVisualizer(object):
     marker= self.GenMarker(x, scale, rgb, alpha)
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.CYLINDER  # or CUBE, SPHERE, ARROW, CYLINDER
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a cylinder at x along its axis ('x','y','z').  If mid is None, the id is automatically assigned
@@ -192,7 +196,7 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.POINTS
     marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a coordinate system at x with arrows.  If mid is None, the id is automatically assigned
@@ -224,7 +228,7 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.LINE_STRIP
     marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a list of lines [[x,y,z]*N] (2i-th and (2i+1)-th points are pair).  If mid is None, the id is automatically assigned
@@ -234,7 +238,7 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.LINE_LIST
     marker.points= [geometry_msgs.msg.Point(*p[:3]) for p in points]
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize a text.  If mid is None, the id is automatically assigned
@@ -247,7 +251,7 @@ class TSimpleVisualizer(object):
     mid2= self.SetID(marker,mid)
     marker.type= visualization_msgs.msg.Marker.TEXT_VIEW_FACING
     marker.text= text
-    self.viz_pub.publish(marker)
+    self.marker_operation(marker)
     return mid2
 
   #Visualize contacts which should be an moveit_msgs/ContactInformation[] [DEPRECATED:arm_navigation_msgs/ContactInformation[]]
@@ -269,3 +273,42 @@ class TSimpleVisualizer(object):
 def VisualizeContacts(contacts, with_normal=False, pt_size=0.01, ns='visualizer_contacts', dt=rospy.Duration(5.0)):
   viz= TSimpleVisualizer(dt, name_space=ns)
   viz.AddContacts(contacts, with_normal=with_normal, scale=[pt_size])
+
+
+#Utility for RViz (MarkerArray version of TSimpleVisualizer).
+class TSimpleVisualizerArray(TSimpleVisualizer):
+  def __init__(self, viz_dt=rospy.Duration(), name_space='visualizer',
+               frame=None, queue_size=1, topic='visualization_marker_array'):
+    super(TSimpleVisualizerArray,self).__init__(viz_dt=viz_dt, name_space=name_space, frame=frame, queue_size=queue_size, topic=topic)
+    self.viz_pub.unregister()
+    self.viz_pub= rospy.Publisher(topic, visualization_msgs.msg.MarkerArray, queue_size=queue_size)
+    self.marker_operation= lambda marker: self.marker_array.markers.append(marker)
+    self.Reset()
+
+  def __del__(self):
+    if self.viz_dt in (None, rospy.Duration()):
+      self.DeleteAllMarkers()
+    self.Reset()
+    #self.viz_pub.publish()
+    self.viz_pub.unregister()
+
+  def Reset(self, viz_dt=None):
+    self.curr_id= 0
+    if viz_dt!=None:
+      self.viz_dt= viz_dt
+    self.marker_array= visualization_msgs.msg.MarkerArray()
+
+  def Publish(self):
+    self.viz_pub.publish(self.marker_array)
+    self.Reset()
+
+  def DeleteAllMarkers(self):
+    self.Reset()
+    marker= visualization_msgs.msg.Marker()
+    marker.header.frame_id= self.viz_frame
+    marker.ns= self.viz_ns
+    marker.action= visualization_msgs.msg.Marker.DELETEALL
+    self.marker_operation(marker)
+    self.Publish()
+    self.added_ids= set()
+
