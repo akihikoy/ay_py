@@ -59,6 +59,7 @@ class TRobotUR(TMultiArmRobot):
     #Check the validity of joint positions:
     try:
       x_curr= rospy.wait_for_message('/joint_states', sensor_msgs.msg.JointState, 3.0)
+      """
       if not all([-1.5*math.pi<q and q<1.5*math.pi for q in x_curr.position]):
         CPrint(4,'''Warning: some joint angles exceed the expected range.
   Joint angles = {q}
@@ -70,6 +71,7 @@ class TRobotUR(TMultiArmRobot):
 
   Will you continue to set up the robot? (Recommended: N)'''.format(q=x_curr.position))
         if not AskYesNo():  return False
+      """
     except (rospy.ROSException, rospy.ROSInterruptException):
       CPrint(4,'Cannot get data from /joint_states')
       return False

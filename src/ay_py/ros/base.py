@@ -179,6 +179,8 @@ class TROSUtil(object):
     self.sub= TContainer(debug=debug)
     #Container for Service proxies
     self.srvp= TContainer(debug=debug)
+    #Container for Service
+    self.srv= TContainer(debug=debug)
     #Container for SimpleActionClient
     self.actc= TContainer(debug=debug)
     #Container for SimpleActionServer
@@ -229,6 +231,12 @@ class TROSUtil(object):
       del self.srvp[k]
       print 'ok'
 
+    for k in self.srv.keys():
+      print 'Shutdown service %r...' % k,
+      self.srv[k].shutdown()
+      del self.srv[k]
+      print 'ok'
+
     for k in self.actc.keys():
       print 'Delete action client %r...' % k,
       del self.actc[k]
@@ -276,6 +284,12 @@ class TROSUtil(object):
       else:  self.srvp[name]= srvp
     return True
 
+  #Add a service.
+  def AddSrv(self, name, port_name, port_type, handler, buff_size=65536, error_handler=None):
+    if name not in self.srv:
+      self.srv[name]= rospy.Service(port_name, port_type, handler, buff_size=buff_size, error_handler=error_handler)
+    return True
+
   #Add an action client.
   def AddActC(self, name, port_name, port_type, time_out=None, num_wait=1):
     if name not in self.actc:
@@ -314,6 +328,11 @@ class TROSUtil(object):
   def DelSrvP(self, name):
     if name in self.srvp:
       del self.srvp[name]
+
+  def DelSrv(self, name):
+    if name in self.srv:
+      self.srv[name].shutdown()
+      del self.srv[name]
 
   def DelActC(self, name):
     if name in self.actc:
