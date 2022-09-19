@@ -31,9 +31,9 @@ class TDxlGripper(TGripper2F1):
       mod= __import__('ay_py.misc.dxl_gripper',globals(),None,('TDynamixelGripper',))
       self.gripper= mod.TDynamixelGripper(dev=None)
       self.joint_names= ['joint0']
-    elif self.gripper_type=='RHP12RNGripper':
+    elif self.gripper_type in ('RHP12RNGripper','RHP12RNAGripper'):
       mod= __import__('ay_py.misc.dxl_rhp12rn',globals(),None,('TRHP12RN',))
-      self.gripper= mod.TRHP12RN(dev=None)
+      self.gripper= mod.TRHP12RN(dev=None,type={'RHP12RNGripper':'','RHP12RNAGripper':'(A)'}[self.gripper_type])
       self.joint_names= ['joint0']
     elif self.gripper_type=='EZGripper':
       mod= __import__('ay_py.misc.dxl_ezg',globals(),None,('TEZG',))
