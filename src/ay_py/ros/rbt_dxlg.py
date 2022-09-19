@@ -57,6 +57,11 @@ class TDxlGripper(TGripper2F1):
     self.sensor_locker= threading.RLock()
     self.port_locker= threading.RLock()
 
+    self.x_curr= None
+    self.q_curr= None
+    self.dq_curr= None
+    self.effort_curr= None
+
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -90,7 +95,7 @@ class TDxlGripper(TGripper2F1):
   def Position(self):
     with self.sensor_locker:
       q= self.q_curr
-    return q[0] if len(self.joint_names)==1 else list(q)
+    return None if q is None else q[0] if len(self.joint_names)==1 else list(q)
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
