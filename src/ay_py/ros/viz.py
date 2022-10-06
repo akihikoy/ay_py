@@ -113,6 +113,17 @@ class TSimpleVisualizer(object):
     self.marker_operation(marker)
     return mid2
 
+  #Visualize an arrow from p1 to p2.  If mid is None, the id is automatically assigned
+  def AddArrowP2P(self, p1, p2, diameter=0.002, rgb=[1,1,1], alpha=1.0, mid=None):
+    x= XFromP1P2(p1, p2, ax='x', r=0)
+    length= la.norm(Vec(p2)-Vec(p1))
+    scale= [length,diameter,diameter]
+    marker= self.GenMarker(x, scale, rgb, alpha)
+    mid2= self.SetID(marker,mid)
+    marker.type= visualization_msgs.msg.Marker.ARROW  # or CUBE, SPHERE, ARROW, CYLINDER
+    self.marker_operation(marker)
+    return mid2
+
   #Visualize a list of arrows.  If mid is None, the id is automatically assigned
   def AddArrowList(self, x_list, axis='x', scale=[0.05,0.002], rgb=[1,1,1], alpha=1.0, mid=None):
     iex,iey= {'x':(0,1),'y':(1,2),'z':(2,0)}[axis]
