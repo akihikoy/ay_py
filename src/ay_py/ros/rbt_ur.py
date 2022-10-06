@@ -43,6 +43,9 @@ class TRobotUR(TMultiArmRobot):
     self.safety_mode_locker= threading.RLock()
     self.robot_program_running_locker= threading.RLock()
 
+    self.q_curr= None
+    self.dq_curr= None
+
     self.io_states= None
     self.io_states_callback= None  #User defined callback f(ur_msgs.msg.IOStates).
     self.io_states_locker= threading.RLock()
@@ -229,14 +232,14 @@ class TRobotUR(TMultiArmRobot):
   def Q(self, arm=None):
     with self.sensor_locker:
       q= self.q_curr
-    return list(q)
+    return list(q) if q is not None else None
 
   '''Return joint velocities of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
       dq= self.dq_curr
-    return list(dq)
+    return list(dq) if dq is not None else None
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
