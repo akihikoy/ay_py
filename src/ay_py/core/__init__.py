@@ -7,6 +7,7 @@ __PACKAGES__= [
   'ml_lwr',
   'opt',
   'sm',
+  'sm2',
   'system',
   'traj',
   'util',
@@ -23,6 +24,7 @@ except ImportError as e:  print str(e)
 from ml_lwr    import *
 from opt       import *
 from sm        import *
+from sm2       import *
 from system    import *
 from traj      import *
 from util      import *
