@@ -16,6 +16,7 @@ class TSimpleVisualizer(object):
     if topic is not None:
       self.viz_pub= rospy.Publisher(topic, visualization_msgs.msg.Marker, queue_size=queue_size)
     self.curr_id= 0
+    self.max_id= 0
     self.added_ids= set()
     self.viz_frame= 'base' if frame is None else frame
     self.viz_ns= name_space
@@ -66,6 +67,11 @@ class TSimpleVisualizer(object):
     self.marker_operation(marker)
     self.added_ids= set()
 
+  def DeleteMarkers(self, mid_start=0, mid_end=None):
+    if mid_end is None:  mid_end= self.max_id
+    for mid in range(mid_start,mid_end):
+      self.DeleteMarker(mid)
+
   def ICol(self, i):
     return self.indexed_colors[i%len(self.indexed_colors)]
 
@@ -90,10 +96,13 @@ class TSimpleVisualizer(object):
     if mid is None:
       marker.id= self.curr_id
       self.curr_id+= 1
+      self.max_id+= 1
     else:
       marker.id= mid
       if marker.id>=self.curr_id:
         self.curr_id= marker.id+1
+      if marker.id>=self.max_id:
+        self.max_id= marker.id+1
     self.added_ids= self.added_ids.union([marker.id])
     return marker.id+1
 
