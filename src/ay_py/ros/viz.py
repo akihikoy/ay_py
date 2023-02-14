@@ -29,7 +29,7 @@ class TSimpleVisualizer(object):
 
   def __del__(self):
     if self.viz_dt in (None, rospy.Duration()):
-      self.DeleteAllMarkers()
+      self.DeleteMarkers()
     self.Reset()
     #self.marker_operation()
     self.viz_pub.unregister()
@@ -80,7 +80,6 @@ class TSimpleVisualizer(object):
     marker.header.frame_id= self.viz_frame
     marker.header.stamp= rospy.Time.now()
     marker.ns= self.viz_ns
-    #marker.id= self.curr_id
     marker.action= visualization_msgs.msg.Marker.ADD  # or DELETE
     marker.lifetime= self.viz_dt
     marker.scale= geometry_msgs.msg.Vector3(*scale[:3])
@@ -89,7 +88,6 @@ class TSimpleVisualizer(object):
     else:
       marker.colors= [std_msgs.msg.ColorRGBA(r,g,b,alpha) for r,g,b in rgb]
     marker.pose= XToGPose(x)
-    #self.curr_id+= 1
     return marker
 
   def SetID(self, marker, mid):

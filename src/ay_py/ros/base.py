@@ -93,6 +93,14 @@ def PToGPoint(p):
   point.z= p[2]
   return point
 
+#Convert p to geometry_msgs/Vector3
+def PToGVector3(p):
+  vec= geometry_msgs.msg.Vector3()
+  vec.x= p[0]
+  vec.y= p[1]
+  vec.z= p[2]
+  return vec
+
 #Convert x to geometry_msgs/Pose
 def XToGPose(x):
   pose= geometry_msgs.msg.Pose()
@@ -116,6 +124,27 @@ def GPoseToX(pose):
   x[5]= pose.orientation.z
   x[6]= pose.orientation.w
   return x
+
+#Convert x to geometry_msgs/Transform
+def XToGTransform(x):
+  tfm= geometry_msgs.msg.Transform()
+  tfm.translation.x= x[0]
+  tfm.translation.y= x[1]
+  tfm.translation.z= x[2]
+  tfm.rotation.x= x[3]
+  tfm.rotation.y= x[4]
+  tfm.rotation.z= x[5]
+  tfm.rotation.w= x[6]
+  return tfm
+
+#Convert x to geometry_msgs/Quaternion
+def QToGQuaternion(x):
+  rot= geometry_msgs.msg.Quaternion()
+  rot.x= x[0]
+  rot.y= x[1]
+  rot.z= x[2]
+  rot.w= x[3]
+  return rot
 
 #Assign v (list of 3 elements) to [d.x,d.y,d.z]
 def VecToXYZ(v, d):
