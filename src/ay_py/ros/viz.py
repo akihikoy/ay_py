@@ -305,7 +305,8 @@ class TSimpleVisualizerArray(TSimpleVisualizer):
 
   def __del__(self):
     if self.viz_dt in (None, rospy.Duration()):
-      self.DeleteAllMarkers()
+      self.DeleteMarkers()
+      self.Publish()
     self.Reset()
     #self.viz_pub.publish()
     self.viz_pub.unregister()
