@@ -507,9 +507,16 @@ def LoadYAML(file_name):
       text= text[len(wrong_directive):]
     return yamlload(text, Loader=YLoader)
 
-#Save a dictionary as a YAML
-def SaveYAML(d, file_name, except_cnv=lambda y:y, interactive=True):
-  OpenW(file_name,interactive=interactive).write(yamldump(ToStdType(d,except_cnv), Dumper=YDumper))
+#Save a dictionary d into a file file_name in YAML format.
+#The input dictionary is converted to regular types by ToStdType with except_cnv.
+#If directive (str) is given, it is inserted at the beginning of the file_name.
+#If interactive, prompted before overwriting the file_name.
+def SaveYAML(d, file_name, except_cnv=lambda y:y, interactive=True, directive=None):
+  with OpenW(file_name,interactive=interactive) as fp:
+    if directive is not None:
+      fp.write(directive+'\n')
+    d= ToStdType(d,except_cnv)
+    fp.write(yamldump(d, Dumper=YDumper))
 
 #Get an SHA-1 hash of a dictionary d.
 def GetSHA1HashOfDict(d):
