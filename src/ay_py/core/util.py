@@ -21,7 +21,8 @@ from yaml import dump as yamldump
 try:
   from yaml import CLoader as YLoader, CDumper as YDumper
 except ImportError:
-  from yaml import YLoader, YDumper
+  from yaml import Loader as YLoader, Dumper as YDumper
+from yaml import Dumper as yaml_Dumper
 
 def AskYesNo():
   while 1:
@@ -511,12 +512,18 @@ def LoadYAML(file_name):
 #The input dictionary is converted to regular types by ToStdType with except_cnv.
 #If directive (str) is given, it is inserted at the beginning of the file_name.
 #If interactive, prompted before overwriting the file_name.
-def SaveYAML(d, file_name, except_cnv=lambda y:y, interactive=True, directive=None):
+#If correct_indent, Dumper_IndentPlus is used as the dumper.
+def SaveYAML(d, file_name, except_cnv=lambda y:y, interactive=True, directive=None, correct_indent=True):
   with OpenW(file_name,interactive=interactive) as fp:
     if directive is not None:
       fp.write(directive+'\n')
     d= ToStdType(d,except_cnv)
-    fp.write(yamldump(d, Dumper=YDumper))
+    fp.write(yamldump(d, Dumper=Dumper_IndentPlus if correct_indent else YDumper))
+
+#Dumper class to correct the list indentation issue of the original Dumper.
+class Dumper_IndentPlus(yaml_Dumper):
+  def increase_indent(self, flow=False, *args, **kwargs):
+    return super(Dumper_IndentPlus,self).increase_indent(flow=flow, indentless=False)
 
 #Get an SHA-1 hash of a dictionary d.
 def GetSHA1HashOfDict(d):
