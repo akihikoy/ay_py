@@ -349,8 +349,8 @@ class TRobotUR(TMultiArmRobot):
           CPrint(4,'  Info:q_traj:',q_traj)
           CPrint(4,'  Info:t_traj:',t_traj)
           CPrint(4,'  Info:dq_traj:',dq_traj)
-          CPrint(4,'Action client result:',self.actc.traj.get_result())
-          raise Exception('TRobotUR.FollowQTraj: Unacceptable error after movement')
+          CPrint(4,'Action client result:',self.actc.traj.get_result()),'(cf. control_msgs/FollowJointTrajectoryActionResult)'
+          raise ROSError('ctrl','TRobotUR.FollowQTraj: Unacceptable error after movement')
 
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''
@@ -359,7 +359,11 @@ class TRobotUR(TMultiArmRobot):
 
     with self.control_locker:
       self.actc.traj.cancel_goal()
-      BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
+      try:
+        BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
+      except ROSError as e:
+        #There will be an error when there is no goal. Ignoring.
+        pass
 
 
   '''Open a gripper.

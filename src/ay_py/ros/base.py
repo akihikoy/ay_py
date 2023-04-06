@@ -10,7 +10,7 @@ import tf
 from ..core.util import *
 
 '''Exception class for ROS operation (e.g. FK, IK).
-    ROSError.Kind: 'fk','ik',etc. '''
+    ROSError.Kind: 'fk','ik','ctrl',etc. '''
 class ROSError(Exception):
   def __init__(self, kind, msg):
     self.Kind= kind
@@ -35,7 +35,11 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02):
       time.sleep(dt)
     return
   if blocking==True:
-    act_client.wait_for_result()
+    if not act_client.wait_for_result():  #timeout=rospy.Duration(duration)
+      raise ROSError('ctrl','BlockAction: act_client.wait_for_result finished anomaly: [{}].'.format(act_client.get_result()))
+    res= act_client.get_result()
+    if res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
+      raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}].'.format(res))
     return
   raise Exception('BlockAction: invalid blocking type: %r'%blocking)
 
