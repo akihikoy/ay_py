@@ -102,8 +102,10 @@ class TRobotUR(TMultiArmRobot):
       ra(self.AddSub('safety_mode', '/ur_hardware_interface/safety_mode', ur_dashboard_msgs.msg.SafetyMode, self.SafetyModeCallback))
       ra(self.AddSub('robot_program_running', '/ur_hardware_interface/robot_program_running', std_msgs.msg.Bool, self.RobotProgramRunningCallback))
       #roslib.load_manifest('ur_msgs')
-      ur_msgs= __import__('ur_msgs',globals(),None,('msg',))
-      ra(self.AddSub('io_states', '/ur_hardware_interface/io_states', ur_msgs.msg.IOStates, self.IOStatesCallback))
+
+    #2023-04-10 modified to subscribe io_states even in simulator for simulated io_states topics.
+    ur_msgs= __import__('ur_msgs',globals(),None,('msg',))
+    ra(self.AddSub('io_states', '/ur_hardware_interface/io_states', ur_msgs.msg.IOStates, self.IOStatesCallback))
 
     self.grippers= [TFakeGripper()]
 
