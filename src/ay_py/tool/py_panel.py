@@ -6,7 +6,7 @@
 #\version 0.1
 #\date    Apr.14, 2021
 
-import os, sys, copy
+import os, sys, copy, math
 
 if 'PYQT_VERSION' not in os.environ:
   os.environ['PYQT_VERSION']= '5'
@@ -189,6 +189,9 @@ class TPrimitivePainter(QtGui.QWidget):
     self.shape= shape
     self.margin= margin  #(horizontal_margin(ratio),vertical_margin(ratio))
     self.color= color
+    self.min_size= 100
+    self.max_size= 400
+    self.draw_bevel= True
     self.setBackgroundRole(QtGui.QPalette.Base)
     #self.setAutoFillBackground(True)
 
@@ -209,13 +212,13 @@ class TPrimitivePainter(QtGui.QWidget):
 
   def setMargin(self, margin):
     self.update()
-    self.shape= margin
+    self.margin= margin
 
   def minimumSizeHint(self):
-    return QtCore.QSize(100, self.heightForWidth(100))
+    return QtCore.QSize(self.min_size, self.heightForWidth(self.min_size))
 
   def sizeHint(self):
-    return QtCore.QSize(400, self.heightForWidth(400))
+    return QtCore.QSize(self.max_size, self.heightForWidth(self.max_size))
 
   def heightForWidth(self, width):
     return width*1.2
@@ -250,9 +253,113 @@ class TPrimitivePainter(QtGui.QWidget):
 
     painter.restore()
 
-    painter.setPen(self.palette().dark().color())
-    painter.setBrush(QtCore.Qt.NoBrush)
-    painter.drawRect(QtCore.QRect(0, 0, self.width() - 1, self.height() - 1))
+    if self.draw_bevel:
+      painter.setPen(self.palette().dark().color())
+      painter.setBrush(QtCore.Qt.NoBrush)
+      painter.drawRect(QtCore.QRect(0, 0, self.width() - 1, self.height() - 1))
+
+class TStatusGrid(QtGui.QWidget):
+  def __init__(self, *args, **kwargs):
+    super(TStatusGrid, self).__init__(*args, **kwargs)
+    #self.setMinimumSize(100, 100)
+    self.setBackgroundRole(QtGui.QPalette.Base)
+
+  '''Construct the status grid widget.
+    list_status: List of status items (dictionaries) (this class also modified the content).
+    direction: Direction to list in the grid ('vertical' or 'horizontal').
+    shape: Shape of 'color' item ('circle', 'square').
+    rows,columns: Number of rows and columns. At least one of them should be specified.
+  '''
+  def Construct(self, list_status, direction='vertical', shape='circle', margin=(0.05,0.05), rows=None, columns=3):
+    # Grid layout
+    self.grid= QtGui.QGridLayout()
+
+    # Define a list of status items.
+    self.list_status= list_status
+    self.dict_status= {item['label']: item for item in self.list_status}
+
+    if rows is None and columns is None:  raise Exception('TStatusGrid: one of rows or columns should be None.')
+    if rows is not None and columns is not None: assert(len(self.list_status)<rows*columns)
+    if rows is None:  rows= int(math.ceil(float(len(self.list_status))/columns))
+    if columns is None:  columns= int(math.ceil(float(len(self.list_status))/rows))
+    self.rows,self.columns= rows,columns
+
+    self.direction= direction
+    self.shape= shape
+    self.margin= margin
+
+    #self.default_font_size= 10
+    if self.direction=='vertical':
+      for c in range(self.columns):
+        for r in range(self.rows):
+          idx= c*self.rows + r
+          if idx>=len(self.list_status):  break
+          self.AddWidgetsForItem(self.list_status[idx], r, c)
+    elif self.direction=='horizontal':
+      for r in range(self.rows):
+        for c in range(self.columns):
+          idx= r*self.columns + c
+          if idx>=len(self.list_status):  break
+          self.AddWidgetsForItem(self.list_status[idx], r, c)
+    else:
+      raise Exception('TStatusGrid: invalid direction:',self.direction)
+
+    self.setLayout(self.grid)
+
+  def AddWidgetsForItem(self, item, r, c):
+    if item['type']=='color':
+      color1= TPrimitivePainter(self.shape, self.margin, self.StateColor(item), self)
+      color1.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Expanding)
+      color1.min_size= 20
+      color1.draw_bevel= False
+      item['w_color']= color1
+
+      label1= QtGui.QLabel(item['label'], self)
+      label1.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+      label1.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+      #label1.font_size= (8,28)
+      #label1.setFont(QtGui.QFont('', self.default_font_size))
+      #label1.resizeEvent= lambda event,obj=label1: self.ResizeText(obj,event)
+      item['w_label']= label1
+
+      rowsize,colsize= 1,1
+      self.grid.addWidget(color1, r, 2*c, rowsize, colsize)
+      self.grid.addWidget(label1, r, 2*c+1, rowsize, colsize)
+
+    elif item['type']=='text':
+      label1= QtGui.QLabel(self.StateText(item), self)
+      label1.setSizePolicy(QtGui.QSizePolicy.Minimum, QtGui.QSizePolicy.Minimum)
+      label1.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
+      #label1.font_size= (8,28)
+      #label1.setFont(QtGui.QFont('', self.default_font_size))
+      #label1.resizeEvent= lambda event,obj=label1: self.ResizeText(obj,event)
+      item['w_label']= label1
+
+      rowsize,colsize= 1,2
+      self.grid.addWidget(label1, r, 2*c, rowsize, colsize)
+
+  def StateColor(self, item):
+    state= item['state']
+    col_map= {'green': (0,255,0), 'yellow': (255,255,0), 'red': (255,0,0)}
+    if state in col_map:  return col_map[state]
+    return (128,128,128)
+
+  def StateText(self, item):
+    state= item['state']
+    return ' {}: {}'.format(item['label'],item['state'])
+
+  def UpdateStatus(self, label, state):
+    item= self.dict_status[label]
+    item['state']= state
+    if item['type']=='color':
+      item['w_color'].color= self.StateColor(item)
+      item['w_color'].update()
+    elif item['type']=='text':
+      item['w_label'].setText(self.StateText(item))
+
+  def setFont(self, f):
+    for item in self.list_status:
+      if 'w_label' in item:  item['w_label'].setFont(f)
 
 class TVirtualJoyStick(QtGui.QWidget):
   onstickmoved= QtCore.pyqtSignal(list)
@@ -478,6 +585,7 @@ class TSimplePanel(QtGui.QWidget):
       'label': self.AddLabel,
       'textedit': self.AddTextEdit,
       'primitive_painer': self.AddPrimitivePainter,
+      'status_grid': self.AddStatusGrid,
       'virtual_joystick': self.AddVirtualJoyStick,
       'rviz': self.AddRViz,
       }
@@ -715,10 +823,30 @@ class TSimplePanel(QtGui.QWidget):
       'shape':'rect',
       'margin':(0.05,0.05),
       'color':(0,0,255),
+      'min_size': 100,
+      'max_size': 400,
+      'draw_bevel': True,
       }, w_param)
     primitive= TPrimitivePainter(param['shape'],param['margin'],param['color'],self)
+    primitive.min_size= param['min_size']
+    primitive.max_size= param['max_size']
+    primitive.draw_bevel= param['draw_bevel']
     self.ApplyCommonWidgetConfig(primitive, param)
     return primitive
+
+  def AddStatusGrid(self, w_param):
+    param= MergeDict2(copy.deepcopy(self.param_common), {
+      'list_status':[],  #List of status items (dictionaries) (this class also modified the content).
+      'direction':'vertical',  #Direction to list in the grid ('vertical' or 'horizontal').
+      'shape':'circle',  #Shape of 'color' item ('circle', 'square').
+      'margin':(0.05,0.05),
+      'rows':None,  #Number of rows and columns. At least one of them should be specified.
+      'columns':3,
+      }, w_param)
+    statusgrid= TStatusGrid(self)
+    statusgrid.Construct(**{key: param[key] for key in ('list_status', 'direction', 'shape', 'margin', 'rows', 'columns')})
+    self.ApplyCommonWidgetConfig(statusgrid, param)
+    return statusgrid
 
   def AddVirtualJoyStick(self, w_param):
     param= MergeDict2(copy.deepcopy(self.param_common), {
@@ -859,16 +987,19 @@ if __name__=='__main__':
         'text':'To tab1',
         'onclick':lambda w,obj:w.layouts['maintab'].setCurrentTab('tab1')}),
     'btn_totab11': ('duplicate', 'btn_totab10'),
+    'btn_totab12': ('duplicate', 'btn_totab10'),
     'btn_totab20': (
       'button',{
         'text':'To tab2',
         'onclick':lambda w,obj:w.layouts['maintab'].setCurrentTab('tab2')}),
     'btn_totab21': ('duplicate', 'btn_totab20'),
+    'btn_totab22': ('duplicate', 'btn_totab20'),
     'btn_totab30': (
       'button',{
         'text':'To tab3',
         'onclick':lambda w,obj:w.layouts['maintab'].setCurrentTab('tab3')}),
     'btn_totab31': ('duplicate', 'btn_totab30'),
+    'btn_totab32': ('duplicate', 'btn_totab30'),
     'cmb1': (
       'combobox',{
         'options':('Option-0','Option-1','Option-2','Other'),
@@ -919,6 +1050,29 @@ if __name__=='__main__':
         'minimum_size': (None,20),
         'maximum_size': (None,20),
         'size_policy': ('expanding', 'fixed')}),
+    'status_grid1': (
+      'status_grid',{
+        'list_status':[
+            dict(label='Safety1', type='color', state='green'),
+            dict(label='Safety2', type='color', state='green'),
+            dict(label='Safety3', type='color', state='green'),
+            dict(label='Safety4', type='color', state='yellow'),
+            dict(label='Safety5', type='color', state='red'),
+            dict(label='Arm1', type='color', state='green'),
+            dict(label='Arm2', type='color', state='green'),
+            dict(label='Gripper1', type='color', state='green'),
+            dict(label='Gripper2', type='color', state='green'),
+            dict(label='Sensor1', type='color', state='green'),
+            dict(label='Sensor2', type='color', state='red'),
+            dict(label='Sensor3', type='color', state='red'),
+            dict(label='Type', type='text', state='A'),
+            dict(label='Counter', type='text', state='20'),
+          ],
+        'direction':'vertical',
+        'shape':'square',
+        'margin':(0.05,0.05),
+        'rows':None,
+        'columns':3 }),
     'checkbox1': (
       'checkbox',{
         'text': 'Please check!'}),
@@ -969,9 +1123,10 @@ if __name__=='__main__':
                   'spacer1',
                 )) ),
             ('tab2', ('boxv',None, ('label_tab2', 'btn_totab10', 'btn_totab31', 'checkbox1') ) ),
-            ('tab3', ('boxv',None, ('primitive_painer1','btn_totab11', 'btn_totab21', 'textedit1') ) ),
+            ('tab3', ('boxv',None, ('primitive_painer1', 'btn_totab11', 'btn_totab21', 'textedit1') ) ),
             #('tab4', ('boxv',None, ('rviz1',) ) ),
-            ('tab5', ('boxv',None,
+            ('tab5', ('boxh',None, ('status_grid1', 'btn_totab12', 'btn_totab22', 'btn_totab32' ) ) ),
+            ('tab6', ('boxv',None,
                         (
                           ('boxh',None, ( ('boxh',None, ('joy_xy1','joy_xy2')),'joy_v1')),
                           'joy_h1',
