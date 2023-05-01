@@ -16,7 +16,7 @@ elif str(os.environ['PYQT_VERSION'])=='5':
   from PyQt5 import QtCore,QtWidgets
   import PyQt5.QtGui as PyQt5QtGui
   QtGui= QtWidgets
-  for component in ('QFont', 'QIntValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter'):
+  for component in ('QFont', 'QIntValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter', 'QFontMetrics'):
     setattr(QtGui,component, getattr(PyQt5QtGui,component))
 else:
   raise Exception('Failed to import the requested version of PyQt:',os.environ['PYQT_VERSION'])
@@ -191,6 +191,7 @@ class TPrimitivePainter(QtGui.QWidget):
     self.color= color
     self.min_size= 100
     self.max_size= 400
+    self.width_height_ratio= 1.2
     self.draw_bevel= True
     self.setBackgroundRole(QtGui.QPalette.Base)
     #self.setAutoFillBackground(True)
@@ -221,7 +222,7 @@ class TPrimitivePainter(QtGui.QWidget):
     return QtCore.QSize(self.max_size, self.heightForWidth(self.max_size))
 
   def heightForWidth(self, width):
-    return width*1.2
+    return width*self.width_height_ratio
 
   def paintEvent(self, event):
     col1= QtGui.QColor(*self.color)
@@ -273,6 +274,7 @@ class TStatusGrid(QtGui.QWidget):
   def Construct(self, list_status, direction='vertical', shape='circle', margin=(0.05,0.05), rows=None, columns=3):
     # Grid layout
     self.grid= QtGui.QGridLayout()
+    self.grid.setContentsMargins(1, 1, 1, 1)
 
     # Define a list of status items.
     self.list_status= list_status
@@ -311,6 +313,7 @@ class TStatusGrid(QtGui.QWidget):
       color1= TPrimitivePainter(self.shape, self.margin, self.StateColor(item), self)
       color1.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Expanding)
       color1.min_size= 20
+      color1.width_height_ratio= 1.0
       color1.draw_bevel= False
       item['w_color']= color1
 
@@ -346,7 +349,7 @@ class TStatusGrid(QtGui.QWidget):
 
   def StateText(self, item):
     state= item['state']
-    return ' {}: {}'.format(item['label'],item['state'])
+    return '{}: {}'.format(item['label'],item['state'])
 
   def UpdateStatus(self, label, state):
     item= self.dict_status[label]
@@ -360,6 +363,12 @@ class TStatusGrid(QtGui.QWidget):
   def setFont(self, f):
     for item in self.list_status:
       if 'w_label' in item:  item['w_label'].setFont(f)
+    text_height= QtGui.QFontMetrics(f).boundingRect('H').height()
+    for item in self.list_status:
+      if 'w_color' in item:
+        item['w_color'].min_size= text_height
+        item['w_color'].max_size= text_height
+        item['w_color'].update()
 
 class TVirtualJoyStick(QtGui.QWidget):
   onstickmoved= QtCore.pyqtSignal(list)
