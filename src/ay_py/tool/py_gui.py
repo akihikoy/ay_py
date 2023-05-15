@@ -13,6 +13,7 @@
 
 import sys, os
 import signal
+import subprocess
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
@@ -196,16 +197,30 @@ class TTerminalTab(QtGui.QWidget):
       self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + list(cmd))
 
   def CreateTerminals(self):
+    #QtTest.QTest.qWait(1000)
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
-      self.TermProcesses.append(
-        self.StartProc(
-          'urxvt',
-          ['-embed', str(self.qtterm[term].winId()),
-            '-e', 'tmux', 'new', '-s', self.pid+term]) )
+      #self.qttabs.widget(r).update()
+      #print 'debug',self.pid+term,str(self.qtterm[term].winId())
+      child= self.StartProc('urxvt',
+                            ['-embed', str(self.qtterm[term].winId()),
+                              '-e', 'tmux', 'new', '-s', self.pid+term])
+      self.TermProcesses.append(child)
+      #print '  --',child,child.pid()
+      #self.SendCmd(term, ['ls','Enter'])
+      #child= self.StartProc('tmux', ['capture-pane', '-t', self.pid+term+':0'] + list(cmd))
+      QtTest.QTest.qWait(50)
+      #res= subprocess.check_output(['tmux', 'capture-pane', '-t', self.pid+term+':0', 'echo ok', 'Enter'])
+      try:
+        res= subprocess.check_output(['tmux', 'send-keys', '-t', self.pid+term+':0', 'echo ok', 'Enter'])
+        #print '  --',res
+      except subprocess.CalledProcessError:
+        #print '  --CalledProcessError'
+        print 'CalledProcessError',self.pid+term,str(self.qtterm[term].winId())
+      #self.qttabs.widget(r).update()
       #print 'new terminal proc:',self.pid+term,self.TermProcesses[-1].pid()
       #QtTest.QTest.qWait(100)
-    QtTest.QTest.qWait(200)
+    #QtTest.QTest.qWait(200)
     #QtTest.QTest.qWait(200*len(self.Terminals))
     #for r,(term,row) in enumerate(self.Terminals):
       #self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + self.InitCommand)
@@ -215,11 +230,11 @@ class TTerminalTab(QtGui.QWidget):
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
       self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + self.ExitCommand)
-    QtTest.QTest.qWait(200)
+    #QtTest.QTest.qWait(200)
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
       self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0', 'exit', 'Enter'])
-    QtTest.QTest.qWait(200)
+    #QtTest.QTest.qWait(200)
     for proc in self.TermProcesses:
       os.kill(proc.pid(), signal.SIGTERM)
 
