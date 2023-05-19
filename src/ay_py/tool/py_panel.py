@@ -948,6 +948,8 @@ class TSimplePanel(QtGui.QWidget):
         tab.setLayout(sublayout)
       #For convenience, we define a setCurrentTab method to show a tab by name.
       layout.setCurrentTab= lambda tab_name:layout.tabs.setCurrentIndex(layout.tab_name_to_index[tab_name])
+      #For convenience, we define a setCurrentTab method to show a tab by name.
+      layout.setTabEnabled= lambda tab_name,enabled:layout.tabs.setTabEnabled(layout.tab_name_to_index[tab_name],enabled)
 
     self.layouts[name]= layout
     return layout
