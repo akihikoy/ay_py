@@ -237,7 +237,8 @@ class TDxlGripperBase(object):
         'stamp':time.time(),
         'position':self.gripper_cmd2pos(p) if p is not None else None,
         'velocity':self.gripper_cmd2vel(v) if v is not None else None,
-        'effort':(c/self.dxl.CurrentLimit*100.0) if c is not None else None,
+        #'effort':(float(c)/self.dxl.CurrentLimit*100.0) if c is not None else None,
+        'effort':self.dxl.ConvCurr(c) if c is not None else None,
         }
       #print state['position']
       with self.state_locker:

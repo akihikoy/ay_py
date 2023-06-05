@@ -197,6 +197,23 @@ class TDxlGripper(TGripper2F1):
     with self.port_locker:
       res= self.srvp.dxl_io(req)
 
+  #Set the current limit and max current.  data: {joint_name:value} or [value0,value1,...].
+  #value is in mA.
+  def SetCurrentLimit(self, data):
+    req= ay_util_msgs.srv.DxlIORequest()
+    req.command= 'SetCurrentLimit'
+    if isinstance(data,dict):
+      req.joint_names= data.keys()
+      req.data_fa= data.values()
+    elif isinstance(data,list):
+      req.joint_names= []
+      req.data_fa= data
+    else:
+      req.joint_names= []
+      req.data_fa= [data]
+    with self.port_locker:
+      res= self.srvp.dxl_io(req)
+
 
 '''Robot control class for DxlGripper.
   This is defined as a subclass of TMultiArmRobot,
