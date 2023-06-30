@@ -280,7 +280,6 @@ class TROSUtil(object):
       del self.dynconfig[k]
       print 'ok'
 
-  @property
   def IsInitialized(self):
     return self._is_initialized
 
