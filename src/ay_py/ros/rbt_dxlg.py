@@ -74,6 +74,7 @@ class TDxlGripper(TGripper2F1):
 
     ra(self.AddSub('joint_states', '/{0}/joint_states'.format(self.node_name), sensor_msgs.msg.JointState, self.JointStatesCallback))
 
+    if False not in res:  self._is_initialized= True
     return self._is_initialized
 
   def Cleanup(self):
