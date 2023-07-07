@@ -311,10 +311,11 @@ class TStatusGrid(QtGui.QWidget):
   def AddWidgetsForItem(self, item, r, c):
     if item['type']=='color':
       color1= TPrimitivePainter(self.shape, self.margin, self.StateColor(item), self)
-      color1.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Expanding)
+      color1.setSizePolicy(QtGui.QSizePolicy.Maximum, QtGui.QSizePolicy.Minimum)
       color1.min_size= 20
       color1.width_height_ratio= 1.0
       color1.draw_bevel= False
+      #color1.draw_bevel= True  #DEBUG
       item['w_color']= color1
 
       label1= QtGui.QLabel(item['label'], self)
@@ -324,6 +325,7 @@ class TStatusGrid(QtGui.QWidget):
       #label1.setFont(QtGui.QFont('', self.default_font_size))
       #label1.resizeEvent= lambda event,obj=label1: self.ResizeText(obj,event)
       item['w_label']= label1
+      #label1.setStyleSheet("background-color: lightgreen")  #DEBUG
 
       rowsize,colsize= 1,1
       self.grid.addWidget(color1, r, 2*c, rowsize, colsize)
@@ -337,6 +339,7 @@ class TStatusGrid(QtGui.QWidget):
       #label1.setFont(QtGui.QFont('', self.default_font_size))
       #label1.resizeEvent= lambda event,obj=label1: self.ResizeText(obj,event)
       item['w_label']= label1
+      #label1.setStyleSheet("background-color: lightgreen")  #DEBUG
 
       rowsize,colsize= 1,2
       self.grid.addWidget(label1, r, 2*c, rowsize, colsize)
