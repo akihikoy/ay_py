@@ -4,8 +4,9 @@ Incremental version of LWR, locally weighted regression.
 - Gaussian kernel with max norm is available.
 - Subclass of TFunctionApprox.
 '''
-from util import *
-from ml import *
+from __future__ import absolute_import
+from .util import *
+from .ml import *
 import six.moves.cPickle as pickle
 
 #Gaussian function

@@ -1,5 +1,7 @@
 #! /usr/bin/env python
 #Basic tools (advanced geometry).
+from __future__ import print_function
+from __future__ import absolute_import
 import numpy as np
 import numpy.linalg as la
 import math
@@ -7,8 +9,8 @@ import random
 from scipy.spatial import ConvexHull as scipy_ConvexHull
 from scipy.spatial.qhull import QhullError as scipy_QhullError
 from scipy.optimize import minimize as scipy_minimize
-from util import *
-from geom import *
+from .util import *
+from .geom import *
 
 #Return an intersection between (p1,p2) and (pA,pB).
 #Return None if there is no intersection.
@@ -132,11 +134,11 @@ def MatchPolygons(points, points_ref, axes, bounds, maxeval=1000):
   while f_obj(r)==0.0 and maxeval>0:
     r= RandB(bounds)
     maxeval-= 1
-    print r,f_obj(r)
+    print(r,f_obj(r))
   if f_obj(r)==0.0:  return None, points
   bounds2= [[xmin,xmax] for xmin,xmax in zip(bounds[0],bounds[1])]
   res= scipy_minimize(f_obj, r, bounds=bounds2, options={'maxiter':maxeval})
-  print res
+  print(res)
   r= res['x']
   points_mv= points+np.dot(r,axes)
   return r, points_mv.tolist()
@@ -394,7 +396,7 @@ def CircleFit2D(XY):
   ZXY1= np.matrix([Z, X, Y, [1.0]*len(Z)]).transpose()
   U,S,V= la.svd(ZXY1,0)
   if S[3]/S[0]<1.0e-12:  # singular case
-    print 'CircleFit2D: SINGULAR'
+    print('CircleFit2D: SINGULAR')
     A= (V.transpose())[:,3]
   else:  # regular case
     R= np.average(np.array(ZXY1),0)
@@ -446,10 +448,10 @@ def CircleFitX(marker_data):
   n_x= n_x/la.norm(n_x)
   n_y= np.cross(n_z,n_x)
 
-  print 'p_mean= ',p_mean
-  print 'n_x= ',n_x
-  print 'n_y= ',n_y
-  print 'n_z= ',n_z
+  print('p_mean= ',p_mean)
+  print('n_x= ',n_x)
+  print('n_y= ',n_y)
+  print('n_z= ',n_z)
 
   #Project the data onto the plane n_x, n_y
   p_data= []
@@ -565,11 +567,11 @@ def BoxPlaneIntersection(box, x_box, x_plane):
               [4,5],[5,6],[6,7],[7,4],
               [1,5],[4,0],[3,7],[6,2]]
   #Extract box edges that have an intersection with the plane.
-  box_edges= filter(lambda (i1,i2): l_box_points[i1][2]<=0<=l_box_points[i2][2] or l_box_points[i2][2]<=0<=l_box_points[i1][2], box_edges)
+  box_edges= filter(lambda i1,i2: l_box_points[i1][2]<=0<=l_box_points[i2][2] or l_box_points[i2][2]<=0<=l_box_points[i1][2], box_edges)
   if len(box_edges)==0:  return []
   #Calculate intersection points.
   f_intersect= lambda p1,p2: [(p1[0]*p2[2]-p1[2]*p2[0])/(p2[2]-p1[2]), (p1[1]*p2[2]-p1[2]*p2[1])/(p2[2]-p1[2])] if abs(p2[2]-p1[2])>EPS else [(p1[0]+p2[0])*0.5, (p1[1]+p2[1])*0.5]
-  l_p_intersect= map(lambda (i1,i2):f_intersect(l_box_points[i1],l_box_points[i2]), box_edges)
+  l_p_intersect= map(lambda i1,i2:f_intersect(l_box_points[i1],l_box_points[i2]), box_edges)
 
   #Make it convex:
   try:

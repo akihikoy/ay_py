@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #State machine with a parameter adjustment architecture
+from __future__ import print_function
+from __future__ import absolute_import
 import os,time
-from util import *
+from .util import *
 
 #Exit the state machine:
 EXIT_STATE= '.exit'
@@ -124,24 +126,24 @@ class TStateMachine:
   #TODO: check the name (allowed only: [_a-zA-Z][_a-zA-Z0-9]*)
   def NewState(self,st):
     if st in self.States:
-      print 'Error: state ',st,' already exists'
+      print('Error: state ',st,' already exists')
       raise
     self.States[st]= TFSMState()
 
   def Show(self):
     for id,st in self.States.items():
-      print '[%s].EntryAction= %r' % (id,st.EntryAction)
-      print '[%s].ExitAction= %r' % (id,st.ExitAction)
-      print '[%s].ElseAction= %r' % (id,st.ElseAction)
+      print('[%s].EntryAction= %r' % (id,st.EntryAction))
+      print('[%s].ExitAction= %r' % (id,st.ExitAction))
+      print('[%s].ElseAction= %r' % (id,st.ElseAction))
       a_id= 0
       for a in st.Actions:
-        print '[%s].Actions[%i].Condition= %r' % (id,a_id,a.Condition)
-        print '[%s].Actions[%i].Action= %r' % (id,a_id,a.Action)
-        print '[%s].Actions[%i].NextState= %r' % (id,a_id,a.NextState)
+        print('[%s].Actions[%i].Condition= %r' % (id,a_id,a.Condition))
+        print('[%s].Actions[%i].Action= %r' % (id,a_id,a.Action))
+        print('[%s].Actions[%i].NextState= %r' % (id,a_id,a.NextState))
         a_id+=1
-      print ''
-    print 'StartState=',self.StartState
-    print 'Debug=',self.Debug
+      print('')
+    print('StartState=',self.StartState)
+    print('Debug=',self.Debug)
 
   def SetStartState(self,start_state=''):
     self.StartState= start_state
@@ -179,10 +181,10 @@ class TStateMachine:
       for ca in st.Actions:
         if ca.Condition():
           if a_id_satisfied>=0:
-            print 'Warning: multiple conditions are satisfied in ',self.curr_state
-            print '  First satisfied condition index & next state:',a_id_satisfied, next_state
-            print '  Additionally satisfied condition index & next state:',a_id, ca.NextState
-            print '  First conditioned action is activated'
+            print('Warning: multiple conditions are satisfied in ',self.curr_state)
+            print('  First satisfied condition index & next state:',a_id_satisfied, next_state)
+            print('  Additionally satisfied condition index & next state:',a_id, ca.NextState)
+            print('  First conditioned action is activated')
           else:
             a_id_satisfied= a_id
             next_state= ca.NextState

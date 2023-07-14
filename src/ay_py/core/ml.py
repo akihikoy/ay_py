@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #Numerical methods.
+from __future__ import print_function
+from __future__ import absolute_import
 import os,time
-from util import *
+from .util import *
 
 
 '''Define a space.
@@ -282,7 +284,7 @@ class TFunctionApprox(object):
 #Dump function approximator (subclass of TFunctionApprox) to file for plot.
 def DumpPlot(fa, f_reduce=lambda xa:xa, f_repair=lambda xa,mi,ma,me:xa, file_prefix='/tmp/f', x_var=0.0, n_div=50, bounds=None):
   #if len(fa.DataX)==0:  print 'DumpPlot: No data'; return
-  if not fa.IsPredictable():  print 'DumpPlot: Not predictable'; return
+  if not fa.IsPredictable():  print('DumpPlot: Not predictable'); return
   if bounds!=None:
     xamin0,xamax0= bounds
   else:
@@ -295,7 +297,7 @@ def DumpPlot(fa, f_reduce=lambda xa:xa, f_repair=lambda xa,mi,ma,me:xa, file_pre
   else:
     xmed= [0.5*(xamin0[d]+xamax0[d]) for d in range(fa.Dx)]
   if len(xamin)>=3 or len(xamin)!=len(xamax) or len(xamin)<=0:
-    print 'DumpPlot: Invalid f_reduce function'
+    print('DumpPlot: Invalid f_reduce function')
     return
 
   fp= open('%s_est.dat'%(file_prefix),'w')

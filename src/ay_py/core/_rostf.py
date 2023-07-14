@@ -4,6 +4,7 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Oct.29, 2017
+from __future__ import print_function
 
 import math,numpy
 
@@ -383,33 +384,33 @@ def unit_vector(data, axis=None, out=None):
 
 
 if __name__=='__main__':
-  print 'I=', identity_matrix()
+  print('I=', identity_matrix())
 
   Q1= [0.06146124, 0, 0, 0.99810947]
   Theta1= 0.123
   Ax1= (1.0, 0.0, 0.0)
-  print 'Q1=', Q1
-  print 'Theta1=', Theta1
-  print 'Ax1=', Ax1
+  print('Q1=', Q1)
+  print('Theta1=', Theta1)
+  print('Ax1=', Ax1)
 
   R1= rotation_matrix(Theta1, Ax1)
-  print 'R1= R about Theta1,Ax1=', R1
+  print('R1= R about Theta1,Ax1=', R1)
 
-  print 'Q1 to Euler=', euler_from_quaternion(Q1)
+  print('Q1 to Euler=', euler_from_quaternion(Q1))
 
   Q2= quaternion_about_axis(Theta1, Ax1)
-  print 'Q2= Q about Theta1,Ax1=', Q2
-  print 'Q1==Q2?', numpy.allclose(Q2, Q1)
+  print('Q2= Q about Theta1,Ax1=', Q2)
+  print('Q1==Q2?', numpy.allclose(Q2, Q1))
 
   R2= quaternion_matrix(Q1)
-  print 'R2= Q to R=', R2
-  print 'R1==R2?', numpy.allclose(R2, R1)
+  print('R2= Q to R=', R2)
+  print('R1==R2?', numpy.allclose(R2, R1))
 
   Q3= quaternion_from_matrix(R1)
-  print 'Q3= R to Q=', Q3
-  print 'Q1==Q3?', numpy.allclose(Q3, Q1)
+  print('Q3= R to Q=', Q3)
+  print('Q1==Q3?', numpy.allclose(Q3, Q1))
 
   Q4= quaternion_about_axis(2.0*Theta1, Ax1)
-  print 'Q4= Q about 2*Theta1,Ax1=', Q4
-  print 'Q4==Q1*Q2?', numpy.allclose(Q4, quaternion_multiply(Q1,Q2))
+  print('Q4= Q about 2*Theta1,Ax1=', Q4)
+  print('Q4==Q1*Q2?', numpy.allclose(Q4, quaternion_multiply(Q1,Q2)))
 

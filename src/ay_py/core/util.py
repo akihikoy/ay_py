@@ -1,5 +1,6 @@
 #! /usr/bin/env python
 #Basic tools (utility).
+from __future__ import print_function
 import numpy as np
 import numpy.linalg as la
 import math
@@ -7,7 +8,10 @@ import os
 import sys
 import copy
 import threading
-import Queue  #For thread communication
+try:
+  import Queue  #For thread communication
+except ModuleNotFoundError:
+  import queue as Queue
 import time
 import datetime
 import random
@@ -344,7 +348,7 @@ def EstStrConvert(v_str):
   return v_str
 
 class Types:
-  stdprim= (int,long,float,bool,str)
+  stdprim= (int,float,bool,str)
   npbool= (np.bool_)
   npint= (np.int_, np.intc, np.intp, np.int8, np.int16, np.int32, np.int64)
   npuint= (np.uint8, np.uint16, np.uint32, np.uint64)
@@ -365,8 +369,8 @@ def ToStdType(x, except_cnv=lambda y:y):
   except AttributeError:
     return except_cnv(x)
     #pass
-  print 'Failed to convert:',x
-  print 'Type:',type(x)
+  print('Failed to convert:',x)
+  print('Type:',type(x))
   raise
 
 #Add a sub-dictionary with the key into a dictionary d
@@ -383,13 +387,13 @@ def PrintDict(d,max_level=-1,level=0,keyonly=False,col=None,c1='',c2=''):
   if col is not None:  c1,c2= ACol.I(col,None)
   for k,v in d.iteritems():
     if type(v)==dict:
-      print '%s%s[%s]%s= ...' % ('  '*level, c1, str(k), c2)
+      print('%s%s[%s]%s= ...' % ('  '*level, c1, str(k), c2))
       if max_level<0 or level<max_level:
         PrintDict(v,max_level=max_level,level=level+1,keyonly=keyonly,col=None,c1=c1,c2=c2)
     elif keyonly:
-      print '%s%s[%s]%s= %s' % ('  '*level, c1, str(k), c2, type(v))
+      print('%s%s[%s]%s= %s' % ('  '*level, c1, str(k), c2, type(v)))
     else:
-      print '%s%s[%s]%s= %r' % ('  '*level, c1, str(k), c2, v)
+      print('%s%s[%s]%s= %r' % ('  '*level, c1, str(k), c2, v))
 
 #Insert a new dictionary to the base dictionary
 def InsertDict(d_base, d_new):
@@ -449,6 +453,7 @@ Usage:
   with DualWriter('file_path') as fp:
     fp.write('hello DualWriter;\n')
 '''
+'''DEPRECATED
 class TDualWriter(file):
   def __init__(self,file_name):
     super(TDualWriter,self).__init__(file_name,'w')
@@ -464,6 +469,7 @@ class TDualWriter(file):
 def DualWriter(file_name,interactive=True):
   OpenWCheck(file_name,'w',interactive)
   return TDualWriter(file_name)
+'''
 
 #Modify file name from xxx.pyc to xxx.py.
 #This does nothing to xxx.py or other extensions.
@@ -551,8 +557,8 @@ def InsertYAML(d_base, file_name):
 #Another simple print function to be used as an action
 def Print(*s):
   for ss in s:
-    print ss,
-  print ''
+    print(ss,end=' ')
+  print('')
 
 #ASCII colors
 class ACol:
@@ -586,29 +592,25 @@ def CStr(col,*s):
 #Print with a color (col can be a code or an int)
 def CPrint(col,*s):
   if len(s)==0:
-    print ''
+    print('')
   else:
     c1,c2= ACol.I(col,None)
-    print c1+str(s[0]),
+    print(c1+str(s[0]),end=' ')
     for ss in s[1:]:
-      print ss,
-    print c2
+      print(ss,end=' ')
+    print(c2)
 
 #Print an exception with a good format
 def PrintException(e, msg=''):
   c1,c2,c3,ce= ACol.I(4,1,0,None)
-  print '%sException( %s%r %s)%s:' % (c1, c2,type(e), c1, msg)
-  print '%r' % (e)
-  #print '  type: ',type(e)
-  #print '  args: ',e.args
-  #print '  message: ',e.message
-  #print '  sys.exc_info(): ',sys.exc_info()
-  print '  %sTraceback: ' % (c3)
-  print '{'
+  print('%sException( %s%r %s)%s:' % (c1, c2,type(e), c1, msg))
+  print('%r' % (e))
+  print('  %sTraceback: ' % (c3))
+  print('{')
   traceback.print_tb(sys.exc_info()[2])
-  print '}'
-  print '%s# Exception( %s%r %s)%s:' % (c1, c2,type(e), c1, msg)
-  print '# %r%s' % (e, ce)
+  print('}')
+  print('%s# Exception( %s%r %s)%s:' % (c1, c2,type(e), c1, msg))
+  print('# %r%s' % (e, ce))
 
 #Container class that can hold any variables
 #ref. http://blog.beanz-net.jp/happy_programming/2008/11/python-5.html
@@ -647,10 +649,10 @@ class TContainerCore(object):
 class TContainerDebug(TContainerCore):
   def __init__(self):
     super(TContainerDebug,self).__init__()
-    print 'Created TContainer object',hex(id(self))
+    print('Created TContainer object',hex(id(self)))
   def __del__(self):
     super(TContainerDebug,self).__del__()
-    print 'Deleting TContainer object',hex(id(self))
+    print('Deleting TContainer object',hex(id(self)))
 '''Helper function to generate a container object.
   Note: the function name is like a class name;
     this is because originally TContainer was a class
@@ -754,9 +756,9 @@ class TThreadManager:
 
   def StopAll(self):
     for k in self.thread_list.keys():
-      print 'Stop thread %r...' % k,
+      print('Stop thread %r...' % k,end=' ')
       del self.thread_list[k]
-      print 'ok'
+      print('ok')
 
   def Join(self,name):
     if name in self.thread_list:
@@ -909,7 +911,7 @@ class TMultiSingleton(type):
     if x not in cls._instance:
       with cls._lock:
         if x not in cls._instance:
-          print 'Creating',cls.__name__,x
+          print('Creating',cls.__name__,x)
           cls._instance[x]= super(TMultiSingleton,cls).__call__(x, *args, **kwargs)
           cls._ref_counter[x]= 1
         else:  cls._ref_counter[x]+= 1
@@ -923,7 +925,7 @@ class TMultiSingleton(type):
         raise Exception('TMultiSingleton.Delete is called with zombie.')
       cls._ref_counter[x]-= 1
       if cls._ref_counter[x]==0:
-        print 'Deleting',cls.__name__,x
+        print('Deleting',cls.__name__,x)
         instance= cls._instance[x]
         del cls._instance[x]
         del cls._ref_counter[x]

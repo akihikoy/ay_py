@@ -1,7 +1,9 @@
 #!/usr/bin/python
 #Simple new version of state machines.
+from __future__ import print_function
+from __future__ import absolute_import
 import os,time
-from util import *
+from .util import *
 
 class TStateMachine2(object):
   def __init__(self, states, start_state, debug=False):
@@ -51,10 +53,10 @@ class TStateMachine2(object):
       for a_id,(condition,next_st,action) in enumerate(actions.Actions):
         if condition():
           if a_id_satisfied>=0:
-            print 'Warning: multiple conditions are satisfied in ',self.curr_state
-            print '  First satisfied condition index, next state:',a_id_satisfied, next_state
-            print '  Additionally satisfied condition index, next state:',a_id, next_st
-            print '  First conditioned action is used'
+            print('Warning: multiple conditions are satisfied in ',self.curr_state)
+            print('  First satisfied condition index, next state:',a_id_satisfied, next_state)
+            print('  Additionally satisfied condition index, next state:',a_id, next_st)
+            print('  First conditioned action is used')
           else:
             a_id_satisfied= a_id
             next_state= next_st

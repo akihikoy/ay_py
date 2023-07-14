@@ -13,43 +13,11 @@ import copy
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d
 from PIL import Image as PILImage
-
+import sys
+sys.path.append('../..')
+from ay_py.core.util import TContainer
 
 # General utilities.
-
-#Container class to share variables.
-class TContainer(object):
-  def __init__(self):
-    pass
-  def __del__(self):
-    pass
-  def __str__(self):
-    return str(self.__dict__)
-  def __repr__(self):
-    return str(self.__dict__)
-  def __iter__(self):
-    return self.__dict__.itervalues()
-  def items(self):
-    return self.__dict__.items()
-  def iteritems(self):
-    return self.__dict__.iteritems()
-  def keys(self):
-    return self.__dict__.keys()
-  def values(self):
-    return self.__dict__.values()
-  def __getitem__(self,key):
-    return self.__dict__[key]
-  def __setitem__(self,key,value):
-    self.__dict__[key]= value
-  def __delitem__(self,key):
-    del self.__dict__[key]
-  def __contains__(self,key):
-    return key in self.__dict__
-  def Cleanup(self):
-    keys= self.__dict__.keys()
-    for k in keys:
-      self.__dict__[k]= None
-      del self.__dict__[k]
 
 def MergeDict(d_base, d_new, allow_new_key=True):
   if isinstance(d_new, (list,tuple)):

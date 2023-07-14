@@ -1,10 +1,17 @@
 #! /usr/bin/env python
 #Basic tools (geometry).
+from __future__ import absolute_import
 import numpy as np
 import numpy.linalg as la
 import math
-from util import *
-import _rostf
+from .util import *
+from ._rostf import (
+  identity_matrix         as _rostf_identity_matrix        ,
+  quaternion_matrix       as _rostf_quaternion_matrix      ,
+  quaternion_multiply     as _rostf_quaternion_multiply    ,
+  quaternion_about_axis   as _rostf_quaternion_about_axis  ,
+  quaternion_from_matrix  as _rostf_quaternion_from_matrix ,
+)
 
 #Convert radian to [-pi,pi)
 def AngleMod1(q):

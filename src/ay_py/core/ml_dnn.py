@@ -2,9 +2,10 @@
 '''
 Deep neural networks for regression using chainer.
 '''
-from util import *
-from ml import *
-from _chn import loss_for_error2
+from __future__ import absolute_import
+from .util import *
+from .ml import *
+from ._chn import loss_for_error2
 
 from chainer import cuda, Variable, FunctionSet, optimizers
 import chainer.functions  as F
@@ -34,7 +35,7 @@ def ReLUGauss(mu, var, epsilon=1.0e-6, cut_sd=4.0):
     if var_out>-epsilon:  return mu_out, 0.0
     else:
       msg= 'ERROR in ReLUGauss: %f, %f, %f, %f'%(mu, sigma, mu_out, var_out)
-      print msg
+      print(msg)
       raise Exception(msg)
   return cast(mu_out), cast(var_out)
 
@@ -385,7 +386,7 @@ class TNNRegression(TFunctionApprox):
           #loss_maf.Update(float(cuda.to_cpu(loss.data)))
           loss_maf.Update(sum_loss / opt['num_check_stop'])
           sum_loss= 0.0
-          if opt['verb']:  print 'Training %s:'%opt['code'], epoch, n_update, loss_maf.Mean, loss_maf.StdDev
+          if opt['verb']:  print('Training %s:'%opt['code'], epoch, n_update, loss_maf.Mean, loss_maf.StdDev)
           fp.write('%d %d %f %f\n' % (epoch, n_update, loss_maf.Mean, loss_maf.StdDev))
           if loss_maf.StdDev < opt['loss_stddev_stop']:
             is_updating= False
@@ -538,7 +539,7 @@ def TNNRegressionExample1():
   if train_model:
     x_train,y_train= GenData(100, noise=0.2)  #TEST: n samples, noise
 
-    print 'Num of samples for train:',len(y_train)
+    print('Num of samples for train:',len(y_train))
     # Dump data for plot:
     fp1= file('/tmp/dnn/smpl_train.dat','w')
     for x,y in zip(x_train,y_train):
@@ -580,7 +581,7 @@ def TNNRegressionExample1():
   if train_model:
     if not batch_train:
       for x,y,n in zip(x_train,y_train,range(len(x_train))):
-        print '========',n,'========'
+        print('========',n,'========')
         model.Update(x,y,not_learn=((n+1)%min(10,len(x_train))!=0))
       #model.Update()
     else:
@@ -882,7 +883,7 @@ class TNNClassification(TFunctionApprox):
           #loss_maf.Update(float(cuda.to_cpu(loss.data)))
           loss_maf.Update(sum_loss / opt['num_check_stop'])
           sum_loss= 0.0
-          if opt['verb']:  print 'Training %s:'%opt['code'], epoch, n_update, loss_maf.Mean, loss_maf.StdDev
+          if opt['verb']:  print('Training %s:'%opt['code'], epoch, n_update, loss_maf.Mean, loss_maf.StdDev)
           fp.write('%d %d %f %f\n' % (epoch, n_update, loss_maf.Mean, loss_maf.StdDev))
           if loss_maf.StdDev < opt['loss_stddev_stop']:
             is_updating= False
