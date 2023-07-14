@@ -261,7 +261,10 @@ if not sys.version.startswith('2'):  # in python 3
     raw_input = input
     basestring = str
 import time  # not really essential
-import collections
+try:
+  from collections import MutableMapping as collections_MutableMapping
+except ImportError:
+  from collections.abc import MutableMapping as collections_MutableMapping
 import numpy as np
 # arange, cos, size, eye, inf, dot, floor, outer, zeros, linalg.eigh,
 # sort, argsort, random, ones,...
@@ -484,7 +487,7 @@ class _BlancClass(object):
 # _____________________________________________________________________
 # _____________________________________________________________________
 #
-class DerivedDictBase(collections.MutableMapping):
+class DerivedDictBase(collections_MutableMapping):
     """for conveniently adding "features" to a dictionary. The actual
     dictionary is in ``self.data``. Copy-paste
     and modify setitem, getitem, and delitem, if necessary"""
@@ -1530,19 +1533,19 @@ class GenoPheno(object):
         self.scales = array(scaling) if scaling is not None else None
         if vec_is_default(self.scales, 1):
             self.scales = 1  # CAVE: 1 is not array(1)
-        elif self.scales.shape is not () and len(self.scales) != self.N:
+        elif self.scales.shape != () and len(self.scales) != self.N:
             raise _Error('len(scales) == ' + str(len(self.scales)) +
                          ' does not match dimension N == ' + str(self.N))
 
         self.typical_x = array(typical_x) if typical_x is not None else None
         if vec_is_default(self.typical_x, 0):
             self.typical_x = 0
-        elif self.typical_x.shape is not () and len(self.typical_x) != self.N:
+        elif self.typical_x.shape != () and len(self.typical_x) != self.N:
             raise _Error('len(typical_x) == ' + str(len(self.typical_x)) +
                          ' does not match dimension N == ' + str(self.N))
 
-        if (self.scales is 1 and
-                self.typical_x is 0 and
+        if (self.scales == 1 and
+                self.typical_x == 0 and
                 self.fixed_values is None and
                 self.tf_pheno is None):
             self.isidentity = True
@@ -1580,10 +1583,10 @@ class GenoPheno(object):
                 y = array(y, copy=False)
             copy = False
 
-            if self.scales is not 1:  # just for efficiency
+            if self.scales != 1:  # just for efficiency
                 y *= self.scales
 
-            if self.typical_x is not 0:
+            if self.typical_x != 0:
                 y += self.typical_x
 
             if self.tf_pheno is not None:
@@ -1656,9 +1659,9 @@ class GenoPheno(object):
             raise ValueError('t1 of options transformation was not defined but is needed as being the inverse of t0')
 
         # affine-linear transformation: shift and scaling
-        if self.typical_x is not 0:
+        if self.typical_x != 0:
             x -= self.typical_x
-        if self.scales is not 1:  # just for efficiency
+        if self.scales != 1:  # just for efficiency
             x /= self.scales
 
         # kick out fixed_values
@@ -3394,7 +3397,7 @@ class CMAEvolutionStrategy(OOOptimizer):
                 # self.C = self.Ypos + Cs * Mh.expms(-self.sp.neg.cmuexp*Csi*self.Yneg*Csi) * Cs
             self.Yneg = np.zeros((self.N, self.N))
 
-        if self.sigma_vec is not 1 and not np.all(self.sigma_vec == 1):
+        if self.sigma_vec != 1 and not np.all(self.sigma_vec == 1):
             self.C = dot(dot(np.diag(self.sigma_vec), self.C), np.diag(self.sigma_vec))
             self.sigma_vec[:] = 1
 
