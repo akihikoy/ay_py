@@ -102,7 +102,7 @@ def GetOrthogonalAxisOf(axis,preferable=[0.0,0.0,1.0],fault=None):
 #Get quaternion from axis and angle.
 def QFromAxisAngle(axis,angle):
   axis= axis / la.norm(axis)
-  return _rostf.quaternion_about_axis(angle,axis)
+  return _rostf_quaternion_about_axis(angle,axis)
 
 #Get R from axis and angle.
 #NOTE: This function is equivalent to Rodrigues(angle*axis).
@@ -111,7 +111,7 @@ def RFromAxisAngle(axis,angle):
 
 ##Quaternion to 3x3 rotation matrix
 #def QToRot(q):
-  #return _rostf.quaternion_matrix(q)[:3,:3]
+  #return _rostf_quaternion_matrix(q)[:3,:3]
 #Quaternion to 3x3 rotation matrix
 #cf. http://www.euclideanspace.com/maths/geometry/rotations/conversions/quaternionToMatrix/
 def QToRot(q):
@@ -148,23 +148,23 @@ def QToRot(q):
 
 #3x3 rotation matrix to quaternion
 def RotToQ(R):
-  M = _rostf.identity_matrix()
+  M = _rostf_identity_matrix()
   M[:3,:3] = R
-  return _rostf.quaternion_from_matrix(M)
+  return _rostf_quaternion_from_matrix(M)
 
 #Convert a pose, x,y,z,quaternion(qx,qy,qz,qw) to pos (x,y,z) and 3x3 rotation matrix
 def XToPosRot(x):
   p = np.array(x[0:3])
-  #R = _rostf.quaternion_matrix(x[3:7])[:3,:3]
+  #R = _rostf_quaternion_matrix(x[3:7])[:3,:3]
   R = QToRot(x[3:7])
   return p, R
 
 #Convert pos p=(x,y,z) and 3x3 rotation matrix R to a pose, x,y,z,quaternion(qx,qy,qz,qw)
 def PosRotToX(p,R):
-  M = _rostf.identity_matrix()
+  M = _rostf_identity_matrix()
   M[:3,:3] = R
   x = list(p)+[0.0]*4
-  x[3:7] = _rostf.quaternion_from_matrix(M)
+  x[3:7] = _rostf_quaternion_from_matrix(M)
   return x
 
 #Decompose a rotation matrix R to axis vectors ex,ey,ez
@@ -247,7 +247,7 @@ def InvRodrigues(R, epsilon=1.0e-6):
 
 #Multiply two quaternions
 def MultiplyQ(q1,q2):
-  return _rostf.quaternion_multiply(q1,q2)
+  return _rostf_quaternion_multiply(q1,q2)
 
 #This solves for x in "x_r = x_l * x", i.e. return "inv(x_l)*x_r"
 #For example, get a local pose of x_r in the x_l frame
