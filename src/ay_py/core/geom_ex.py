@@ -12,6 +12,14 @@ from scipy.optimize import minimize as scipy_minimize
 from .util import *
 from .geom import *
 
+#Check if a polygon is clockwise.
+#ref. https://stackoverflow.com/questions/1165647/how-to-determine-if-a-list-of-polygon-points-are-in-clockwise-order
+def PolygonIsClockwise(polygon):
+  if len(polygon)<3:  return None
+  polygon= list(polygon)
+  s= sum((p2[0]-p1[0])*(p2[1]+p1[1]) for p1,p2 in zip(polygon,polygon[1:]+[polygon[0]]))
+  return s>0
+
 #Return an intersection between (p1,p2) and (pA,pB).
 #Return None if there is no intersection.
 #Based on: https://www.cs.hmc.edu/ACM/lectures/intersections.html
@@ -87,14 +95,13 @@ def PolygonClosestPoint(points, point_ref):
 
 #ref. http://stackoverflow.com/questions/11716268/point-in-polygon-algorithm
 #Ray-casting algorithm (http://en.wikipedia.org/wiki/Point_in_polygon)
+#Refactored version.
 def PointInPolygon2D(points, point):
-  c= False
-  j= len(points)-1
-  for i in range(len(points)):
-    if ((points[i][1]>point[1]) != (points[j][1]>point[1])) and (point[0] < (points[j][0]-points[i][0]) * (point[1]-points[i][1]) / (points[j][1]-points[i][1]) + points[i][0]) :
-      c= not c
-    j= i
-  return c
+  points= list(points)  #Convert numpy.array
+  s= sum(1 for p1,p2 in zip(points,[points[-1]]+points[:-1])
+         if ((p1[1]>point[1]) != (p2[1]>point[1]))
+          and (point[0] < (p2[0]-p1[0]) * (point[1]-p1[1]) / (p2[1]-p1[1]) + p1[0]))
+  return s%2==1
 
 #Calculate area of a polygon in 2D.
 # http://mathworld.wolfram.com/PolygonArea.html
@@ -321,21 +328,6 @@ class TParameterizedPolygon:
 #Output polygon is counterclockwise.
 #Ref: https://rosettacode.org/wiki/Sutherland-Hodgman_polygon_clipping
 def ClipPolygon(subject_polygon, clip_polygon):
-  def is_left_of(edge_1, edge_2, test):
-    tmp1 = [edge_2[0] - edge_1[0], edge_2[1] - edge_1[1]]
-    tmp2 = [test[0] - edge_2[0], test[1] - edge_2[1]]
-    x = (tmp1[0] * tmp2[1]) - (tmp1[1] * tmp2[0])
-    if x < 0:  return False
-    elif x > 0:  return True
-    else:  return None  # Colinear points;
-
-  def is_clockwise(polygon):
-    for p in polygon:
-      is_left = is_left_of(polygon[0], polygon[1], p);
-      if is_left != None:  #some of the points may be colinear.  That's ok as long as the overall is a polygon
-        return not is_left
-    return None #All the points in the polygon are colinear
-
   def inside(p):
     return(cp2[0]-cp1[0])*(p[1]-cp1[1]) > (cp2[1]-cp1[1])*(p[0]-cp1[0])
 
@@ -347,11 +339,10 @@ def ClipPolygon(subject_polygon, clip_polygon):
     n3 = 1.0 / (dc[0] * dp[1] - dc[1] * dp[0])
     return [(n1*dp[0] - n2*dc[0]) * n3, (n1*dp[1] - n2*dc[1]) * n3]
 
-  ic = is_clockwise(subject_polygon)
+  ic = PolygonIsClockwise(subject_polygon)
   if ic is None:  return []
   if ic:  subject_polygon= list(reversed(subject_polygon))
-  ic = is_clockwise(clip_polygon)
-  #print 'is_clockwise(clip_polygon)=',ic
+  ic = PolygonIsClockwise(clip_polygon)
   if ic is None:  return []
   if ic:  clip_polygon= list(reversed(clip_polygon))
 
