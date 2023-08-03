@@ -74,6 +74,13 @@ def InfLineLineIntersection(p1, dp1, pA, pB, tol=1e-8, return_rs=False):
   yi = (y1 + r*dy1 + yA + s*dyA)/2.0
   return [xi,yi]
 
+#Check if two line segments (p1-p2, pA-pB) have an intersection.
+#ref. https://bryceboe.com/2006/10/23/line-segment-intersection-algorithm/
+def DoLineLineIntersect(p1, p2, pA, pB):
+  def ccw(a, b, c):
+    return (c[1]-a[1])*(b[0]-a[0]) > (b[1]-a[1])*(c[0]-a[0])
+  return ccw(p1,pA,pB)!=ccw(p2,pA,pB) and ccw(p1,p2,pA)!=ccw(p1,p2,pB)
+
 #Return a list of intersections between line seg (p1,p2) and a polygon (points).
 def LinePolygonIntersection(p1, p2, points, return_rs=False, keep_none=False):
   pIs= [LineLineIntersection(p1,p2,pA,pB,return_rs=return_rs)
@@ -276,7 +283,7 @@ def SplitPolygonAtReflexVertex(points):
   polygons_split= [split(points,i_reflex,i_shortest)
                    for i_reflex,i_shortest in zip(idxs_reflex,idxs_shortest)]
   convex_ratio= [(ConvexRatio(poly1),ConvexRatio(poly2))
-                 if len(poly1)>=3 and len(poly2)>=3 else 0.0
+                 if len(poly1)>=3 and len(poly2)>=3 else (0.0,0.0)
                  for poly1,poly2 in polygons_split]
   #print('convex_ratio=',convex_ratio)
   i_best= np.argmax([min(cr1,cr2) for cr1,cr2 in convex_ratio])
