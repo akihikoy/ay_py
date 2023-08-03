@@ -9,6 +9,7 @@ import random
 from scipy.spatial import ConvexHull as scipy_ConvexHull
 from scipy.spatial.qhull import QhullError as scipy_QhullError
 from scipy.optimize import minimize as scipy_minimize
+from cv2 import minAreaRect as cv2_minAreaRect
 from .util import *
 from .geom import *
 
@@ -20,10 +21,20 @@ def PolygonIsClockwise(polygon):
   s= sum((p2[0]-p1[0])*(p2[1]+p1[1]) for p1,p2 in zip(polygon,polygon[1:]+[polygon[0]]))
   return s>0
 
-#Return an intersection between (p1,p2) and (pA,pB).
+#Check if a vertex i_point (index) is reflex vertex (angle>180).
+#  NOTE: Assume that polygon is sorted clockwise.
+def PolygonIsReflexVertex(polygon, i_point):
+  p0= np.array(polygon[i_point])
+  p1= polygon[i_point-1 if i_point-1>=0 else len(polygon)-1]
+  p2= polygon[i_point+1 if i_point+1<len(polygon) else 0]
+  theta= GetAngle2(p1-p0, p2-p0)
+  #print('i_point={}: theta={}'.format(i_point,theta))
+  return theta<0.0
+
+#Return an intersection between line seg (p1,p2) and line seg (pA,pB).
 #Return None if there is no intersection.
 #Based on: https://www.cs.hmc.edu/ACM/lectures/intersections.html
-def LineLineIntersection(p1, p2, pA, pB, tol=1e-8):
+def LineLineIntersection(p1, p2, pA, pB, tol=1e-8, return_rs=False):
   x1, y1 = p1;   x2, y2 = p2
   dx1 = x2 - x1;  dy1 = y2 - y1
   xA, yA = pA;   xB, yB = pB;
@@ -37,12 +48,44 @@ def LineLineIntersection(p1, p2, pA, pB, tol=1e-8):
   s = DETinv * (-dy1 * (xA-x1) + dx1 * (yA-y1))
   if r<0.0 or s<0.0 or r>1.0 or s>1.0:  return None
 
+  if return_rs:  return [r,s]
   xi = (x1 + r*dx1 + xA + s*dxA)/2.0
   yi = (y1 + r*dy1 + yA + s*dyA)/2.0
   return [xi,yi]
 
-def LinePolygonIntersection(p1, p2, points):
-  pIs= [LineLineIntersection(p1,p2,pA,pB) for pA,pB in zip(points, points[1:]+[points[0]])]
+#Return an intersection between inf line (p1+r*dp1) and line seg (pA,pB).
+#Return None if there is no intersection.
+def InfLineLineIntersection(p1, dp1, pA, pB, tol=1e-8, return_rs=False):
+  x1, y1 = p1
+  dx1, dy1 = dp1
+  xA, yA = pA;   xB, yB = pB;
+  dxA = xB - xA;  dyA = yB - yA;
+
+  DET = (-dx1 * dyA + dy1 * dxA)
+  if math.fabs(DET) < tol: return None
+
+  DETinv = 1.0/DET
+  r = DETinv * (-dyA * (xA-x1) + dxA * (yA-y1))
+  s = DETinv * (-dy1 * (xA-x1) + dx1 * (yA-y1))
+  if s<0.0 or s>1.0:  return None
+
+  if return_rs:  return [r,s]
+  xi = (x1 + r*dx1 + xA + s*dxA)/2.0
+  yi = (y1 + r*dy1 + yA + s*dyA)/2.0
+  return [xi,yi]
+
+#Return a list of intersections between line seg (p1,p2) and a polygon (points).
+def LinePolygonIntersection(p1, p2, points, return_rs=False, keep_none=False):
+  pIs= [LineLineIntersection(p1,p2,pA,pB,return_rs=return_rs)
+        for pA,pB in zip(points, points[1:]+[points[0]])]
+  if keep_none:  return pIs
+  return filter(None,pIs)
+
+#Return a list of intersections between inf line (p1+r*dp1) and a polygon (points).
+def InfLinePolygonIntersection(p1, dp1, points, return_rs=False, keep_none=False):
+  pIs= [InfLineLineIntersection(p1,dp1,pA,pB,return_rs=return_rs)
+        for pA,pB in zip(points, points[1:]+[points[0]])]
+  if keep_none:  return pIs
   return filter(None,pIs)
 
 #Get intersections of a line segment (p1,p2) and a circle (pc,rad).
@@ -108,8 +151,8 @@ def PointInPolygon2D(points, point):
 # http://stackoverflow.com/questions/451426/how-do-i-calculate-the-area-of-a-2d-polygon
 def PolygonArea(points):
   if len(points)<3:  return 0.0
-  return 0.5*abs(sum(x0*y1-x1*y0
-                     for ((x0,y0), (x1,y1)) in zip(points, points[1:]+[points[0]])))
+  return 0.5*abs(sum(p0[0]*p1[1]-p1[0]*p0[1]
+                     for p0,p1 in zip(points, points[1:]+[points[0]])))
 
 #Shrink a polygon with scale (e.g. 0.8) with respect to the center.
 def ShrinkPolygon(points, scale):
@@ -117,8 +160,213 @@ def ShrinkPolygon(points, scale):
   shrunken= [center+scale*(point-center) for point in points]
   return shrunken
 
+#Get a rectangle of minimum area.
+#Return: center,size,angle.
+#  angle is in radian.
+#  size[0] is always greater than size[1].
+#ref. https://gis.stackexchange.com/questions/22895/finding-minimum-area-rectangle-for-given-points
+def MinAreaRect(points):
+  center,size,angle= cv2_minAreaRect(np.array(points,np.float32))
+  angle*= np.pi/180.0
+  if size[0]<size[1]:
+    size= (size[1],size[0])
+    angle= angle+np.pi*0.5 if angle<0 else angle-np.pi*0.5
+  return center,size,angle
+
 def ConvexHull(points):
   return [points[v] for v in scipy_ConvexHull(points).vertices]
+
+#Calculate the convex ratio: index to evaluate how a given polygon is close to convex.
+def ConvexRatio(points):
+  return PolygonArea(points)/PolygonArea(ConvexHull(points))
+
+#Get visible vertices from a point.
+#ref. https://en.wikipedia.org/wiki/Visibility_polygon#Optimal_algorithms_for_a_point_in_a_simple_polygon
+def GetVisibleVertices(points, point):
+  if len(points)<3:  return None
+  is_close= lambda pa,pb: np.linalg.norm(np.array(pa)-pb)<min_dist
+  points= list(points)  #Convert numpy.array
+  stack= [0,1]
+  #for k1 in range(3):
+    #print('{},dist= {}'.format(k1,np.linalg.norm(np.array(point)-points[k1])))
+    #if not is_close(point,k1):  stack.append(k1)
+    #if len(stack)==2:  break
+  #if len(stack)!=2:  return None
+  for k1 in range(stack[-1],len(points)):
+    k2= k1+1 if k1+1<len(points) else 0
+    p1,p2= points[k1],points[k2]
+    #print('{},dist= {}'.format(k2,np.linalg.norm(np.array(point)-p2)))
+    #if is_close(point,p2):  continue
+    #Add p2 is it is not hidden by the polygon in stack.
+    is_visible= all(not DoLineLineIntersect(points[s1],points[s2],point,p2)
+                    for s1,s2 in zip(stack[:-1],stack[1:]) )
+    if is_visible and k2!=0:
+      stack.append(k2)
+    #print(k1,k2,is_visible,stack)
+    #Remove points in stack it they are hidden by p1-p2.
+    stack= [s for s in stack
+            if s==k1 or s==k2 or not DoLineLineIntersect(p1,p2,point,points[s])]
+    #print('-----',k1,k2,is_visible,stack)
+  visibility= [False]*len(points)
+  for s in stack:  visibility[s]= True
+  return visibility
+
+#Get visible vertices from a vertex. Neighbor vertices are excluded.
+def GetVisibleVerticesFromVertex(points, i_point):
+  visibility= GetVisibleVertices(points, GetVertexPointWithTinyOffset(points, i_point))
+  visibility= [visible and abs(i_point-j_point)>1 and abs(i_point-j_point)!=len(points)-1
+                  for j_point,visible in enumerate(visibility)]
+  return visibility
+
+#Return a point on a polygon points[i_point] with a tiny offset
+# so that the point is inside (if inside==True or outside (if inside==False) of the polygon.
+def GetVertexPointWithTinyOffset(points, i_point, inside=True, r_offset=1.0e-5):
+  point= np.array(points[i_point])
+  p1= points[i_point-1 if i_point-1>=0 else len(points)-1]
+  p2= points[i_point+1 if i_point+1<len(points) else 0]
+  dp= r_offset*((p1-point)+(p2-point))
+  if inside:
+    point= point+dp if PointInPolygon2D(points, point+dp) else point-dp
+  else:
+    point= point+dp if not PointInPolygon2D(points, point+dp) else point-dp
+  return point
+
+#Split a polygon (points) by an infinite line (p1+r*dp1), and return a list of polygons.
+#A simple split method is introduced here:
+#  In case there is no intersections between the line and the polygon, [points] is returned.
+#  In case there is only one intersection, [points] is returned.
+#  In case there are two intersections, a list of two polygons is returned.
+#  In case there are more intersections, the polygon is separated only by the outer points.
+def SplitPolygonByInfLine(p1, dp1, points):
+  points= list(points)
+  rs_list= InfLinePolygonIntersection(p1, dp1, points, return_rs=True, keep_none=True)
+  r_list= [rs if rs is None else rs[0] for rs in rs_list]
+  num_intersect= len(filter(None,r_list))
+  if num_intersect<2:  return [points]
+  r_list= np.array(r_list)
+  r_list[r_list==None]= np.nan
+  #print('r_list=',r_list)
+  ipA,ipB= np.nanargmin(r_list),np.nanargmax(r_list)  #Points to split the polygon.
+  #print('ipA,ipB=',ipA,ipB)
+  if ipA>ipB:  ipA,ipB= ipB,ipA
+  #print('ipA,ipB=',ipA,ipB)
+  #print('p1,dp1=',p1,dp1)
+  pA= (p1+r_list[ipA]*np.array(dp1)).tolist()
+  pB= (p1+r_list[ipB]*np.array(dp1)).tolist()
+  return [[pA]+points[ipA+1:ipB+1]+[pB], [pB]+points[ipB+1:]+points[:ipA+1]+[pA]]
+
+#Split a polygon into two at a reflex vertex so that the convex-ratio is maximized.
+#  Return: [poly1,poly2].
+#  If there is no reflex vertex, or the number of vertices after split is less than 3, return [points].
+def SplitPolygonAtReflexVertex(points):
+  def split(poly,i,j):
+    if i>j:  i,j= j,i
+    return [poly[i:j+1], poly[j:]+poly[:i+1]]
+  if not PolygonIsClockwise(points):  points.reverse()
+  visibilities= [GetVisibleVerticesFromVertex(points, i_point) for i_point in range(len(points))]
+  #print('visibilities=',{i_point:np.array(range(len(points)))[visibility] for i_point,visibility in enumerate(visibilities)})
+  idxs_reflex= [i_point for i_point in range(len(points)) if PolygonIsReflexVertex(points, i_point)]
+  #print('idxs_reflex=',idxs_reflex)
+  if len(idxs_reflex)==0:  return [points]
+  except_mask= lambda array,idx: [i==idx or not visibilities[idx][i] for i in range(len(array))]
+  idxs_shortest= [np.argmin(np.ma.array(np.linalg.norm(np.array(points)-points[i_reflex],axis=1),
+                                        mask=except_mask(points,i_reflex)))
+                  for i_reflex in idxs_reflex]
+  #print('idxs_shortest=',idxs_shortest)
+  polygons_split= [split(points,i_reflex,i_shortest)
+                   for i_reflex,i_shortest in zip(idxs_reflex,idxs_shortest)]
+  convex_ratio= [(ConvexRatio(poly1),ConvexRatio(poly2))
+                 if len(poly1)>=3 and len(poly2)>=3 else 0.0
+                 for poly1,poly2 in polygons_split]
+  #print('convex_ratio=',convex_ratio)
+  i_best= np.argmax([min(cr1,cr2) for cr1,cr2 in convex_ratio])
+  poly1,poly2= polygons_split[i_best]
+  #print('poly1,poly2=',poly1,poly2)
+  if len(poly1)<3 or len(poly2)<3:  return [points]  #No split is better.
+  return [poly1,poly2]
+
+#Divide a polygon so that each sub-polygon has almost the same area close to target_area.
+def DivideConvexByArea(points, target_area, scale_width=1.5):
+  target_w= np.sqrt(target_area)*scale_width
+  center,size,angle= MinAreaRect(points)
+  dp_long= np.array([np.cos(angle), np.sin(angle)])  #Vector along the longer edge.
+  dp_short= np.array([-np.sin(angle), np.cos(angle)])  #Vector along the longer edge.
+
+  #1. divide polygon along the shorter edge into floor(h/sqrt(target_area)) blocks.
+  poly= points
+  polygons_h= []
+  center_bottom= np.array(center)-0.5*size[1]*dp_short
+  num_h= int(np.floor(size[1]/target_w))
+  if num_h>1:
+    dh= size[1]/num_h
+    #print('Divide along the short edge: h={}, dh={}, num_h={}'.format(size[1],dh,num_h))
+    for i_h in range(1,num_h):
+      ph= center_bottom+i_h*dh*dp_short
+      sub_polys= SplitPolygonByInfLine(ph, dp_long, poly)
+      #print('--i_h={}, poly size={}, # of sub_polys={}'.format(i_h,len(poly),len(sub_polys)))
+      #print('--ph is in poly={}'.format(PointInPolygon2D(poly,ph)))
+      if len(sub_polys)==1:
+        poly= sub_polys[0]
+      elif len(sub_polys)==2:
+        sub_poly1,sub_poly2= sub_polys
+        #if PointInPolygon2D(sub_poly1, ph+1.0*dh*dp_short):
+        if np.dot(np.mean(sub_poly1,axis=0)-ph,dp_short)>0.0:
+          poly= sub_poly1
+          polygons_h.append(sub_poly2)
+        else:
+          poly= sub_poly2
+          polygons_h.append(sub_poly1)
+  polygons_h.append(poly)
+
+  #2. divide each sub_poly along the longer edge so that each area(sub_sub_poly) is larger than target_area.
+  polygons= []
+  middle_left= np.array(center)-0.5*size[0]*dp_long
+  num_w= int(np.floor(size[0]/target_w))
+  if num_w<2:  return polygons_h
+  for poly in polygons_h:
+    dw= size[0]/num_w
+    #print('Divide along the long edge: w={}, dw={}, num_w={}'.format(size[0],dw,num_w))
+    for i_w in range(1,num_w):
+      pw= middle_left+i_w*dw*dp_long
+      sub_polys= SplitPolygonByInfLine(pw, dp_short, poly)
+      #print('--i_w={}, poly size={}, # of sub_polys={}'.format(i_w,len(poly),len(sub_polys)))
+      if len(sub_polys)==1:
+        poly= sub_polys[0]
+      elif len(sub_polys)==2:
+        sub_poly1,sub_poly2= sub_polys
+        if np.dot(np.mean(sub_poly1,axis=0)-pw,dp_long)>0.0:
+          poly= sub_poly1
+          #if PolygonArea(sub_poly2)>target_area:
+          polygons.append(sub_poly2)
+        else:
+          poly= sub_poly2
+          #if PolygonArea(sub_poly1)>target_area:
+          polygons.append(sub_poly1)
+    #if PolygonArea(poly)>target_area:
+    polygons.append(poly)
+
+  return polygons
+
+#Polygon decomposition algorithm using SplitPolygonAtReflexVertex and DivideConvexByArea.
+def DecomposePolygon(points, target_area, th_convex_ratio=0.8, scale_width=1.5):
+  polygons= [points]
+  decomposed= []
+  while len(polygons)>0:
+    polygon= polygons.pop(0)
+    if PolygonArea(polygon)<2.0*target_area:
+      decomposed.append(polygon)
+      continue
+    convex_ratio= ConvexRatio(polygon)
+    #print('# polygons={}, # decomposed={}, polygon size={}, convex_ratio={}'.format(len(polygons),len(decomposed),len(polygon),convex_ratio))
+    if convex_ratio<th_convex_ratio:
+      sub_polys= SplitPolygonAtReflexVertex(polygon)
+      #print('--SPARV # of sub_polys={}'.format(len(sub_polys)))
+      polygons+= sub_polys
+    else:
+      sub_polys= DivideConvexByArea(polygon, target_area, scale_width=scale_width)
+      #print('--DCBA # of sub_polys={}'.format(len(sub_polys)))
+      decomposed+= sub_polys
+  return decomposed
 
 '''Move a polygon points along with axes so that it matches with points_ref.
   More specifically, find r such that intersection-area between
