@@ -184,8 +184,12 @@ def ConvexHull(points):
   return [points[v] for v in scipy_ConvexHull(points).vertices]
 
 #Calculate the convex ratio: index to evaluate how a given polygon is close to convex.
-def ConvexRatio(points):
-  return PolygonArea(points)/PolygonArea(ConvexHull(points))
+def ConvexRatio(points, tol=1.0e-8):
+  if len(points)<3:  return 0.0
+  area= PolygonArea(points)
+  if area<tol:  return 0.0  #NOTE: This guarantees hull_area>=tol
+  hull_area= PolygonArea(ConvexHull(points))
+  return area/hull_area
 
 #Get visible vertices from a point.
 #ref. https://en.wikipedia.org/wiki/Visibility_polygon#Optimal_algorithms_for_a_point_in_a_simple_polygon
@@ -365,11 +369,14 @@ def DecomposePolygon(points, target_area, th_convex_ratio=0.8, scale_width=1.5):
       continue
     convex_ratio= ConvexRatio(polygon)
     #print('# polygons={}, # decomposed={}, polygon size={}, convex_ratio={}'.format(len(polygons),len(decomposed),len(polygon),convex_ratio))
+    do_dcba= True
     if convex_ratio<th_convex_ratio:
       sub_polys= SplitPolygonAtReflexVertex(polygon)
       #print('--SPARV # of sub_polys={}'.format(len(sub_polys)))
-      polygons+= sub_polys
-    else:
+      if len(sub_polys)>1:
+        polygons+= sub_polys
+        do_dcba= False
+    if do_dcba:
       sub_polys= DivideConvexByArea(polygon, target_area, scale_width=scale_width)
       #print('--DCBA # of sub_polys={}'.format(len(sub_polys)))
       decomposed+= sub_polys
