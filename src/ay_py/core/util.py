@@ -615,8 +615,10 @@ def PrintException(e, msg=''):
 #Container class that can hold any variables
 #ref. http://blog.beanz-net.jp/happy_programming/2008/11/python-5.html
 class TContainerCore(object):
-  def __init__(self):
-    pass
+  def __init__(self, d_in=None):
+    if d_in is not None:
+      assert(isinstance(d_in,dict))
+      self.__dict__= d_in
   def __del__(self):
     pass
   def __str__(self):
@@ -647,8 +649,8 @@ class TContainerCore(object):
       self.__dict__[k]= None
       del self.__dict__[k]
 class TContainerDebug(TContainerCore):
-  def __init__(self):
-    super(TContainerDebug,self).__init__()
+  def __init__(self, d_in=None):
+    super(TContainerDebug,self).__init__(d_in)
     print('Created TContainer object',hex(id(self)))
   def __del__(self):
     super(TContainerDebug,self).__del__()
@@ -657,8 +659,8 @@ class TContainerDebug(TContainerCore):
   Note: the function name is like a class name;
     this is because originally TContainer was a class
     where TContainerCore and TContainerDebug are unified.'''
-def TContainer(debug=False):
-  return TContainerCore() if not debug else TContainerDebug()
+def TContainer(d_in=None, debug=False):
+  return TContainerCore(d_in=d_in) if not debug else TContainerDebug(d_in=d_in)
 
 #Managing thread objects
 class TThreadManager:
