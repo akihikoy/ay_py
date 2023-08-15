@@ -269,29 +269,49 @@ def SplitPolygonByInfLine(p1, dp1, points):
 #Split a polygon into two at a reflex vertex so that the convex-ratio is maximized.
 #  Return: [poly1,poly2].
 #  If there is no reflex vertex, or the number of vertices after split is less than 3, return [points].
-def SplitPolygonAtReflexVertex(points):
+#  num_approx: If not None, the size of input polygon is reduced to this number for faster computation.
+def SplitPolygonAtReflexVertex(points, num_approx=None):
   def split(poly,i,j):
     if i>j:  i,j= j,i
     return [poly[i:j+1], poly[j:]+poly[:i+1]]
+  #t0= time.time()
+  #print('# points={}'.format(len(points)))
   if not PolygonIsClockwise(points):  points.reverse()
+  if num_approx is not None and len(points)>num_approx:
+    idxs_map= np.round(np.linspace(0,len(points)-1,num_approx)).astype(int)
+    points_orig= points
+    points= [points[idx] for idx in idxs_map]
+  else:
+    idxs_map= None
+  #print('  t1= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   visibilities= [GetVisibleVerticesFromVertex(points, i_point) for i_point in range(len(points))]
+  #print('  t2= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   #print('visibilities=',{i_point:np.array(range(len(points)))[visibility] for i_point,visibility in enumerate(visibilities)})
   idxs_reflex= [i_point for i_point in range(len(points)) if PolygonIsReflexVertex(points, i_point)]
+  #print('  t3= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   #print('idxs_reflex=',idxs_reflex)
   if len(idxs_reflex)==0:  return [points]
   except_mask= lambda array,idx: [i==idx or not visibilities[idx][i] for i in range(len(array))]
   idxs_shortest= [np.argmin(np.ma.array(np.linalg.norm(np.array(points)-points[i_reflex],axis=1),
                                         mask=except_mask(points,i_reflex)))
                   for i_reflex in idxs_reflex]
+  #print('  t4= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   #print('idxs_shortest=',idxs_shortest)
   polygons_split= [split(points,i_reflex,i_shortest)
                    for i_reflex,i_shortest in zip(idxs_reflex,idxs_shortest)]
+  #print('  t5= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   convex_ratio= [(ConvexRatio(poly1),ConvexRatio(poly2))
                  if len(poly1)>=3 and len(poly2)>=3 else (0.0,0.0)
                  for poly1,poly2 in polygons_split]
+  #print('  t6= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   #print('convex_ratio=',convex_ratio)
   i_best= np.argmax([min(cr1,cr2) for cr1,cr2 in convex_ratio])
-  poly1,poly2= polygons_split[i_best]
+  if idxs_map is None:
+    poly1,poly2= split(points,idxs_reflex[i_best],idxs_shortest[i_best])
+  else:
+    points= points_orig
+    poly1,poly2= split(points,idxs_map[idxs_reflex[i_best]],idxs_map[idxs_shortest[i_best]])
+  #print('  t7= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   #print('poly1,poly2=',poly1,poly2)
   if len(poly1)<3 or len(poly2)<3:  return [points]  #No split is better.
   return [poly1,poly2]
@@ -359,27 +379,33 @@ def DivideConvexByArea(points, target_area, scale_width=1.5):
   return polygons
 
 #Polygon decomposition algorithm using SplitPolygonAtReflexVertex and DivideConvexByArea.
-def DecomposePolygon(points, target_area, th_convex_ratio=0.8, scale_width=1.5):
+def DecomposePolygon(points, target_area, th_convex_ratio=0.8, scale_width=1.5, num_approx_refsplit=None):
   polygons= [points]
   decomposed= []
   while len(polygons)>0:
     polygon= polygons.pop(0)
+    #t0= time.time()
+    #print('# polygons={}, # decomposed={}, polygon size={}'.format(len(polygons),len(decomposed),len(polygon)))
     if PolygonArea(polygon)<2.0*target_area:
       decomposed.append(polygon)
       continue
+    #print('  t1= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
     convex_ratio= ConvexRatio(polygon)
     #print('# polygons={}, # decomposed={}, polygon size={}, convex_ratio={}'.format(len(polygons),len(decomposed),len(polygon),convex_ratio))
+    #print('  t2= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
     do_dcba= True
     if convex_ratio<th_convex_ratio:
-      sub_polys= SplitPolygonAtReflexVertex(polygon)
+      sub_polys= SplitPolygonAtReflexVertex(polygon, num_approx=num_approx_refsplit)
       #print('--SPARV # of sub_polys={}'.format(len(sub_polys)))
       if len(sub_polys)>1:
         polygons+= sub_polys
         do_dcba= False
+    #print('  t3= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
     if do_dcba:
       sub_polys= DivideConvexByArea(polygon, target_area, scale_width=scale_width)
       #print('--DCBA # of sub_polys={}'.format(len(sub_polys)))
       decomposed+= sub_polys
+    #print('  t4= {:6.2f}ms'.format((time.time()-t0)*1.e3)); t0=time.time()
   return decomposed
 
 '''Move a polygon points along with axes so that it matches with points_ref.
