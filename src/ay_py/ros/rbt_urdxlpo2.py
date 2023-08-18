@@ -6,6 +6,7 @@ import roslib
 import rospy
 
 from rbt_ur import *
+from rbt_dxlpo2 import TDxlpO2Gripper
 
 '''Robot control class for single Universal Robots UR* with DxlpO2 gripper.'''
 class TRobotURDxlpO2(TRobotUR):
@@ -22,22 +23,18 @@ class TRobotURDxlpO2(TRobotUR):
 
     ra(super(TRobotURDxlpO2,self).Init())
 
-    if not self.is_sim:
-      #The gripper module is imported here to avoid importing it in simulation mode.
-      mod= __import__('rbt_dxlpo2',globals(),None,('TDxlpO2Gripper',))
-      self.dxlpo2_gripper= mod.TDxlpO2Gripper(node_name=self.gripper_node, finger_type=self.finger_type)
-    else:
-      if self.finger_type=='Straight1':
-        self.gripper_range= [0.0,0.300]  #FIXME: 0.3 is inaccurate.
-      elif self.finger_type=='SRound1':  #Small, round finger (yellow)
-        self.gripper_range= [0.0,0.1950]
-      elif self.finger_type=='Fork1':
-        self.gripper_range= [-0.0189,0.200]
-      elif self.finger_type=='???':
-        self.gripper_range= [0.0,0.2200]
-      else:
-        raise Exception('TDxlpO2: Unknown finger_type: {finger_type}'.format(finger_type=self.finger_type))
-      self.dxlpo2_gripper= TSimGripper2F1(pos_range=self.gripper_range)
+    self.dxlpo2_gripper= TDxlpO2Gripper(node_name=self.gripper_node, finger_type=self.finger_type)
+    #if self.finger_type=='Straight1':
+      #self.gripper_range= [0.0,0.300]  #FIXME: 0.3 is inaccurate.
+    #elif self.finger_type=='SRound1':  #Small, round finger (yellow)
+      #self.gripper_range= [0.0,0.1950]
+    #elif self.finger_type=='Fork1':
+      #self.gripper_range= [-0.0189,0.200]
+    #elif self.finger_type=='???':
+      #self.gripper_range= [0.0,0.2200]
+    #else:
+      #raise Exception('TDxlpO2: Unknown finger_type: {finger_type}'.format(finger_type=self.finger_type))
+    #self.dxlpo2_gripper= TSimGripper2F1(pos_range=self.gripper_range)
     self.grippers= [self.dxlpo2_gripper]
 
     print 'Initializing and activating DxlGripper gripper...'

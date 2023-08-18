@@ -6,6 +6,7 @@ import roslib
 import rospy
 
 from rbt_gen3 import TRobotGen3
+from rbt_dxlo3 import TDxlO3Gripper
 
 '''Robot control class for single Kinova Gen3 with DxlO3 Gripper.'''
 class TRobotGen3DxlO3(TRobotGen3):
@@ -21,12 +22,8 @@ class TRobotGen3DxlO3(TRobotGen3):
 
     ra(super(TRobotGen3DxlO3,self).Init())
 
-    if not self.is_sim:
-      #The gripper module is imported here to avoid importing it in simulation mode.
-      mod= __import__('rbt_dxlo3',globals(),None,('TDxlO3Gripper',))
-      self.dxlo3_gripper= mod.TDxlO3Gripper(node_name=self.gripper_node)
-    else:
-      self.dxlo3_gripper= TSimGripper2F1(('DxlO3',),pos_range=[0.0,0.118])
+    self.dxlo3_gripper= TDxlO3Gripper(node_name=self.gripper_node)
+    #self.dxlo3_gripper= TSimGripper2F1(('DxlO3',),pos_range=[0.0,0.118])
     self.grippers= [self.dxlo3_gripper]
 
     print 'Initializing and activating DxlO3 gripper...'

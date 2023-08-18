@@ -6,6 +6,7 @@ import roslib
 import rospy
 
 from rbt_ur import *
+from rbt_dxlpy1 import TDxlpY1Gripper
 
 '''Robot control class for single Universal Robots UR* with DxlpY1 gripper.'''
 class TRobotURDxlpY1(TRobotUR):
@@ -21,12 +22,8 @@ class TRobotURDxlpY1(TRobotUR):
 
     ra(super(TRobotURDxlpY1,self).Init())
 
-    if not self.is_sim:
-      #The gripper module is imported here to avoid importing it in simulation mode.
-      mod= __import__('rbt_dxlpy1',globals(),None,('TDxlpY1Gripper',))
-      self.dxlpy1_gripper= mod.TDxlpY1Gripper(node_name=self.gripper_node)
-    else:
-      self.dxlpy1_gripper= TSimGripper2F1(pos_range=[0.0,0.133])
+    self.dxlpy1_gripper= TDxlpY1Gripper(node_name=self.gripper_node)
+    #self.dxlpy1_gripper= TSimGripper2F1(pos_range=[0.0,0.133])
     self.grippers= [self.dxlpy1_gripper]
 
     print 'Initializing and activating DxlGripper gripper...'

@@ -15,6 +15,7 @@ import copy
 
 from robot import *
 from kdl_kin import *
+from rbt_rq import TRobotiq
 
 '''Robot control class for single Motoman SIA10F with a Robotiq gripper.'''
 class TRobotMotoman(TMultiArmRobot):
@@ -50,11 +51,8 @@ class TRobotMotoman(TMultiArmRobot):
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
-    if not self.is_sim:
-      mod= __import__('rbt_rq',globals(),None,('TRobotiq',))
-      self.robotiq= TRobotiq()  #Robotiq controller
-    else:
-      self.robotiq= TSimGripper2F1(('Robotiq',),pos_range=[0.0,0.0855])
+    self.robotiq= TRobotiq()  #Robotiq controller
+    #self.robotiq= TSimGripper2F1(('Robotiq',),pos_range=[0.0,0.0855])
     self.grippers= [self.robotiq]
 
     #print 'Enabling the robot...'

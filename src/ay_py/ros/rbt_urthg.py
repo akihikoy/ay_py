@@ -6,6 +6,7 @@ import roslib
 import rospy
 
 from rbt_ur import *
+from rbt_rhp12rn import TRHP12RNGripper
 
 '''Robot control class for single Universal Robots UR* with RH-P12-RN Gripper (Thormang3 gripper).'''
 class TRobotURThG(TRobotUR):
@@ -21,12 +22,8 @@ class TRobotURThG(TRobotUR):
 
     ra(super(TRobotURThG,self).Init())
 
-    if not self.is_sim:
-      #The gripper module is imported here to avoid importing it in simulation mode.
-      mod= __import__('rbt_rhp12rn',globals(),None,('TRHP12RNGripper',))
-      self.th_gripper= mod.TRHP12RNGripper(node_name=self.gripper_node)
-    else:
-      self.th_gripper= TSimGripper2F1(('RHP12RNGripper','ThGripper'),pos_range=[0.0,0.109])
+    self.th_gripper= TRHP12RNGripper(node_name=self.gripper_node)
+    #self.th_gripper= TSimGripper2F1(('RHP12RNGripper','ThGripper'),pos_range=[0.0,0.109])
     self.grippers= [self.th_gripper]
 
     print 'Initializing and activating RHP12RNGripper gripper...'
