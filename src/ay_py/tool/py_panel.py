@@ -16,7 +16,7 @@ elif str(os.environ['PYQT_VERSION'])=='5':
   from PyQt5 import QtCore,QtWidgets
   import PyQt5.QtGui as PyQt5QtGui
   QtGui= QtWidgets
-  for component in ('QFont', 'QIntValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter', 'QFontMetrics'):
+  for component in ('QFont', 'QFontMetrics', 'QIntValidator', 'QDoubleValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter'):
     setattr(QtGui,component, getattr(PyQt5QtGui,component))
 else:
   raise Exception('Failed to import the requested version of PyQt:',os.environ['PYQT_VERSION'])
@@ -754,7 +754,8 @@ class TSimplePanel(QtGui.QWidget):
       'size_policy': ('expanding', 'fixed'),
       }, w_param)
     edit= QtGui.QLineEdit(self)
-    if param['validator']=='int':  edit.setValidator(QtGui.QIntValidator())
+    if param['validator']=='int':    edit.setValidator(QtGui.QIntValidator())
+    if param['validator']=='float':  edit.setValidator(QtGui.QDoubleValidator())
     edit.setMinimumHeight(10)
     edit.setMinimumWidth(10)
     #edit.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
