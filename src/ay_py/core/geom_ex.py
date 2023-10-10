@@ -674,7 +674,7 @@ def CircleFit2D(XY):
   Z= [X[d]**2 + Y[d]**2 for d in range(len(XY))]
   ZXY1= np.matrix([Z, X, Y, [1.0]*len(Z)]).transpose()
   U,S,V= la.svd(ZXY1,0)
-  if S[3]/S[0]<1.0e-12:  # singular case
+  if len(S)<4 or S[3]/S[0]<1.0e-12:  # singular case
     print('CircleFit2D: SINGULAR')
     A= (V.transpose())[:,3]
   else:  # regular case
