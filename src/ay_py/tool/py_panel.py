@@ -750,12 +750,16 @@ class TSimplePanel(QtGui.QWidget):
 
   def AddLineEdit(self, w_param):
     param= MergeDict2(copy.deepcopy(self.param_common), {
+      'text':'',
       'validator': None,  #'int'
       'size_policy': ('expanding', 'fixed'),
+      'ontextchanged': None,
       }, w_param)
     edit= QtGui.QLineEdit(self)
+    edit.setText(param['text'])
     if param['validator']=='int':    edit.setValidator(QtGui.QIntValidator())
     if param['validator']=='float':  edit.setValidator(QtGui.QDoubleValidator())
+    if param['ontextchanged']:  edit.textChanged.connect(lambda _,edit=edit:param['ontextchanged'](self,edit))
     edit.setMinimumHeight(10)
     edit.setMinimumWidth(10)
     #edit.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
