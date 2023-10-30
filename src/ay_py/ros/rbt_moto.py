@@ -1,9 +1,6 @@
 #! /usr/bin/env python
 #Robot controller for Motoman.
 from const import *
-#if ROS_ROBOT not in ('ANY','Motoman','Motoman_SIM'):
-  #raise ImportError('Stop importing: ROS_ROBOT is not Motoman')
-#if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
 import roslib
 import rospy
@@ -15,9 +12,8 @@ import copy
 
 from robot import *
 from kdl_kin import *
-from rbt_rq import TRobotiq
 
-'''Robot control class for single Motoman SIA10F with a Robotiq gripper.'''
+'''Robot control class for a single Motoman robot.'''
 class TRobotMotoman(TMultiArmRobot):
   def __init__(self, name='Motoman', is_sim=False):
     super(TRobotMotoman,self).__init__(name=name)
@@ -25,13 +21,16 @@ class TRobotMotoman(TMultiArmRobot):
 
     self.joint_names= [[]]
     self.joint_names[0]= rospy.get_param('controller_joint_names')
-    #self.joint_names[0]= ['joint_'+jkey for jkey in ('s','l','e','u','r','b','t')]
 
     #Motoman all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
-    self.links['base']= ['base_link']
-    self.links['r_arm']= ['link_s', 'link_l', 'link_e', 'link_u', 'link_r', 'link_b', 'link_t']
+    if self.Name.startswith('Motoman_SIA10F'):
+      self.links['base']= ['base_link']
+      self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_e', 'link_4_u', 'link_5_r', 'link_6_b', 'link_7_t']
+    elif self.Name.startswith('Motoman_MotoMINI'):
+      self.links['base']= ['base_link']
+      self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r', 'link_5_b', 'link_6_t']
     self.links['robot']= self.links['base'] + self.links['r_arm']
 
   '''Initialize (e.g. establish ROS connection).'''
@@ -41,24 +40,22 @@ class TRobotMotoman(TMultiArmRobot):
     ra= lambda r: res.append(r)
 
     self.kin= [None]
-    self.kin[0]= TKinematics(base_link='base_link',end_link='link_t')
+    self.kin[0]= TKinematics(base_link=self.links['base'][0],end_link='tool0')
 
     ra(self.AddActC('traj', '/joint_trajectory_action',
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
-    #if self.is_sim:
-      #ra(self.AddPub('joint_states', '/joint_states', sensor_msgs.msg.JointState))
-
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
-    self.robotiq= TRobotiq()  #Robotiq controller
-    #self.robotiq= TSimGripper2F1(('Robotiq',),pos_range=[0.0,0.0855])
-    self.grippers= [self.robotiq]
+    #self.robotiq= TRobotiq()  #Robotiq controller
+    ##self.robotiq= TSimGripper2F1(('Robotiq',),pos_range=[0.0,0.0855])
+    #self.grippers= [self.robotiq]
+    self.grippers= [TFakeGripper()]
 
     #print 'Enabling the robot...'
 
-    print 'Initializing and activating Robotiq gripper...'
-    ra(self.robotiq.Init())
+    #print 'Initializing and activating Robotiq gripper...'
+    #ra(self.robotiq.Init())
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
@@ -74,13 +71,13 @@ class TRobotMotoman(TMultiArmRobot):
     c.Links= copy.deepcopy(self.links)
     c.PaddingLinks= []
     c.PaddingValues= [0.002]*len(c.PaddingLinks)
-    c.DefaultBaseFrame= 'base_link'
-    c.HandLinkToGrasp[0]= 'link_t'
+    c.DefaultBaseFrame= self.kin[0]._base_link
+    c.HandLinkToGrasp[0]= self.kin[0]._tip_link
     c.IgnoredLinksInGrasp[0]= []
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
-    if q in ('Motoman','Motoman_SIM'):  return True
+    if q in ('Motoman','Motoman_SIM',self.Name):  return True
     return super(TRobotMotoman,self).Is(q)
 
   @property
@@ -89,39 +86,42 @@ class TRobotMotoman(TMultiArmRobot):
 
   @property
   def BaseFrame(self):
-    return 'base_link'
+    return self.kin[0]._base_link
 
   '''End link of an arm.'''
   def EndLink(self, arm=None):
-    return 'link_t'
+    return self.kin[0]._tip_link
 
   '''Names of joints of an arm.'''
   def JointNames(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.joint_names[arm]
 
   '''Return limits (lower, upper) of joint angles.
     arm: arm id, or None (==currarm). '''
   def JointLimits(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.kin[arm].joint_limits_lower, self.kin[arm].joint_limits_upper
 
   '''Return limits of joint angular velocity.
-    arm: arm id, or None (==currarm). '''
+    arm: arm id, or None (==currarm).
+    NOTE: This limit is used only when it is used explicitly.'''
   def JointVelLimits(self, arm=None):
-    #['s','l','e','u','r','b','t']
-    #FIXME: Should be adjusted for Motoman
-    return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8, 0.8]
+    if self.Name.startswith('Motoman_SIA10F'):
+      #['s','l','e','u','r','b','t']
+      return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8, 0.8]
+    elif self.Name.startswith('Motoman_MotoMINI'):
+      return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8]
 
   '''Return range of gripper.
     arm: arm id, or None (==currarm). '''
   def GripperRange(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.grippers[arm].PosRange()
 
   '''End effector of an arm.'''
   def EndEff(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     return self.grippers[arm]
 
   def JointStatesCallback(self, msg):
@@ -135,14 +135,14 @@ class TRobotMotoman(TMultiArmRobot):
   def Q(self, arm=None):
     with self.sensor_locker:
       q= self.q_curr
-    return list(q)
+    return list(q) if q is not None else None
 
   '''Return joint velocities of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
       dq= self.dq_curr
-    return list(dq)
+    return list(dq) if dq is not None else None
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
@@ -153,7 +153,7 @@ class TRobotMotoman(TMultiArmRobot):
       If not None, the returned pose is x_ext on self.BaseFrame.
     with_st: whether return FK status. '''
   def FK(self, q=None, x_ext=None, arm=None, with_st=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if q is None:  q= self.Q(arm)
 
     angles= {joint:q[j] for j,joint in enumerate(self.joint_names[arm])}  #Deserialize
@@ -172,7 +172,7 @@ class TRobotMotoman(TMultiArmRobot):
       If not None, we do not consider an offset.
     with_st: whether return the solver status. '''
   def J(self, q=None, x_ext=None, arm=None, with_st=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if q is None:  q= self.Q(arm)
 
     if x_ext is not None:
@@ -196,7 +196,7 @@ class TRobotMotoman(TMultiArmRobot):
     start_angles: initial joint angles for IK solver, or None (==self.Q(arm)).
     with_st: whether return IK status. '''
   def IK(self, x_trg, x_ext=None, start_angles=None, arm=None, with_st=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if start_angles is None:  start_angles= self.Q(arm)
 
     x_trg[3:]/= la.norm(x_trg[3:])  #Normalize the orientation:
@@ -217,7 +217,7 @@ class TRobotMotoman(TMultiArmRobot):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
     assert(len(q_traj)==len(t_traj))
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
 
@@ -241,24 +241,34 @@ class TRobotMotoman(TMultiArmRobot):
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''
   def StopMotion(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     with self.control_locker:
       self.actc.traj.cancel_goal()
-      BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
+      try:
+        BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
+      except ROSError as e:
+        #There will be an error when there is no goal. Ignoring.
+        pass
 
 
   '''Open a gripper.
     arm: arm id, or None (==currarm).
     blocking: False: move background, True: wait until motion ends.  '''
   def OpenGripper(self, arm=None, blocking=False):
-    self.MoveGripper(pos=0.1, arm=arm, blocking=blocking)
+    if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
+    with self.gripper_locker:
+      gripper.Open(blocking=blocking)
 
   '''Close a gripper.
     arm: arm id, or None (==currarm).
     blocking: False: move background, True: wait until motion ends.  '''
   def CloseGripper(self, arm=None, blocking=False):
-    self.MoveGripper(pos=0.0, arm=arm, blocking=blocking)
+    if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
+    with self.gripper_locker:
+      gripper.Close(blocking=blocking)
 
   '''High level interface to control a gripper.
     arm: arm id, or None (==currarm).
@@ -267,23 +277,50 @@ class TRobotMotoman(TMultiArmRobot):
     speed: speed of the movement; 0 (minimum), 100 (maximum).
     blocking: False: move background, True: wait until motion ends.  '''
   def MoveGripper(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    if gripper.Is('Robotiq'):
+    if gripper.Is('Gripper2F1'):
       with self.gripper_locker:
         gripper.Move(pos, max_effort, speed, blocking=blocking)
+    elif gripper.Is('Gripper2F2'):
+      with self.gripper_locker:
+        gripper.Move2F1(pos, max_effort, speed, blocking=blocking)
+
+  '''Low level interface to control a gripper.
+    arm: arm id, or None (==currarm).
+    pos: target positions.
+    max_effort: maximum effort to control; 0 (weakest), 100 (strongest).
+    speed: speed of the movement; 0 (minimum), 100 (maximum).
+    blocking: False: move background, True: wait until motion ends.  '''
+  def MoveGripper2(self, pos, max_effort=50.0, speed=50.0, arm=None, blocking=False):
+    if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
+    with self.gripper_locker:
+      gripper.Move(pos, max_effort, speed, blocking=blocking)
 
   '''Get a gripper position in meter.
     arm: arm id, or None (==currarm). '''
   def GripperPos(self, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
 
     gripper= self.grippers[arm]
-    if gripper.Is('Robotiq'):
+    if gripper.Is('Gripper2F1'):
       with self.sensor_locker:
         pos= gripper.Position()
-      return pos
+    elif gripper.Is('Gripper2F2'):
+      with self.sensor_locker:
+        pos= gripper.Position2F1()
+    return pos
+
+  '''Get gripper positions.
+    arm: arm id, or None (==currarm). '''
+  def GripperPos2(self, arm=None):
+    if arm is None:  arm= self.Arm
+    gripper= self.grippers[arm]
+    with self.sensor_locker:
+      pos= gripper.Position()
+    return pos
 
   '''Get a fingertip height offset in meter.
     The fingertip trajectory of some grippers has a rounded shape.
@@ -293,7 +330,20 @@ class TRobotMotoman(TMultiArmRobot):
       pos: Gripper position to get the offset. None: Current position.
       arm: arm id, or None (==currarm).'''
   def FingertipOffset(self, pos=None, arm=None):
-    arm= 0
+    if arm is None:  arm= self.Arm
     if pos is None:  pos= self.GripperPos(arm)
-    return self.grippers[arm].FingertipOffset(pos)
+    gripper= self.grippers[arm]
+    if gripper.Is('Gripper2F1'):  return gripper.FingertipOffset(pos)
+    elif gripper.Is('Gripper2F2'):  return gripper.FingertipOffset2F1(pos)
 
+  '''Get a fingertip height offset in meter.
+    The fingertip trajectory of some grippers has a rounded shape.
+    This function gives the offset from the highest (longest) point (= closed fingertip position),
+    and the offset is always negative.
+    NOTE: In the previous versions (before 2019-12-10), this offset was from the opened fingertip position.
+      pos: Gripper position to get the offset. None: Current position.
+      arm: arm id, or None (==currarm).'''
+  def FingertipOffset2(self, pos=None, arm=None):
+    if arm is None:  arm= self.Arm
+    if pos is None:  pos= self.GripperPos2(arm)
+    return self.grippers[arm].FingertipOffset(pos)

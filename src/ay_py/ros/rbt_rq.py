@@ -15,6 +15,7 @@ except ImportError:
   print 'Cannot import: robotiq_c_model_control.msg'
 finally:
   #Define TRobotiq for class structure.
+  from robot import TGripper2F1
   if 'robotiq_msgs' not in globals():
     class TRobotiq(TGripper2F1):
       pass
