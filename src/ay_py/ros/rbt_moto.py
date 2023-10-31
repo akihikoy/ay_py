@@ -26,9 +26,11 @@ class TRobotMotoman(TMultiArmRobot):
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
     if self.Name.startswith('MotomanSIA10F'):
+      self.type_name= 'MotomanSIA10F'
       self.links['base']= ['base_link']
       self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_e', 'link_4_u', 'link_5_r', 'link_6_b', 'link_7_t']
     elif self.Name.startswith('MotomanMotoMINI'):
+      self.type_name= 'MotomanMotoMINI'
       self.links['base']= ['base_link']
       self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r', 'link_5_b', 'link_6_t']
     else:
@@ -79,7 +81,7 @@ class TRobotMotoman(TMultiArmRobot):
 
   '''Answer to a query q by {True,False}. e.g. Is('PR2').'''
   def Is(self, q):
-    if q in ('Motoman','Motoman_SIM',self.Name):  return True
+    if q in ('Motoman','Motoman_SIM',self.type_name,self.Name):  return True
     return super(TRobotMotoman,self).Is(q)
 
   @property
