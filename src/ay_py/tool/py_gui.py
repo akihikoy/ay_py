@@ -17,10 +17,10 @@ import subprocess
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
-  def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True):
+  def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True,term_width=400):
     QtGui.QWidget.__init__(self)
     self.pid= str(os.getpid())+'-'
-    self.InitUI(title,widgets,exit_command,size,horizontal,no_focus)
+    self.InitUI(title,widgets,exit_command,size,horizontal,no_focus,term_width)
 
   # Get a dict of option name: option content
   def ExpandOpt(self):
@@ -34,9 +34,10 @@ class TTerminalTab(QtGui.QWidget):
     if cmd[0]==':all':  return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
     return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
 
-  def InitUI(self,title,widgets,exit_command,size,horizontal,no_focus,grid_type='vhbox'):
+  def InitUI(self,title,widgets,exit_command,size,horizontal,no_focus,term_width,grid_type='vhbox'):
     # Set window size.
     self.resize(*size)
+    self.setMinimumSize(term_width, size[1])
     self.Processes= []
     self.TermProcesses= []
 
@@ -58,6 +59,8 @@ class TTerminalTab(QtGui.QWidget):
     self.setLayout(boxlayout)
 
     self.qttabs= self.MakeTabs()
+    #self.qttabs.setSizePolicy(QtGui.QSizePolicy.Fixed, QtGui.QSizePolicy.Expanding)
+    self.qttabs.setFixedWidth(term_width)
     boxlayout.addWidget(self.qttabs)
 
     # Grid layout
@@ -67,7 +70,24 @@ class TTerminalTab(QtGui.QWidget):
     #if grid_type=='grid':  grid= QtGui.QGridLayout()
     #elif grid_type=='vhbox':  grid= QtGui.QVBoxLayout()
     wg.setLayout(grid)
-    boxlayout.addWidget(wg)
+    #boxlayout.addWidget(wg)
+
+    #Scroll Area Properties
+    vbox2= QtGui.QVBoxLayout()
+    vbox2.addWidget(wg)
+    widget= QtGui.QWidget()
+    widget.setLayout(vbox2)
+    scroll= QtGui.QScrollArea()  # Scroll Area which contains the widgets, set as the centralWidget
+    scroll.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+    scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+    #scroll.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+    scroll.setWidgetResizable(True)
+    scroll.setWidget(widget)
+
+    vbox3= QtGui.QVBoxLayout()
+    vbox3.addWidget(scroll)
+
+    boxlayout.addLayout(vbox3)
 
     # Add widgets on grid
     for r,line in enumerate(self.Widgets):
@@ -161,6 +181,10 @@ class TTerminalTab(QtGui.QWidget):
     # Show window
     self.show()
     self.CreateTerminals()
+
+    ## Adjust the alignment of the terminal widget.
+    #for idx in range(self.qttabs.count()):
+      #self.qttabs.widget(idx).layout().setAlignment(QtCore.Qt.AlignTop)
 
   def MakeTabs(self):
     tabs= QtGui.QTabWidget()
