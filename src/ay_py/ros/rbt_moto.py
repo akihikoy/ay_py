@@ -25,12 +25,14 @@ class TRobotMotoman(TMultiArmRobot):
     #Motoman all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
-    if self.Name.startswith('Motoman_SIA10F'):
+    if self.Name.startswith('MotomanSIA10F'):
       self.links['base']= ['base_link']
       self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_e', 'link_4_u', 'link_5_r', 'link_6_b', 'link_7_t']
-    elif self.Name.startswith('Motoman_MotoMINI'):
+    elif self.Name.startswith('MotomanMotoMINI'):
       self.links['base']= ['base_link']
       self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r', 'link_5_b', 'link_6_t']
+    else:
+      CPrint(4,'Invalid Motoman name: {}'.format(self.Name))
     self.links['robot']= self.links['base'] + self.links['r_arm']
 
   '''Initialize (e.g. establish ROS connection).'''
@@ -107,10 +109,10 @@ class TRobotMotoman(TMultiArmRobot):
     arm: arm id, or None (==currarm).
     NOTE: This limit is used only when it is used explicitly.'''
   def JointVelLimits(self, arm=None):
-    if self.Name.startswith('Motoman_SIA10F'):
+    if self.Name.startswith('MotomanSIA10F'):
       #['s','l','e','u','r','b','t']
       return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8, 0.8]
-    elif self.Name.startswith('Motoman_MotoMINI'):
+    elif self.Name.startswith('MotomanMotoMINI'):
       return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8]
 
   '''Return range of gripper.
