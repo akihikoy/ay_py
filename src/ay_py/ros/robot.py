@@ -109,7 +109,7 @@ class TMultiArmRobot(TROSUtil):
     pass
 
   def DoF(self, arm=None):
-    return 7
+    return None
 
   '''Return limits (lower, upper) of joint angles.
     arm: arm id, or None (==currarm). '''

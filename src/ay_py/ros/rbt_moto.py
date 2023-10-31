@@ -99,6 +99,9 @@ class TRobotMotoman(TMultiArmRobot):
     if arm is None:  arm= self.Arm
     return self.joint_names[arm]
 
+  def DoF(self, arm=None):
+    return len(self.JointNames(arm=arm))
+
   '''Return limits (lower, upper) of joint angles.
     arm: arm id, or None (==currarm). '''
   def JointLimits(self, arm=None):
