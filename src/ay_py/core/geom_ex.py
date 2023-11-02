@@ -157,6 +157,7 @@ def PointInPolygon2D(points, point):
 # http://mathworld.wolfram.com/PolygonArea.html
 # http://stackoverflow.com/questions/451426/how-do-i-calculate-the-area-of-a-2d-polygon
 def PolygonArea(points):
+  points= list(points)  #Convert numpy.array/tuple to list.
   if len(points)<3:  return 0.0
   return 0.5*abs(sum(p0[0]*p1[1]-p1[0]*p0[1]
                      for p0,p1 in zip(points, points[1:]+[points[0]])))
