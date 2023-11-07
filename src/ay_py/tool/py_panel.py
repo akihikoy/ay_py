@@ -728,14 +728,18 @@ class TSimplePanel(QtGui.QWidget):
     param= MergeDict2(copy.deepcopy(self.param_common), {
       'options': [],
       'index': 0,
+      'text': None,
+      'editable': False,
       'size_adjust_policy': None,  #'all_contents','first_content','min_content'
       'onactivated': None,
       }, w_param)
     cmbbx= QtGui.QComboBox(self)
-    cmbbx.setFocusPolicy(QtCore.Qt.NoFocus)
+    #cmbbx.setFocusPolicy(QtCore.Qt.NoFocus)
     for option in param['options']:
       cmbbx.addItem(option)
     if param['index'] is not None:  cmbbx.setCurrentIndex(param['index'])
+    if param['text'] is not None:  cmbbx.setCurrentText(param['text'])
+    if param['editable'] is not None:  cmbbx.setEditable(param['editable'])
     if param['size_adjust_policy'] is not None:
       policy= {'all_contents':  QtGui.QComboBox.AdjustToContents,
                'first_content': QtGui.QComboBox.AdjustToContentsOnFirstShow,
@@ -756,7 +760,7 @@ class TSimplePanel(QtGui.QWidget):
       'ontextchanged': None,
       }, w_param)
     edit= QtGui.QLineEdit(self)
-    edit.setText(param['text'])
+    if param['text'] is not None:  edit.setText(param['text'])
     if param['validator']=='int':    edit.setValidator(QtGui.QIntValidator())
     if param['validator']=='float':  edit.setValidator(QtGui.QDoubleValidator())
     if param['ontextchanged']:  edit.textChanged.connect(lambda _,edit=edit:param['ontextchanged'](self,edit))
@@ -1025,6 +1029,12 @@ if __name__=='__main__':
         'index':1,
         'onactivated': lambda w,obj:(Print('Selected',obj.currentText()),
                                      w.widgets['edit_cmb1other'].setEnabled(obj.currentText()=='Other'))}),
+    'cmb2': (
+      'combobox',{
+        'options':('Text-0','Text-1','Text-2'),
+        'index':None,
+        'editable':True,
+        'onactivated': lambda w,obj:Print('Selected',obj.currentText())  }),
     'edit_cmb1other': (
       'lineedit',{
         'validator':'int',
@@ -1135,7 +1145,7 @@ if __name__=='__main__':
               ('boxv',None,
                 (
                   ('grid',None, (('btn1',0,0),('btn2',0,1,1,2),
-                                  ('spacer1',1,0),('cmb1',1,1),('edit_cmb1other',1,2)) ),
+                                  ('cmb2',1,0),('cmb1',1,1),('edit_cmb1other',1,2)) ),
                   ('boxh',None, ('radbox1','edit_radbox1other') ),
                   ('boxv',None, ('radbox2','slider_radbox2other') ),
                   ('boxh',None, ('btn_totab20', 'btn_totab30') ),
