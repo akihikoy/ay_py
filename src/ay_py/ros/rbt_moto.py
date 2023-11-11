@@ -33,6 +33,10 @@ class TRobotMotoman(TMultiArmRobot):
       self.type_name= 'MotomanMotoMINI'
       self.links['base']= ['base_link']
       self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r', 'link_5_b', 'link_6_t']
+    elif self.Name.startswith('MotomanSG650'):
+      self.type_name= 'MotomanSG650'
+      self.links['base']= ['base_link']
+      self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r']
     else:
       CPrint(4,'Invalid Motoman name: {}'.format(self.Name))
     self.links['robot']= self.links['base'] + self.links['r_arm']
@@ -119,6 +123,8 @@ class TRobotMotoman(TMultiArmRobot):
       return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8, 0.8]
     elif self.Name.startswith('MotomanMotoMINI'):
       return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8]
+    elif self.Name.startswith('MotomanSG650'):
+      return [1.0, 1.0, 1.0, 1.0]
 
   '''Return range of gripper.
     arm: arm id, or None (==currarm). '''
