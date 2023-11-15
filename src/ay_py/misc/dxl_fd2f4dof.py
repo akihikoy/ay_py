@@ -7,10 +7,11 @@
 from dxl_mikata import *
 
 class TFD2F4DoF(TMikata):
-  def __init__(self, dev='/dev/ttyUSB0'):
+  def __init__(self, dev='/dev/ttyUSB0', model='2022'):
     self.dev= dev
     self.baudrate= 2e6
     self.dxl_type= ['XM430-W350']*4
+    if model=='2023':  self.dxl_type= ['XH430-V350']*4
     self.dxl_ids= [1,2,3,4]
     self.joint_names= ['joint_1', 'joint_2', 'joint_3', 'joint_4']
     self.dxl= {}  #{joint_name:TDynamixel1}
