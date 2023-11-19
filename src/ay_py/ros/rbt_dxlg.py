@@ -22,6 +22,7 @@ class TDxlGripper(TGripper2F1):
 
     #FIXME:gripper_type and finger_type can be obtained from a topic from node_name,
     #  which will reduce the configuration complexity without loss of generality.
+    #TODO:--> cf. rbt_geh6000il which uses rosparam to aquire the gripper configuration.
 
     self.gripper_type= gripper_type
     self.node_name= node_name
