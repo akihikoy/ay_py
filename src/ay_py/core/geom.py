@@ -265,6 +265,8 @@ def TransformLeftInv(x_l,x_r):
     p= np.dot(Rl.T, (pr-pl))
     R= np.dot(Rl.T, Rr)
     return PosRotToX(p,R)
+  else:
+    raise Exception('TransformLeftInv: Invalid x_r size: {}'.format(len(x_r)))
 
 #List version of TransformLeftInv.
 #Equivalent to [TransformLeftInv(x_l,x_r) for x_r in x_r_list]
@@ -301,12 +303,15 @@ def Transform(x2, x1):
       return Vec(x2)+Vec(x1)
     if len(x1)==4:  #i.e. [quaternion]
       raise Exception('invalid Transform: point * quaternion')
+    raise Exception('invalid Transform: For x2 size ({}), invalid x1 size ({}) '.format(len(x2), len(x1)))
 
   if len(x2)==7:
     p2,R2= XToPosRot(x2)
   elif len(x2)==4:  #i.e. [quaternion]
     p2= Vec([0.0,0.0,0.0])
     R2= QToRot(x2)
+  else:
+    raise Exception('invalid Transform: Invalid x2 and x1 sizes ({}, {}) '.format(len(x2), len(x1)))
 
   if len(x1)==7:
     p1,R1= XToPosRot(x1)
