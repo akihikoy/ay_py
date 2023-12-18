@@ -36,7 +36,7 @@ class TRobotMotoman(TMultiArmRobot):
     elif self.Name.startswith('MotomanSG650'):
       self.type_name= 'MotomanSG650'
       self.links['base']= ['base_link']
-      self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r']
+      self.links['r_arm']= ['link_1_s', 'link_1_s_cable', 'link_2_l', 'link_3_u', 'link_4_r']
     else:
       CPrint(4,'Invalid Motoman name: {}'.format(self.Name))
     self.links['robot']= self.links['base'] + self.links['r_arm']
