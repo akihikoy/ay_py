@@ -41,6 +41,9 @@ class TRobotMotoman(TMultiArmRobot):
       CPrint(4,'Invalid Motoman name: {}'.format(self.Name))
     self.links['robot']= self.links['base'] + self.links['r_arm']
 
+    self.q_curr= None
+    self.dq_curr= None
+
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= False
