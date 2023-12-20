@@ -4,6 +4,7 @@ import rospy
 import actionlib as al
 import geometry_msgs.msg
 import trajectory_msgs.msg
+import actionlib_msgs.msg
 import dynamic_reconfigure.client
 import tf
 
@@ -20,6 +21,8 @@ class ROSError(Exception):
   def __repr__(self):
     return 'ROSError({kind},{msg})'.format(kind=repr(self.Kind), msg=repr(self.Msg))
 
+ACTC_STATE_TO_STR= {getattr(actionlib_msgs.msg.GoalStatus,key):key for key in ('PENDING', 'ACTIVE', 'RECALLED', 'REJECTED', 'PREEMPTED', 'ABORTED', 'SUCCEEDED', 'LOST')}
+
 '''Block the execution of action client.
   act_client: action client that is executing an action.
   blocking: False: not block, True: wait until action ends, 'time': wait until duration.
@@ -35,11 +38,13 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02):
       time.sleep(dt)
     return
   if blocking==True:
-    if not act_client.wait_for_result():  #timeout=rospy.Duration(duration)
+    if not act_client.wait_for_result(timeout=rospy.Duration(duration+1.0)):
       raise ROSError('ctrl','BlockAction: act_client.wait_for_result finished anomaly: [{}].'.format(act_client.get_result()))
     res= act_client.get_result()
     if res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
       raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}].'.format(res))
+    if act_client.get_state()!=actionlib_msgs.msg.GoalStatus.SUCCEEDED:
+      raise ROSError('ctrl','BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
     return
   raise Exception('BlockAction: invalid blocking type: %r'%blocking)
 
