@@ -22,6 +22,9 @@ class TRobotMotoman(TMultiArmRobot):
     self.joint_names= [[]]
     self.joint_names[0]= rospy.get_param('controller_joint_names')
 
+    #Tolerance of motion (FollowQTraj).  Increase this value when the payload is large.
+    self.MotionTol= 0.05
+
     #Motoman all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
@@ -253,6 +256,19 @@ class TRobotMotoman(TMultiArmRobot):
     with self.control_locker:
       self.actc.traj.send_goal(goal)
       BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
+      if blocking!=False:
+        q_finished= self.Q(arm=arm)
+        q_err= np.array(q_traj[-1])-q_finished
+        if np.max(np.abs(q_err)) > self.MotionTol:
+          CPrint(4,'TRobotMotoman.FollowQTraj: Unacceptable error after movement')
+          CPrint(4,'  Info:q_traj[-1]:',q_traj[-1])
+          CPrint(4,'  Info:q_finished:',q_finished)
+          CPrint(4,'  Info:q_err:',q_err.tolist())
+          CPrint(4,'  Info:q_traj:',q_traj)
+          CPrint(4,'  Info:t_traj:',t_traj)
+          CPrint(4,'  Info:dq_traj:',dq_traj)
+          CPrint(4,'Action client result:',self.actc.traj.get_result()),'(cf. control_msgs/FollowJointTrajectoryActionResult)'
+          raise ROSError('ctrl','TRobotMotoman.FollowQTraj: Unacceptable error after movement')
 
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''
