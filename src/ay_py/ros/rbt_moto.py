@@ -36,6 +36,14 @@ class TRobotMotoman(TMultiArmRobot):
       self.type_name= 'MotomanMotoMINI'
       self.links['base']= ['base_link']
       self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r', 'link_5_b', 'link_6_t']
+    elif self.Name.startswith('MotomanGP7'):
+      self.type_name= 'MotomanGP7'
+      self.links['base']= ['base_link']
+      self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r', 'link_5_b', 'link_6_t']
+    elif self.Name.startswith('MotomanHC10SDTP'):
+      self.type_name= 'MotomanHC10SDTP'
+      self.links['base']= ['base_link']
+      self.links['r_arm']= ['link_1_s', 'link_2_l', 'link_3_u', 'link_4_r', 'link_5_b', 'link_6_t']
     elif self.Name.startswith('MotomanSG650'):
       self.type_name= 'MotomanSG650'
       self.links['base']= ['base_link']
@@ -128,6 +136,10 @@ class TRobotMotoman(TMultiArmRobot):
       #['s','l','e','u','r','b','t']
       return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8, 0.8]
     elif self.Name.startswith('MotomanMotoMINI'):
+      return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8]
+    elif self.Name.startswith('MotomanGP7'):
+      return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8]
+    elif self.Name.startswith('MotomanHC10SDTP'):
       return [0.5, 0.5, 0.8, 0.8, 0.8, 0.8]
     elif self.Name.startswith('MotomanSG650'):
       return [1.0, 1.0, 1.0, 1.0]
