@@ -8,6 +8,7 @@ import actionlib
 import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
+import industrial_msgs.msg
 import copy
 
 from robot import *
@@ -52,8 +53,12 @@ class TRobotMotoman(TMultiArmRobot):
       CPrint(4,'Invalid Motoman name: {}'.format(self.Name))
     self.links['robot']= self.links['base'] + self.links['r_arm']
 
+    #Thread lockers for robot_status:
+    self.robot_status_locker= threading.RLock()
+
     self.q_curr= None
     self.dq_curr= None
+    self.robot_status= None
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -68,6 +73,8 @@ class TRobotMotoman(TMultiArmRobot):
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
+
+    ra(self.AddSub('robot_status', '/robot_status', industrial_msgs.msg.RobotStatus, self.RobotStatusCallback))
 
     #self.robotiq= TRobotiq()  #Robotiq controller
     ##self.robotiq= TSimGripper2F1(('Robotiq',),pos_range=[0.0,0.0855])
@@ -101,6 +108,18 @@ class TRobotMotoman(TMultiArmRobot):
   def Is(self, q):
     if q in ('Motoman','Motoman_SIM',self.type_name,self.Name):  return True
     return super(TRobotMotoman,self).Is(q)
+
+  #Check if the robot is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    if self.is_sim:  return True
+    with self.robot_status_locker:
+      return all((self.robot_status.mode.val==industrial_msgs.msg.RobotMode.AUTO,
+                  self.robot_status.e_stopped.val==industrial_msgs.msg.TriState.FALSE,
+                  self.robot_status.drives_powered.val==industrial_msgs.msg.TriState.TRUE,
+                  self.robot_status.in_error.val==industrial_msgs.msg.TriState.FALSE,))
+
+  def PrintStatus(self):
+    print 'robot_status: {}'.format(self.robot_status)
 
   @property
   def NumArms(self):
@@ -160,6 +179,10 @@ class TRobotMotoman(TMultiArmRobot):
       self.x_curr= msg
       self.q_curr= self.x_curr.position
       self.dq_curr= self.x_curr.velocity
+
+  def RobotStatusCallback(self, msg):
+    with self.robot_status_locker:
+      self.robot_status= msg
 
   '''Return joint angles of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
@@ -249,6 +272,10 @@ class TRobotMotoman(TMultiArmRobot):
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
     assert(len(q_traj)==len(t_traj))
     if arm is None:  arm= self.Arm
+
+    if not self.IsNormal():
+      self.PrintStatus()
+      raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
     self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
 
