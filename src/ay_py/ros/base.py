@@ -26,20 +26,24 @@ ACTC_STATE_TO_STR= {getattr(actionlib_msgs.msg.GoalStatus,key):key for key in ('
 '''Block the execution of action client.
   act_client: action client that is executing an action.
   blocking: False: not block, True: wait until action ends, 'time': wait until duration.
-  duration: duration in seconds.
+  duration: duration of the action in seconds.
   accuracy: accuracy to check duration.
+  timeout_offset: offset from duration for timeout in seconds (timeout=duration+offset).
 '''
-def BlockAction(act_client, blocking, duration, accuracy=0.02):
+def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.5):
   if blocking==False:  return
   if blocking=='time':
     end_time= rospy.Time.now() + rospy.Duration(duration)
     dt= duration*accuracy
     while rospy.Time.now() < end_time:
+      if act_client.get_state()==actionlib_msgs.msg.GoalStatus.SUCCEEDED:  break
+      if act_client.get_state() not in (actionlib_msgs.msg.GoalStatus.PENDING, actionlib_msgs.msg.GoalStatus.ACTIVE):
+        raise ROSError('ctrl','BlockAction: act_client state is not normal: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
       time.sleep(dt)
     return
   if blocking==True:
-    if not act_client.wait_for_result(timeout=rospy.Duration(duration+1.0)):
-      raise ROSError('ctrl','BlockAction: act_client.wait_for_result finished anomaly: [{}].'.format(act_client.get_result()))
+    if not act_client.wait_for_result(timeout=rospy.Duration(duration+timeout_offset)):
+      raise ROSError('ctrl','BlockAction: act_client.wait_for_result finished anomaly: [result:{}, state:{}/{}].'.format(act_client.get_result(), act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
     res= act_client.get_result()
     if res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
       raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}].'.format(res))
