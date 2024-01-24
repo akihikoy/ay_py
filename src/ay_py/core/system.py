@@ -33,7 +33,6 @@ class TKBHit(object):
   def __init__(self,activate=True):
     self.is_curses_term= False
     self.termios= termios  #Ensure to use termios in __del__
-    self.ask_timeout= 6000  #Timeout in Ask* functions.
 
     if activate:
       self.Activate()
@@ -130,32 +129,37 @@ class TKBHit(object):
     return None
 
   #KBHit compatible AskYesNo.
-  def AskYesNo(self):
+  def AskYesNo(self, timeout=6000, repeat_at_timeout=True):
     if self.IsActive():
       while 1:
         sys.stdout.write('  (y|n) > ')
         sys.stdout.flush()
-        if self.CheckKBHit(self.ask_timeout):
+        if self.CheckKBHit(timeout):
           ans= self.GetChE()
           sys.stdout.write('\n')
           if ans=='y' or ans=='Y':  return True
           elif ans=='n' or ans=='N':  return False
+        sys.stdout.write('\n')
+        if not repeat_at_timeout:  return None
     else:
       return AskYesNo()
 
   #KBHit compatible AskGen.
   #Usage: AskGen('y','n','c')
-  def AskGen(self,*argv):
+  #       AskGen('y','n','c',timeout=3,repeat_at_timeout=False)
+  def AskGen(self, *argv, **kwargs):
     assert(len(argv)>0)
     if self.IsActive():
       while 1:
         sys.stdout.write('  (%s) > ' % '|'.join(argv))
         sys.stdout.flush()
-        if self.CheckKBHit(self.ask_timeout):
+        if self.CheckKBHit(kwargs.get('timeout',6000)):
           ans= self.GetChE()
           sys.stdout.write('\n')
           for a in argv:
             if ans==a:  return a
+        sys.stdout.write('\n')
+        if not kwargs.get('repeat_at_timeout',True):  return None
     else:
       return AskGen(*argv)
 
@@ -173,16 +177,16 @@ def KBHitOnce():
   return None
 
 #KBHit version of AskYesNo (does not wait for pressing return key).
-def KBHAskYesNo():
+def KBHAskYesNo(timeout=6000, repeat_at_timeout=True):
   sys.stdout.flush()
   with TKBHit() as kbhit:
-    return kbhit.AskYesNo()
+    return kbhit.AskYesNo(timeout=timeout, repeat_at_timeout=repeat_at_timeout)
   return None
 
 #KBHit version of AskGen (does not wait for pressing return key).
-def KBHAskGen(*argv):
+def KBHAskGen(*argv, **kwargs):
   sys.stdout.flush()
   with TKBHit() as kbhit:
-    return kbhit.AskGen(*argv)
+    return kbhit.AskGen(*argv, **kwargs)
   return None
 
