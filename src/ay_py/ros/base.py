@@ -43,8 +43,10 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
     return
   if blocking==True:
     if not act_client.wait_for_result(timeout=rospy.Duration(duration+timeout_offset)):
-      raise ROSError('ctrl','BlockAction: act_client.wait_for_result finished anomaly: [result:{}, state:{}/{}].'.format(act_client.get_result(), act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
+      raise ROSError('ctrl','BlockAction: act_client.wait_for_result finished anomaly: [state:{}/{}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
     res= act_client.get_result()
+    if res is None:
+      raise ROSError('ctrl','BlockAction: act_client.wait_for_result could not get a result within timeout (duration+timeout_offset={}s) [state:{}/{}].'.format(duration+timeout_offset, act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
     if res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
       raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}].'.format(res))
     if act_client.get_state()!=actionlib_msgs.msg.GoalStatus.SUCCEEDED:
