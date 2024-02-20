@@ -116,6 +116,7 @@ class TRobotMotoman(TMultiArmRobot):
       return all((self.robot_status.mode.val==industrial_msgs.msg.RobotMode.AUTO,
                   self.robot_status.e_stopped.val==industrial_msgs.msg.TriState.FALSE,
                   self.robot_status.drives_powered.val==industrial_msgs.msg.TriState.TRUE,
+                  self.robot_status.motion_possible.val==industrial_msgs.msg.TriState.TRUE,
                   self.robot_status.in_error.val==industrial_msgs.msg.TriState.FALSE,))
 
   def PrintStatus(self):
