@@ -100,6 +100,14 @@ def SetupDynamicReconfigureClient(name, time_out=None):
     return None
 
 
+def TopicArrives(port_name, port_type, time_out=5.0):
+  try:
+    res= rospy.wait_for_message(port_name, port_type, time_out)
+    return res is not None
+  except rospy.ROSException:
+    return False
+
+
 #Convert p to geometry_msgs/Point
 def PToGPoint(p):
   point= geometry_msgs.msg.Point()
