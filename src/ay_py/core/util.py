@@ -537,7 +537,7 @@ def DumpYAML(d, except_cnv=lambda y:y, directive=None, correct_indent=True, to_s
 #If to_std_type, the input dictionary is converted to regular types by ToStdType with except_cnv.
 def SaveYAML(d, file_name, except_cnv=lambda y:y, interactive=True, directive=None, correct_indent=True, to_std_type=True):
   with OpenW(file_name,interactive=interactive) as fp:
-    fp.write(DumpYAML(d))
+    fp.write(DumpYAML(d, except_cnv=except_cnv, directive=directive, correct_indent=correct_indent, to_std_type=to_std_type))
 
 #Dumper class to correct the list indentation issue of the original Dumper.
 class Dumper_IndentPlus(yaml_Dumper):
