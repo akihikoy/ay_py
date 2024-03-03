@@ -11,14 +11,6 @@ import six.moves.cPickle as pickle
 import numpy as np
 from ..core.util import TContainer
 
-def GetCameraProjectionMatrix(cam_info_topic='/camera/aligned_depth_to_color/camera_info'):
-  try:
-    cam_info= rospy.wait_for_message(cam_info_topic, sensor_msgs.msg.CameraInfo, 5.0)
-    proj_mat= np.array(cam_info.P).reshape(3,4) #get camera projection matrix from ros topic
-    return proj_mat
-  except (rospy.ROSException, rospy.ROSInterruptException):
-    raise Exception('Failed to read topic: {cam_info_topic}'.format(cam_info_topic=cam_info_topic))
-
 #Return an empty container object to store RealSense observation.
 #with_helper: Return a helper container together,
 #    which includes a converter from ROS message to images.
