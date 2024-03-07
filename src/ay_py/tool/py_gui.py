@@ -9,11 +9,14 @@
 #         Option (radio button) interface is added.
 #\date    May.30, 2019
 #         Option (combobox) interface is added.
+#\date    Mar.7, 2024
+#         Added a method to save and load options (:radio and :cmd) into/from a file.
 #Requirements: tmux rxvt-unicode-256color
 
 import sys, os
 import signal
 import subprocess
+import yaml
 from PyQt4 import QtCore,QtGui,QtTest
 
 class TTerminalTab(QtGui.QWidget):
@@ -24,14 +27,37 @@ class TTerminalTab(QtGui.QWidget):
 
   # Get a dict of option name: option content
   def ExpandOpt(self):
-    opt= {name:rbgroup.checkedButton().text() for name,rbgroup in self.RBOptions.iteritems()}
-    opt.update({name:cmbbx.currentText() for name,cmbbx in self.CBOptions.iteritems()})
+    opt= {name:str(rbgroup.checkedButton().text()) for name,rbgroup in self.RBOptions.iteritems()}
+    opt.update({name:str(cmbbx.currentText()) for name,cmbbx in self.CBOptions.iteritems()})
     return opt
+
+  # Save the option dict as a yaml file
+  def SaveOpts(self, file_name):
+    with open(file_name,'w') as fp:
+      fp.write(yaml.dump(self.ExpandOpt()))
+    print 'Options are saved into {}'.format(file_name)
+
+  # Load option dict from a yaml file and update the UI.
+  def LoadOpts(self, file_name):
+    with open(file_name) as fp:
+      opt= yaml.load(fp.read())
+    #print 'debug',opt
+    for name,value in opt.iteritems():
+      if name in self.RBOptions:
+        for radbtn in self.RBOptions[name].buttons():
+          if radbtn.text()==value:
+            radbtn.setChecked(True)
+            break
+      elif name in self.CBOptions:
+        idx= self.CBOptions[name].findText(value, QtCore.Qt.MatchFixedString)
+        self.CBOptions[name].setCurrentIndex(idx)
+    print 'Loaded options from {}'.format(file_name)
 
   def CmdToLambda(self,term,cmd):
     if cmd==':close':  return self.close
     if len(cmd)==0:  return lambda:None
     if cmd[0]==':all':  return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
+    if cmd[0]==':saveopts':  return lambda:self.SaveOpts(cmd[1].format(**self.ExpandOpt()))
     return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
 
   def InitUI(self,title,widgets,exit_command,size,horizontal,no_focus,term_width,grid_type='vhbox'):
@@ -273,13 +299,16 @@ class TTerminalTab(QtGui.QWidget):
     else:
       event.ignore()
 
-def RunTerminalTab(title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True,start=True):
+def RunTerminalTab(title, widgets, exit_command, 
+                   size=(800,400), horizontal=True, no_focus=True, start=True,
+                   init_option_file=None):
   app= QtGui.QApplication(sys.argv)
   win= TTerminalTab(title,widgets,exit_command,size=size,horizontal=horizontal,no_focus=no_focus)
   signal.signal(signal.SIGINT, lambda signum,frame,win=win: (win.Exit(),QtGui.QApplication.quit()) )
   timer= QtCore.QTimer()
   timer.start(500)  # You may change this if you wish.
   timer.timeout.connect(lambda: None)  # Let the interpreter run each 500 ms.
+  if init_option_file is not None:  win.LoadOpts(init_option_file)
   if start:  StartApp(app)
   return app,win
 
@@ -288,17 +317,22 @@ def StartApp(app):
 
 if __name__=='__main__':
   E= 'Enter'
+  option_file= '/tmp/opts.yaml'
   widgets= [
     ('main1',[
       ('Init',[':all','ros',E,'norobot',E]),
+      ('KillAll',[':all',E,'C-c']),
+      ('SaveOpts',[':saveopts',option_file]),
       ('Exit',':close') ]),
     ('s1',[
       (':pair', ('rviz',['rviz',E]),
                 ('kill',['C-c']) )  ]),
+    ('LS_Dir',':radio',['./','/tmp/','/home/']),
+    ('LS_Opt',':cmb',['','-a','-rtl']),
     ('s2',[
-      ('ls',('ls',E)),
+      ('ls',('ls {LS_Opt} {LS_Dir}',E)),
       ('nodes',['rostopic list',E]),
       ('topics',['rosnode list',E]) ]),
     ]
   exit_command= [E,'C-c']
-  RunTerminalTab('Sample Launcher',widgets,exit_command)
+  RunTerminalTab('Sample Launcher',widgets,exit_command,init_option_file=option_file)
