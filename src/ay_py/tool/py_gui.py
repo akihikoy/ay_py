@@ -39,6 +39,9 @@ class TTerminalTab(QtGui.QWidget):
 
   # Load option dict from a yaml file and update the UI.
   def LoadOpts(self, file_name):
+    if not os.path.exists(file_name):
+      print 'Option file does not exist: {}'.format(file_name)
+      return
     with open(file_name) as fp:
       opt= yaml.load(fp.read())
     #print 'debug',opt
