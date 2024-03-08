@@ -9,7 +9,7 @@ import random
 from scipy.spatial import ConvexHull as scipy_ConvexHull
 from scipy.spatial.qhull import QhullError as scipy_QhullError
 from scipy.optimize import minimize as scipy_minimize
-from cv2 import minAreaRect as cv2_minAreaRect
+from cv2 import minAreaRect as cv2_minAreaRect, fillPoly as cv2_fillPoly, bitwise_and as cv2_bitwise_and
 from .util import *
 from .geom import *
 
@@ -663,6 +663,31 @@ def ClipPolygon(subject_polygon, clip_polygon):
       s = e
     cp1 = cp2
   return(output_list)
+
+#Checks if two polygons (points1, points2) overlap.
+#  NOTE: ClipPolygon based on Sutherland-Hodgman-Algorithm is used,
+#    which assumes points2 to be a convex polygon (points1 is an arbitrary polygon).
+def PolygonOverlap(points1, points2):
+  points2= ConvexHull(points2)
+  intersection= ClipPolygon(points1, points2)
+  return PolygonArea(intersection)>0
+
+#Checks if two polygons (points1, points2) overlap with OpenCV.
+#  NOTE: Polygons are converted to polygons in images, which looses the accuracy.
+#    The accuracy depends on resolution, but larger resolution increases the computation cost.
+#  Sometimes this is faster than PolygonOverlap especially when the size of polygons are large.
+def PolygonOverlapCV(points1, points2, resolution=100):
+  pts= np.vstack((points1, points2))
+  offset= np.min(pts,axis=0)
+  scale= resolution/(np.max(pts,axis=0)-offset)
+  points1_int= ((points1-offset) * scale).astype(np.int32)
+  points2_int= ((points2-offset) * scale).astype(np.int32)
+  points1_img= np.zeros((resolution,resolution), dtype='uint8')
+  points2_img= np.zeros((resolution,resolution), dtype='uint8')
+  cv2_fillPoly(points1_img, [points1_int.reshape(-1,1,2)], 1)
+  cv2_fillPoly(points2_img, [points2_int.reshape(-1,1,2)], 1)
+  intersection= cv2_bitwise_and(points1_img, points2_img)
+  return np.any(intersection>0)
 
 #Fitting a circle to the data XY, return the center [x,y] and the radius
 #based on: http://people.cas.uab.edu/~mosya/cl/HyperSVD.m
