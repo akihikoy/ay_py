@@ -472,7 +472,22 @@ class TPCA_SVD(TPCA):
     if calc_projected:
       self.Projected= np.dot(data, self.EVecs)
 
-#Centroid of a polygon
+#Centroid of a polygon in 2D
+#ref. http://en.wikipedia.org/wiki/Centroid
+def PolygonCentroid2D(points):
+  if len(points)==0:  return None
+  if len(points)==1:  return points[0]
+  assert(len(points[0])==2)
+  xy= np.array(points)
+  xy= np.vstack((xy,[xy[0]]))  #Extend so that xy[N]==xy[0]
+  # Area calculation
+  A= 0.5 * np.sum(xy[:-1, 0] * xy[1:, 1] - xy[1:, 0] * xy[:-1, 1])
+  # Centroid calculations
+  Cx= np.sum((xy[:-1, 0] + xy[1:, 0]) * (xy[:-1, 0] * xy[1:, 1] - xy[1:, 0] * xy[:-1, 1])) / (6. * A)
+  Cy= np.sum((xy[:-1, 1] + xy[1:, 1]) * (xy[:-1, 0] * xy[1:, 1] - xy[1:, 0] * xy[:-1, 1])) / (6. * A)
+  return [Cx,Cy]
+
+#Centroid of a polygon (3D)
 #ref. http://en.wikipedia.org/wiki/Centroid
 def PolygonCentroid(points, pca_default=None, only_centroid=True):
   if len(points)==0:  return None
@@ -483,11 +498,12 @@ def PolygonCentroid(points, pca_default=None, only_centroid=True):
   else:
     pca= pca_default
   xy= pca.Projected[:,[0,1]]
-  N= len(xy)
   xy= np.vstack((xy,[xy[0]]))  #Extend so that xy[N]==xy[0]
-  A= 0.5*sum([xy[n,0]*xy[n+1,1] - xy[n+1,0]*xy[n,1] for n in range(N)])
-  Cx= sum([(xy[n,0]+xy[n+1,0])*(xy[n,0]*xy[n+1,1]-xy[n+1,0]*xy[n,1]) for n in range(N)]) / (6.0*A)
-  Cy= sum([(xy[n,1]+xy[n+1,1])*(xy[n,0]*xy[n+1,1]-xy[n+1,0]*xy[n,1]) for n in range(N)]) / (6.0*A)
+  # Area calculation
+  A= 0.5 * np.sum(xy[:-1, 0] * xy[1:, 1] - xy[1:, 0] * xy[:-1, 1])
+  # Centroid calculations
+  Cx= np.sum((xy[:-1, 0] + xy[1:, 0]) * (xy[:-1, 0] * xy[1:, 1] - xy[1:, 0] * xy[:-1, 1])) / (6. * A)
+  Cy= np.sum((xy[:-1, 1] + xy[1:, 1]) * (xy[:-1, 0] * xy[1:, 1] - xy[1:, 0] * xy[:-1, 1])) / (6. * A)
   centroid= pca.Reconstruct([Cx,Cy],[0,1])
   if only_centroid:  return centroid
   else:  return centroid, [Cx,Cy]
