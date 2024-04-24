@@ -26,6 +26,17 @@ class TRobotMotoman(TMultiArmRobot):
     #Tolerance of motion (FollowQTraj).  Increase this value when the payload is large.
     self.MotionTol= 0.05
 
+    #Motoman trajectory controller specific configurations:
+    #Number of retries the goal trajectory sending with updating the first goal poing.
+    self.NumTrajCtrlRetry= 10
+    #Duration of (interval between) each trajectory send_goal retry.
+    self.DtTrajCtrlRetry= 0.005
+    #Duration (interval) to check the trajectory action client state.
+    self.DtTrajActCStateMonitor= 0.001
+    #Duration to sleep while trajectory ACTIVE before trajectory ABORTED.
+    #  NOTE: If trajectory abort error happens with the first point mismatch error (3011), increase this value.
+    self.DtTrajActiveBeforeAbort= 0.5
+
     #Motoman all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
@@ -287,14 +298,52 @@ class TRobotMotoman(TMultiArmRobot):
 
     dq_traj= QTrajToDQTraj(q_traj, t_traj)
 
-    #copy q_traj, t_traj to goal
-    goal= control_msgs.msg.FollowJointTrajectoryGoal()
-    goal.goal_time_tolerance= rospy.Time(0.1)
-    goal.trajectory.joint_names= self.joint_names[arm]
-    goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
+    for i_retry in range(self.NumTrajCtrlRetry+1):
+      #copy q_traj, t_traj to goal
+      goal= control_msgs.msg.FollowJointTrajectoryGoal()
+      goal.goal_time_tolerance= rospy.Time(0.1)
+      goal.trajectory.joint_names= self.joint_names[arm]
+      goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
+
+      with self.control_locker:
+        self.actc.traj.send_goal(goal)
+
+      #Wait for the change of self.actc.traj state:
+      t_wait_state_start= rospy.Time.now()
+      while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.PENDING:
+        #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
+        rospy.sleep(self.DtTrajActCStateMonitor)
+        if (rospy.Time.now()-t_wait_state_start).to_sec()>1.0:
+          print 'Timeout. action_client_state is PENDING for a while.'
+          break
+      #Wait during the self.actc.traj state==ACTIVE:
+      #  As this check takes time (self.DtTrajActiveBeforeAbort), it is done only when blocking!=False
+      if blocking!=False:
+        t_wait_state_start= rospy.Time.now()
+        while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ACTIVE:
+          #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
+          if not self.IsNormal():
+            self.PrintStatus()
+            raise Exception('FollowQTraj: Stopped as the robot is not in normal state (1).')
+          rospy.sleep(self.DtTrajActCStateMonitor)
+          if (rospy.Time.now()-t_wait_state_start).to_sec()>self.DtTrajActiveBeforeAbort:
+            #print 'DEBUG: Stop ACTIVE waiting.'
+            break
+        #print 'DEBUG: Waited during ACTIVE for {}s'.format((rospy.Time.now()-t_wait_state_start).to_sec())
+      #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
+      #In case the trajectory aborted, it can be guessed as the first position mismatch.
+      #Retrying after updating the first point by the current position.
+      if self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ABORTED:
+        if not self.IsNormal():
+          self.PrintStatus()
+          raise Exception('FollowQTraj: Stopped as the robot is not in normal state (2).')
+        print '{}: Trajectory aborted. Retrying by updating the first point to the current joint angles ({}).'.format(self.Name, i_retry)
+        rospy.sleep(self.DtTrajCtrlRetry)
+        q_traj[0]= self.Q(arm=arm)
+      else:
+        break
 
     with self.control_locker:
-      self.actc.traj.send_goal(goal)
       BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
       if blocking!=False:
         q_finished= self.Q(arm=arm)
