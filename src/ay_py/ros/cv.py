@@ -21,9 +21,9 @@ def GetImageEncoding(img_topic, convert_cv=False, time_out=5.0):
 
 
 #Get a camera projection matrix from a ROS topic.
-def GetCameraProjectionMatrix(cam_info_topic='/camera/aligned_depth_to_color/camera_info'):
+def GetCameraProjectionMatrix(cam_info_topic='/camera/aligned_depth_to_color/camera_info', time_out=5.0):
   try:
-    cam_info= rospy.wait_for_message(cam_info_topic, sensor_msgs.msg.CameraInfo, 5.0)
+    cam_info= rospy.wait_for_message(cam_info_topic, sensor_msgs.msg.CameraInfo, time_out)
     proj_mat= np.array(cam_info.P).reshape(3,4) #get camera projection matrix from ros topic
     return proj_mat
   except (rospy.ROSException, rospy.ROSInterruptException):
@@ -32,9 +32,9 @@ def GetCameraProjectionMatrix(cam_info_topic='/camera/aligned_depth_to_color/cam
 
 
 #Get detailed camera parameters (P,K,D,R) from a ROS topic.
-def GetCameraInfo(cam_info_topic='/camera/aligned_depth_to_color/camera_info'):
+def GetCameraInfo(cam_info_topic='/camera/aligned_depth_to_color/camera_info', time_out=5.0):
   try:
-    cam_info= rospy.wait_for_message(cam_info_topic, sensor_msgs.msg.CameraInfo, 5.0)
+    cam_info= rospy.wait_for_message(cam_info_topic, sensor_msgs.msg.CameraInfo, time_out)
     P= np.array(cam_info.P).reshape(3,4)
     K= np.array(cam_info.K).reshape(3,3)
     D= np.array(cam_info.D)
