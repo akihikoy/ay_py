@@ -5,6 +5,7 @@ import actionlib as al
 import geometry_msgs.msg
 import trajectory_msgs.msg
 import actionlib_msgs.msg
+import control_msgs.msg
 import dynamic_reconfigure.client
 import tf
 
@@ -22,6 +23,7 @@ class ROSError(Exception):
     return 'ROSError({kind},{msg})'.format(kind=repr(self.Kind), msg=repr(self.Msg))
 
 ACTC_STATE_TO_STR= {getattr(actionlib_msgs.msg.GoalStatus,key):key for key in ('PENDING', 'ACTIVE', 'RECALLED', 'REJECTED', 'PREEMPTED', 'ABORTED', 'SUCCEEDED', 'LOST')}
+ACTC_RESULT_TO_STR= {getattr(control_msgs.msg.FollowJointTrajectoryResult,key):key for key in ('GOAL_TOLERANCE_VIOLATED', 'INVALID_GOAL', 'INVALID_JOINTS', 'OLD_HEADER_TIMESTAMP', 'PATH_TOLERANCE_VIOLATED', 'SUCCESSFUL')}
 
 '''Block the execution of action client.
   act_client: action client that is executing an action.
@@ -36,8 +38,11 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
     end_time= rospy.Time.now() + rospy.Duration(duration)
     dt= duration*accuracy
     while rospy.Time.now() < end_time:
-      if act_client.get_state()==actionlib_msgs.msg.GoalStatus.SUCCEEDED:  break
+      if act_client.get_state()==actionlib_msgs.msg.GoalStatus.SUCCEEDED:
+        #CPrint(4,'BlockAction: act_client ends with state==SUCCEEDED')
+        break
       if act_client.get_state() not in (actionlib_msgs.msg.GoalStatus.PENDING, actionlib_msgs.msg.GoalStatus.ACTIVE):
+        #CPrint(4,'BlockAction: act_client state is not normal: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
         raise ROSError('ctrl','BlockAction: act_client state is not normal: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
       time.sleep(dt)
     return
@@ -48,8 +53,10 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
     if res is None:
       raise ROSError('ctrl','BlockAction: act_client.wait_for_result could not get a result within timeout (duration+timeout_offset={}s) [state:{}/{}].'.format(duration+timeout_offset, act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
     if res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
-      raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}].'.format(res))
+      #CPrint(4,'BlockAction: act_client finished anomaly: [{}:{},{}].'.format(res.error_code,ACTC_RESULT_TO_STR[res.error_code],res.error_string))
+      raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}:{},{}].'.format(res.error_code,ACTC_RESULT_TO_STR[res.error_code],res.error_string))
     if act_client.get_state()!=actionlib_msgs.msg.GoalStatus.SUCCEEDED:
+      #CPrint(4,'BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
       raise ROSError('ctrl','BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
     return
   raise Exception('BlockAction: invalid blocking type: %r'%blocking)
@@ -203,6 +210,10 @@ def ToROSTrajectory(joint_names, q_traj, t_traj, dq_traj=None):
     traj.points= [ROSGetJTP(q,t) for q,t in zip(q_traj, t_traj)]
   traj.header.stamp= rospy.Time.now()
   return traj
+
+#Make a list of JointTolerance(pos, vel, acc) for all joint_names.
+def GetSimpleJointTol(joint_names, pos, vel, acc):
+  return [control_msgs.msg.JointTolerance(jname, pos, vel, acc) for jname in joint_names]
 
 
 '''One time tf listening.  Useful when obtaining static transformation.
