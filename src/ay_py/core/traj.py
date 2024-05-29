@@ -202,6 +202,7 @@ Return True if the trajectories are valid.
 f_fK: Forward kinematics (x=f_fk(q)).
 N_int: Number of interpolation.
 dp_lim, dq_lim: Max position and orientation errors (meters, radians).
+TODO:FIXME: Especially the mapping of FK takes long compt. time (map(f_fk, q_traj_int)).
 '''
 def CheckXQTrajValidity(q_traj, x_traj, f_fk, dp_lim=np.inf, dq_lim=0.1, N_int=5):
   if len(q_traj)<=1:  return True

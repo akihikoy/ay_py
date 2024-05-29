@@ -31,6 +31,13 @@ class TRobotUR(TMultiArmRobot):
     #Tolerance of motion (FollowQTraj).  Increase this value when the payload is large.
     self.MotionTol= 0.05
 
+    self.GoalTimeTol= 0.1  #Goal time tolerance for FollowQTraj.
+    self.PathTol= []  #List of control_msgs.msg.JointTolerance for FollowQTraj.
+    self.GoalTol= []  #List of control_msgs.msg.JointTolerance for FollowQTraj.
+    #Examples to set PathTol:
+    #  robot.PathTol= [control_msgs.msg.JointTolerance(jname,1.0,8.0,0.1) for jname in robot.JointNames(arm)]
+    #  robot.PathTol= GetSimpleJointTol(robot.JointNames(arm), 1.0,8.0,0.1)
+
     #UR all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
@@ -333,7 +340,9 @@ class TRobotUR(TMultiArmRobot):
 
     #copy q_traj, t_traj to goal
     goal= control_msgs.msg.FollowJointTrajectoryGoal()
-    goal.goal_time_tolerance= rospy.Time(0.1)
+    if self.GoalTimeTol is not None:  goal.goal_time_tolerance= rospy.Time(self.GoalTimeTol)
+    if self.PathTol is not None:  goal.path_tolerance= self.PathTol
+    if self.GoalTol is not None:  goal.goal_tolerance= self.GoalTol
     goal.trajectory.joint_names= self.joint_names[arm]
     goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
 
@@ -343,8 +352,9 @@ class TRobotUR(TMultiArmRobot):
       if blocking!=False:
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
-        if np.max(np.abs(q_err)) > self.MotionTol:
+        if self.MotionTol is not None and np.max(np.abs(q_err)) > self.MotionTol:
           CPrint(4,'TRobotUR.FollowQTraj: Unacceptable error after movement')
+          CPrint(4,'  Info:MotionTol:',self.MotionTol)
           CPrint(4,'  Info:q_traj[-1]:',q_traj[-1])
           CPrint(4,'  Info:q_finished:',q_finished)
           CPrint(4,'  Info:q_err:',q_err.tolist())
