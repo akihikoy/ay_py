@@ -985,9 +985,11 @@ def InitPanelApp():
   app= QtGui.QApplication(sys.argv)
   return app
 
-def RunPanelApp():
+def RunPanelApp(exit_at_close=True):
   global app
-  sys.exit(app.exec_())
+  exit_code= app.exec_()
+  if exit_at_close:  sys.exit(exit_code)
+  return exit_code
 
 
 if __name__=='__main__':
