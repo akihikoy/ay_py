@@ -121,12 +121,19 @@ class TKBHit(object):
     if self.CheckKBHit(timeout):
       if echo:  return self.GetChE()
       else:  return self.GetCh()
-      ##Try to clear buffer: (it does not work)
-      #while self.CheckKBHit(0):
-        #c= self.GetCh()
-        #sys.stdout.write('>> %s\n'%ch)
-        #sys.stdout.flush()
     return None
+
+  #Get a keyboard hit last in the input buffer
+  def KBHitLast(self, echo=False, timeout=0):
+    ch= None
+    while self.CheckKBHit(timeout):
+      ch= self.GetCh()
+    if echo and ch is not None:  self.PutCh(ch)
+    return ch
+
+  #WARNING: This function does not completely flush the input buffer.
+  def FlushIn(self):
+    termios.tcflush(sys.stdin, termios.TCIFLUSH)
 
   #KBHit compatible AskYesNo.
   def AskYesNo(self, timeout=6000, repeat_at_timeout=True):
