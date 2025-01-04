@@ -732,6 +732,7 @@ class TSimplePanel(QtGui.QWidget):
       'editable': False,
       'size_adjust_policy': None,  #'all_contents','first_content','min_content'
       'onactivated': None,
+      'ontextchanged': None,
       }, w_param)
     cmbbx= QtGui.QComboBox(self)
     #cmbbx.setFocusPolicy(QtCore.Qt.NoFocus)
@@ -746,6 +747,7 @@ class TSimplePanel(QtGui.QWidget):
                'min_content':   QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon}[param['size_adjust_policy']]
       cmbbx.setSizeAdjustPolicy(policy)
     if param['onactivated']:  cmbbx.activated[str].connect(lambda _,cmbbx=cmbbx:param['onactivated'](self,cmbbx))
+    if param['ontextchanged']:  cmbbx.editTextChanged.connect(lambda _,cmbbx=cmbbx:param['ontextchanged'](self,cmbbx))
     #cmbbx.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     cmbbx.resize(cmbbx.sizeHint())
     #cmbbx.move(10, 60)
@@ -985,9 +987,11 @@ def InitPanelApp():
   app= QtGui.QApplication(sys.argv)
   return app
 
-def RunPanelApp():
+def RunPanelApp(exit_at_close=True):
   global app
-  sys.exit(app.exec_())
+  exit_code= app.exec_()
+  if exit_at_close:  sys.exit(exit_code)
+  return exit_code
 
 
 if __name__=='__main__':

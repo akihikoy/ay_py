@@ -8,6 +8,7 @@ import actionlib_msgs.msg
 import control_msgs.msg
 import dynamic_reconfigure.client
 import tf
+import rosgraph
 
 from ..core.util import *
 
@@ -113,6 +114,27 @@ def TopicArrives(port_name, port_type, time_out=5.0):
     return res is not None
   except rospy.ROSException:
     return False
+
+def IsTopicAvailable(port_name, port_type):
+  try:
+    topics= rospy.get_published_topics()
+    for topic, topic_type in topics:
+      if topic==port_name and topic_type==port_type._type:
+        return True
+    return False  # Topic not found or type mismatch
+  except rospy.ROSException as e:
+    #rospy.logerr("Failed to get published topics: %s", str(e))
+    return False
+
+def IsServiceAvailable(service_name):
+  try:
+    master= rosgraph.Master(rospy.get_name())
+    service_uri= master.lookupService(service_name)
+    return True
+  except rosgraph.MasterError:
+    return False
+  except Exception as e:
+    raise Exception('Error checking service availability: {}'.format(str(e)))
 
 
 #Convert p to geometry_msgs/Point
