@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    toy_push1.py
 #\brief   Toy example: push an object with a funnel-like gripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -41,7 +41,7 @@ def DoPush(po,pg,theta,dm,rg):
   assert(dm>=0.0)
   lpo= TransformToLocal(po,pg,theta)
   sign= lambda x: 1.0 if x>=0.0 else -1.0
-  norm= lambda p1,p2: math.sqrt(sum((p1[d]-p2[d])**2 for d in xrange(2)))
+  norm= lambda p1,p2: math.sqrt(sum((p1[d]-p2[d])**2 for d in range(2)))
   lpo2= None
   if lpo[0]-abs(lpo[1])<0.0 or abs(lpo[1])>rg:  lpo2= [lpo[0]-dm, lpo[1]]  #not touched
   elif dm<=lpo[0]-abs(lpo[1]):                  lpo2= [lpo[0]-dm, lpo[1]]  #not touched
@@ -123,7 +123,7 @@ def Main():
   ExecuteAndViz(file_format,po,pg,theta,dm,rg,p1,p2,probs,stddevs)
 
 def PlotGraphs():
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   commands=[
     '''qplot -x2 aaa
@@ -145,13 +145,13 @@ def PlotGraphs():
   for cmd in commands:
     if cmd!='':
       cmd= ' '.join(cmd.splitlines())
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':

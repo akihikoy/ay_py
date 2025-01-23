@@ -1,12 +1,12 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for BaxterN.
-from const import *
+from .const import *
 #if ROS_ROBOT not in ('ANY','BaxterN'):
   #raise ImportError('Stop importing: ROS_ROBOT is not BaxterN')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
-from rbt_bxtr import *
-from rbt_rq import TRobotiq
+from .rbt_bxtr import *
+from .rbt_rq import TRobotiq
 
 '''Robot control class for Baxter.'''
 class TRobotBaxterN(TRobotBaxter):
@@ -42,10 +42,10 @@ class TRobotBaxterN(TRobotBaxter):
     self.robotiq[LEFT]= TRobotiqN('gripper_left')
     self.grippers= [self.robotiq[RIGHT], self.robotiq[LEFT]]
 
-    print 'Enabling the robot...'
+    print('Enabling the robot...')
     baxter_interface.RobotEnable(baxter_interface.CHECK_VERSION).enable()
 
-    print 'Initializing Robotiq grippers...'
+    print('Initializing Robotiq grippers...')
     ra(self.robotiq[RIGHT].Init())
     ra(self.robotiq[LEFT].Init())
 

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    nn1.py
 #\brief   Train NN for IRIS classification;
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -36,7 +36,7 @@ def TrainNN():
 
 def Main(logdir='/tmp/c2/', options_in={}):
   #Uncomment this to train the model:
-  print 'Run TrainNN?'
+  print('Run TrainNN?')
   if AskYesNo():  TrainNN()
   #return
 
@@ -62,7 +62,7 @@ def Main(logdir='/tmp/c2/', options_in={}):
   fp.close()
 
 def PlotGraphs(argv):
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   logdir= argv[0] if len(argv)>0 else '/tmp/c2/'
   qopt= argv[1] if len(argv)>1 else ''
@@ -98,13 +98,13 @@ def PlotGraphs(argv):
       if qopt!='':
         cmd= cmd.replace('qplot -x2 aaa','qplot '+qopt)
         if cmd[-1]=='&':  cmd= cmd[:-1]
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':

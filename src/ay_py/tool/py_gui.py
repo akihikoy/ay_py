@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    terminal_tab8lib.py
 #\brief   Simple Tab-Terminal GUI command launcher (library).
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -17,7 +17,20 @@ import sys, os
 import signal
 import subprocess
 import yaml
-from PyQt4 import QtCore,QtGui,QtTest
+
+if 'PYQT_VERSION' not in os.environ:
+  os.environ['PYQT_VERSION']= '5'
+if str(os.environ['PYQT_VERSION'])=='4':
+  from PyQt4 import QtCore,QtGui,QtTest
+elif str(os.environ['PYQT_VERSION'])=='5':
+  from PyQt5 import QtCore,QtWidgets,QtTest
+  import PyQt5.QtGui as PyQt5QtGui
+  QtGui= QtWidgets
+  for component in ('QFont', 'QFontMetrics', 'QIntValidator', 'QDoubleValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter'):
+    setattr(QtGui,component, getattr(PyQt5QtGui,component))
+else:
+  raise Exception('Failed to import the requested version of PyQt:',os.environ['PYQT_VERSION'])
+
 
 class TTerminalTab(QtGui.QWidget):
   def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True,term_width=400):
@@ -27,25 +40,25 @@ class TTerminalTab(QtGui.QWidget):
 
   # Get a dict of option name: option content
   def ExpandOpt(self):
-    opt= {name:str(rbgroup.checkedButton().text()) for name,rbgroup in self.RBOptions.iteritems()}
-    opt.update({name:str(cmbbx.currentText()) for name,cmbbx in self.CBOptions.iteritems()})
+    opt= {name:str(rbgroup.checkedButton().text()) for name,rbgroup in self.RBOptions.items()}
+    opt.update({name:str(cmbbx.currentText()) for name,cmbbx in self.CBOptions.items()})
     return opt
 
   # Save the option dict as a yaml file
   def SaveOpts(self, file_name):
     with open(file_name,'w') as fp:
       fp.write(yaml.dump(self.ExpandOpt()))
-    print 'Options are saved into {}'.format(file_name)
+    print('Options are saved into {}'.format(file_name))
 
   # Load option dict from a yaml file and update the UI.
   def LoadOpts(self, file_name):
     if not os.path.exists(file_name):
-      print 'Option file does not exist: {}'.format(file_name)
+      print('Option file does not exist: {}'.format(file_name))
       return
     with open(file_name) as fp:
-      opt= yaml.load(fp.read())
+      opt= yaml.load(fp.read(), Loader=yaml.SafeLoader)
     #print 'debug',opt
-    for name,value in opt.iteritems():
+    for name,value in opt.items():
       if name in self.RBOptions:
         for radbtn in self.RBOptions[name].buttons():
           if radbtn.text()==value:
@@ -54,7 +67,7 @@ class TTerminalTab(QtGui.QWidget):
       elif name in self.CBOptions:
         idx= self.CBOptions[name].findText(value, QtCore.Qt.MatchFixedString)
         self.CBOptions[name].setCurrentIndex(idx)
-    print 'Loaded options from {}'.format(file_name)
+    print('Loaded options from {}'.format(file_name))
 
   def CmdToLambda(self,term,cmd):
     if cmd==':close':  return self.close
@@ -224,6 +237,9 @@ class TTerminalTab(QtGui.QWidget):
       tabs.addTab(tab, term)
 
       terminal= QtGui.QWidget(self)
+      terminal.setAttribute(QtCore.Qt.WA_NativeWindow)
+      terminal.resize(self.width()//2-50, self.height()-100)
+      terminal.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
       hBoxlayout= QtGui.QHBoxLayout()
       tab.setLayout(hBoxlayout)
       hBoxlayout.addWidget(terminal)
@@ -254,22 +270,22 @@ class TTerminalTab(QtGui.QWidget):
     for r,(term,row) in enumerate(self.Terminals):
       self.qttabs.setCurrentIndex(r)
       #self.qttabs.widget(r).update()
-      #print 'debug',self.pid+term,str(self.qtterm[term].winId())
+      #print 'debug',self.pid+term,str(int(self.qtterm[term].winId()))
       child= self.StartProc('urxvt',
-                            ['-embed', str(self.qtterm[term].winId()),
+                            ['-embed', str(int(self.qtterm[term].winId())),
                               '-e', 'tmux', 'new', '-s', self.pid+term])
       self.TermProcesses.append(child)
       #print '  --',child,child.pid()
       #self.SendCmd(term, ['ls','Enter'])
       #child= self.StartProc('tmux', ['capture-pane', '-t', self.pid+term+':0'] + list(cmd))
       QtTest.QTest.qWait(50)
-      #res= subprocess.check_output(['tmux', 'capture-pane', '-t', self.pid+term+':0', 'echo ok', 'Enter'])
+      #res= subprocess.check_output(['tmux', 'capture-pane', '-t', self.pid+term+':0', 'echo ok', 'Enter']).decode('utf-8')
       try:
-        res= subprocess.check_output(['tmux', 'send-keys', '-t', self.pid+term+':0', 'echo ok', 'Enter'])
+        res= subprocess.check_output(['tmux', 'send-keys', '-t', self.pid+term+':0', 'echo ok', 'Enter']).decode('utf-8')
         #print '  --',res
       except subprocess.CalledProcessError:
         #print '  --CalledProcessError'
-        print 'CalledProcessError',self.pid+term,str(self.qtterm[term].winId())
+        print('CalledProcessError',self.pid+term,str(int(self.qtterm[term].winId())))
       #self.qttabs.widget(r).update()
       #print 'new terminal proc:',self.pid+term,self.TermProcesses[-1].pid()
       #QtTest.QTest.qWait(100)

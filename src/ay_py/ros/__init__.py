@@ -10,14 +10,14 @@ __PACKAGES__= [
   'viz',
   ]
 
-from base         import *
-try:  from col_mi       import *
-except ImportError as e:  print str(e)
-from const        import *
-from cv           import *
-try:  from kdl_kin      import *
-except ImportError as e:  print str(e)
-from pointcloud   import *
-from robot        import *
-from rs           import *
-from viz          import *
+from .base         import *
+try:  from .col_mi       import *
+except ImportError as e:  print(str(e))
+from .const        import *
+from .cv           import *
+try:  from .kdl_kin      import *
+except ImportError as e:  print(str(e))
+from .pointcloud   import *
+from .robot        import *
+from .rs           import *
+from .viz          import *

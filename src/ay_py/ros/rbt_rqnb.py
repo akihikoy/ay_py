@@ -1,12 +1,12 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Robotiq-No-Body.
-from const import *
+from .const import *
 #if ROS_ROBOT not in ('ANY','RobotiqNB'):
   #raise ImportError('Stop importing: ROS_ROBOT is not RobotiqNB')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
 
-from robot import TMultiArmRobot
-from rbt_rq import TRobotiq
+from .robot import TMultiArmRobot
+from .rbt_rq import TRobotiq
 
 '''Robot control class for RobotiqNB.
   This is defined as a subclass of TMultiArmRobot,
@@ -26,7 +26,7 @@ class TRobotRobotiqNB(TMultiArmRobot):
     self.robotiq= TRobotiq()  #Robotiq controller
     self.grippers= [self.robotiq, self.robotiq]
 
-    print 'Initializing and activating Robotiq gripper...'
+    print('Initializing and activating Robotiq gripper...')
     ra(self.robotiq.Init())
 
     if False not in res:  self._is_initialized= True

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #Switching to enable and disable robot by pressing a key.  Press q to exit.
 from _path import *
 from ay_py.misc.dxl_mikata import *

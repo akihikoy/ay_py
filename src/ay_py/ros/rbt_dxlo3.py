@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #\brief   Robot controller for DxlO3 gripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
@@ -6,10 +6,10 @@
 #\version 0.2
 #\date    Feb.28, 2020
 #         Completely modified the implementation: now we use the gripper driver ROS node.
-from const import *
+from .const import *
 
-from robot import TGripper2FN
-from rbt_dxlg import TDxlGripper, TRobotDxlGripper
+from .robot import TGripper2FN
+from .rbt_dxlg import TDxlGripper, TRobotDxlGripper
 
 
 '''DxlO3 gripper utility class'''

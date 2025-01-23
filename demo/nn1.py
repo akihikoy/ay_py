@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    nn1.py
 #\brief   Train NN with 1d catapult data (simulation);
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -12,7 +12,7 @@ modeldir= '/tmp/c1/'
 def TrainNN():
   #data= [[e['action']['pos_target'],e['result']['loc_land']] for e in LoadYAML('data/catapult1.yaml')]
   #data= map(lambda row:map(float,row.split()), open('data/catapult1.dat','r').read().split('\n'))
-  data= [map(float,row.split()) for row in open(demo_dir+'data/catapult1.dat','r').read().split('\n') if row!='']
+  data= [list(map(float,row.split())) for row in open(demo_dir+'data/catapult1.dat','r').read().split('\n') if row!='']
 
   dim_in= 1
   dim_out= 1
@@ -38,7 +38,7 @@ def TrainNN():
 
 def Main(logdir='/tmp/c1/', options_in={}):
   #Uncomment this to train the model:
-  print 'Run TrainNN?'
+  print('Run TrainNN?')
   if AskYesNo():  TrainNN()
   #return
 
@@ -61,7 +61,7 @@ def Main(logdir='/tmp/c1/', options_in={}):
   fp.close()
 
 def PlotGraphs(argv):
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   logdir= argv[0] if len(argv)>0 else '/tmp/c1/'
   qopt= argv[1] if len(argv)>1 else ''
@@ -81,13 +81,13 @@ def PlotGraphs(argv):
       if qopt!='':
         cmd= cmd.replace('qplot -x2 aaa','qplot '+qopt)
         if cmd[-1]=='&':  cmd= cmd[:-1]
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':

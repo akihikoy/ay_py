@@ -1,6 +1,5 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Basic tools (optimization version 2).
-from __future__ import absolute_import
 import math
 import random
 import copy
@@ -332,7 +331,7 @@ class TDiscOptProb (TOptimizerInterface):
 
   #Return the best parameter, mean-score.
   def Result(self):
-    best_s,best_o= max(zip(self.Params['means'], range(len(self.Options['mapped_values']))))
+    best_s,best_o= max(list(zip(self.Params['means'], list(range(len(self.Options['mapped_values']))))))
     return best_o, best_s
 
   #Check the stop condition.
@@ -464,8 +463,8 @@ class TContOptNoGrad (TOptimizerInterface):
     self.es= None
     self.es_gen= None
     self.curr_param= None
-    #self.tmpfp= file(self.Logger,'a')
-    #self.tmpfp= file(self.Logger,'w')
+    #self.tmpfp= open(self.Logger,'a')
+    #self.tmpfp= open(self.Logger,'w')
     self.CreateES()
 
   #Synchronize Params (and maybe Options) with an internal optimizer to be saved.
@@ -516,7 +515,7 @@ class TContOptNoGrad (TOptimizerInterface):
     if res[0] is not None and res[1]!=np.inf:
       return res[0], -res[1]
     elif len(self.Params['scores'])>0:
-      score,params= min(zip(self.Params['scores'],self.Params['solutions']))
+      score,params= min(list(zip(self.Params['scores'],self.Params['solutions'])))
       return params, -score
     else:
       return None, None
@@ -709,7 +708,7 @@ class TCompositeOpt (TOptimizerInterface):
 
   #Synchronize Params (and maybe Options) with an internal optimizer to be saved.
   def SyncParams(self):
-    for name,opt in self.Opts.iteritems():
+    for name,opt in self.Opts.items():
       opt.SyncParams()
       self.Params[name]= opt.Params
       self.Options[name]= opt.Options
@@ -737,7 +736,7 @@ class TCompositeOpt (TOptimizerInterface):
         #This optimizer is a selector:
         self.Opts[name]= TDiscOptProb()
         options= self.Options[name] if name in self.Options else {}
-        options['mapped_values']= range(len(sub[2]))
+        options['mapped_values']= list(range(len(sub[2])))
         params= self.Params[name] if name in self.Params else {}
         self.Opts[name].Init({'options':options,'params':params})
         for sub2 in sub[2]:
@@ -1049,7 +1048,7 @@ def MinimizeFunc_DB(fmin_obj, parameters0, scale0, options,
     parameters_res= res[0]
     score_res= res[1]
   elif has_solution and len(solutions)>0:
-    score_res,parameters_res= min(zip(scores,solutions))
+    score_res,parameters_res= min(list(zip(scores,solutions)))
   else:
     score_res= None
     parameters_res= None

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_dxlpo2.py
 #\brief   Control module of DxlpO2 gripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -7,7 +7,7 @@
 #\version 0.2
 #\date    May.21, 2022
 #         Refactored the code.
-from dxl_gripper import TDxlGripperBase
+from .dxl_gripper import TDxlGripperBase
 
 '''DxlpO2 gripper utility class'''
 class TDxlpO2(TDxlGripperBase):

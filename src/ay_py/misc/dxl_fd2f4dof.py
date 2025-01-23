@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_fd2f4dof.py
 #\brief   Control module of FD2F4DoF gripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Mar.15, 2022
-from dxl_mikata import *
+from .dxl_mikata import *
 
 class TFD2F4DoF(TMikata):
   def __init__(self, dev='/dev/ttyUSB0', model='2022'):

@@ -1,7 +1,7 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for 6 DoF Mikata Arm (using ay_util/mikata_driver).
 
-from rbt_mikata2 import *
+from .rbt_mikata2 import *
 
 '''Mikata6 Gripper utility class'''
 class TMikata6Gripper(TMikataGripper2):

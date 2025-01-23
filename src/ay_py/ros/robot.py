@@ -1,7 +1,7 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Common robot interface for PR2 and Baxter.
-from base import *
-from const import *
+from .base import *
+from .const import *
 from ..core.geom import *
 from ..core.traj import *
 
@@ -32,7 +32,7 @@ class TMultiArmRobot(TROSUtil):
 
   def __del__(self):
     self.Cleanup()
-    print '%s: bye.'%self.Name
+    print('%s: bye.'%self.Name)
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -43,12 +43,12 @@ class TMultiArmRobot(TROSUtil):
     #NOTE: cleaning-up order is important. consider dependency
 
     #Check the thread lockers status:
-    print 'Count of currarm_locker:',self.currarm_locker._RLock__count
+    #print('Count of currarm_locker:',self.currarm_locker._is_owned())
 
     #Check the thread lockers status:
-    print 'Count of control_locker:',self.control_locker._RLock__count
-    print 'Count of gripper_locker:',self.gripper_locker._RLock__count
-    print 'Count of sensor_locker:',self.sensor_locker._RLock__count
+    #print('Count of control_locker:',self.control_locker._is_owned())
+    #print('Count of gripper_locker:',self.gripper_locker._is_owned())
+    #print('Count of sensor_locker:',self.sensor_locker._is_owned())
 
     super(TMultiArmRobot,self).Cleanup()
 

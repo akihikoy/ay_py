@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Motoman.
-from const import *
+from .const import *
 
 import roslib
 import rospy
@@ -11,8 +11,8 @@ import trajectory_msgs.msg
 import industrial_msgs.msg
 import copy
 
-from robot import *
-from kdl_kin import *
+from .robot import *
+from .kdl_kin import *
 
 '''Robot control class for a single Motoman robot.'''
 class TRobotMotoman(TMultiArmRobot):
@@ -135,7 +135,7 @@ class TRobotMotoman(TMultiArmRobot):
                   self.robot_status.in_error.val==industrial_msgs.msg.TriState.FALSE,))
 
   def PrintStatus(self):
-    print 'robot_status: {}'.format(self.robot_status)
+    print('robot_status: {}'.format(self.robot_status))
 
   @property
   def NumArms(self):
@@ -320,7 +320,7 @@ class TRobotMotoman(TMultiArmRobot):
         #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
         rospy.sleep(self.DtTrajActCStateMonitor)
         if (rospy.Time.now()-t_wait_state_start).to_sec()>1.0:
-          print 'Timeout. action_client_state is PENDING for a while.'
+          print('Timeout. action_client_state is PENDING for a while.')
           break
       #Wait during the self.actc.traj state==ACTIVE:
       #  As this check takes time (self.DtTrajActiveBeforeAbort), it is done only when blocking!=False
@@ -343,7 +343,7 @@ class TRobotMotoman(TMultiArmRobot):
         if not self.IsNormal():
           self.PrintStatus()
           raise Exception('FollowQTraj: Stopped as the robot is not in normal state (2).')
-        print '{}: Trajectory aborted. Retrying by updating the first point to the current joint angles ({}).'.format(self.Name, i_retry)
+        print('{}: Trajectory aborted. Retrying by updating the first point to the current joint angles ({}).'.format(self.Name, i_retry))
         rospy.sleep(self.DtTrajCtrlRetry)
         q_traj[0]= self.Q(arm=arm)
       else:

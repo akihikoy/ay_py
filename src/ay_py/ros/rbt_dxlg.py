@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #\brief   Robot controller for a 3D-printed Gripper with Dynamixel.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
@@ -6,11 +6,12 @@
 #\version 0.2
 #\date    Feb.28, 2020
 #         Completely modified the implementation: now we use the gripper driver ROS node.
-from const import *
+from .const import *
 
 import threading
+import importlib
 
-from robot import TGripper2F1,TMultiArmRobot
+from .robot import TGripper2F1,TMultiArmRobot
 import sensor_msgs.msg
 import ay_util_msgs.srv
 
@@ -29,27 +30,27 @@ class TDxlGripper(TGripper2F1):
     #We use an instance of low-level gripper controller without activating it (i.e. no device communication)
     #in order to get the parameters.
     if self.gripper_type=='DxlGripper':
-      mod= __import__('ay_py.misc.dxl_gripper',globals(),None,('TDynamixelGripper',))
+      mod= importlib.import_module('ay_py.misc.dxl_gripper')
       self.gripper= mod.TDynamixelGripper(dev=None)
       self.joint_names= ['joint0']
     elif self.gripper_type in ('RHP12RNGripper','RHP12RNAGripper'):
-      mod= __import__('ay_py.misc.dxl_rhp12rn',globals(),None,('TRHP12RN',))
+      mod= importlib.import_module('ay_py.misc.dxl_rhp12rn')
       self.gripper= mod.TRHP12RN(dev=None,type={'RHP12RNGripper':'','RHP12RNAGripper':'(A)'}[self.gripper_type])
       self.joint_names= ['joint0']
     elif self.gripper_type=='EZGripper':
-      mod= __import__('ay_py.misc.dxl_ezg',globals(),None,('TEZG',))
+      mod= importlib.import_module('ay_py.misc.dxl_ezg')
       self.gripper= mod.TEZG(dev=None)
       self.joint_names= ['joint0']
     elif self.gripper_type=='DxlpO2Gripper':
-      mod= __import__('ay_py.misc.dxl_dxlpo2',globals(),None,('TDxlpO2',))
+      mod= importlib.import_module('ay_py.misc.dxl_dxlpo2')
       self.gripper= mod.TDxlpO2(dev=None, finger_type=finger_type)
       self.joint_names= ['joint0']
     elif self.gripper_type=='DxlO3Gripper':
-      mod= __import__('ay_py.misc.dxl_dxlo3',globals(),None,('TDxlO3',))
+      mod= importlib.import_module('ay_py.misc.dxl_dxlo3')
       self.gripper= mod.TDxlO3(dev=None)
       self.joint_names= ['joint0','joint1']
     elif self.gripper_type=='DxlpY1Gripper':
-      mod= __import__('ay_py.misc.dxl_dxlpy1',globals(),None,('TDxlpY1',))
+      mod= importlib.import_module('ay_py.misc.dxl_dxlpy1')
       self.gripper= mod.TDxlpY1(dev=None)
       self.joint_names= ['joint0']
     else:
@@ -188,8 +189,8 @@ class TDxlGripper(TGripper2F1):
     req.command= 'Write'
     req.data_s= address
     if isinstance(data,dict):
-      req.joint_names= data.keys()
-      req.data_ia= data.values()
+      req.joint_names= list(data.keys())
+      req.data_ia= list(data.values())
     elif isinstance(data,list):
       req.joint_names= []
       req.data_ia= data
@@ -205,8 +206,8 @@ class TDxlGripper(TGripper2F1):
     req= ay_util_msgs.srv.DxlIORequest()
     req.command= 'SetCurrentLimit'
     if isinstance(data,dict):
-      req.joint_names= data.keys()
-      req.data_fa= data.values()
+      req.joint_names= list(data.keys())
+      req.data_fa= list(data.values())
     elif isinstance(data,list):
       req.joint_names= []
       req.data_fa= data
@@ -235,7 +236,7 @@ class TRobotDxlGripper(TMultiArmRobot):
     self.dxl_gripper= dxl_gripper
     self.grippers= [self.dxl_gripper]
 
-    print 'Initializing and activating {} gripper...'.format(self.Name)
+    print('Initializing and activating {} gripper...'.format(self.Name))
     ra(self.dxl_gripper.Init())
 
     if False not in res:  self._is_initialized= True

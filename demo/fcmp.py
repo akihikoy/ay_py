@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #Test of TCombinedFuncApprox (combined function approximator) that combines
 #some TFunctionApprox objects.
 from _path import *
@@ -27,13 +27,13 @@ def Main():
   #assess= lambda y: 5.0*y[0]+y[1]
 
   if not load_model:
-    fp= file(src_file)
+    fp= open(src_file)
     while True:
       line= fp.readline()
       if not line: break
       data= line.split()
-      model.Update(map(float,data[0:dim[0]]),
-                   map(float,data[dim[0]:sum(dim)]))
+      model.Update(list(map(float,data[0:dim[0]])),
+                   list(map(float,data[dim[0]:sum(dim)])))
     SaveYAML(cmodels[0].Save('/tmp/lwr/0_'), '/tmp/lwr/0_lwr_model.yaml')
     SaveYAML(cmodels[1].Save('/tmp/lwr/1_'), '/tmp/lwr/1_lwr_model.yaml')
 
@@ -52,7 +52,7 @@ def Main():
   fp.close()
 
 def PlotGraphs():
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   commands=[
     '''qplot -x2 aaa -3d
@@ -66,13 +66,13 @@ def PlotGraphs():
   for cmd in commands:
     if cmd!='':
       cmd= ' '.join(cmd.splitlines())
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':

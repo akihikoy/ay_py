@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_ezg.py
 #\brief   Control module of SAKE EZGripper Gen2.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -8,7 +8,7 @@
 #\date    May.21, 2022
 #         Refactored the code.
 #         NOTE: Dynamixel MX-64AR of EZGripper is originally protocol 1.0; update the firmware.
-from dxl_gripper import TDxlGripperBase
+from .dxl_gripper import TDxlGripperBase
 
 '''SAKE EZGripper Gen2 utility class'''
 class TEZG(TDxlGripperBase):

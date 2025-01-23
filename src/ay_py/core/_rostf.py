@@ -1,11 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    _rostf.py
 #\brief   Copied some codes from ROS tf.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Oct.29, 2017
-from __future__ import print_function
-
 import math,numpy
 
 '''

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #Experiments tools.
 from ..core.util import *
 
@@ -25,11 +25,11 @@ def Exp(main, basedir, logdir, dirs, num_runs, conditions):
 
   basedir1= basedir.format(home=homedir)
   if exists(basedir1):
-    print '########################################'
-    print 'Base directory exists:',basedir1
-    print '########################################'
+    print('########################################')
+    print('Base directory exists:',basedir1)
+    print('########################################')
     for i in range(3):
-      print 'Start in %i sec... (Ctrl+C to stop)'%(3-i)
+      print('Start in %i sec... (Ctrl+C to stop)'%(3-i))
       time.sleep(1.0)
   else:
     mkdirs(basedir1)
@@ -59,11 +59,11 @@ def Exp(main, basedir, logdir, dirs, num_runs, conditions):
 
   error_flag= False
   for n in range(num_runs):
-    for cond,options in conditions.iteritems():
+    for cond,options in conditions.items():
       logdir1= logdir.format(home=homedir, base=basedir1, cond=cond, n=n)
       if exists(logdir1):
-        print 'Log directory exists:',logdir1
-        print 'Skip...'
+        print('Log directory exists:',logdir1)
+        print('Skip...')
         continue
       mkdirs(logdir1)
       for d in dirs:  mkdirs(logdir1+d)

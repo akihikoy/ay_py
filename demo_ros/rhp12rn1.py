@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    rhp12rn1.py
 #\brief   Test of TRHP12RNGripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -14,13 +14,13 @@ if __name__=='__main__':
   dev= sys.argv[1] if len(sys.argv)>1 else DXLG_DEV
   rospy.init_node('rhp12rn1')
   robot= TRobotRHP12RNGripper(dev=dev)
-  print 'Initializing...'
+  print('Initializing...')
   robot.Init()
-  print 'Done.'
+  print('Done.')
 
   robot.OpenGripper(blocking=True)
-  print 'GripperPos=',robot.GripperPos()
+  print('GripperPos=',robot.GripperPos())
   robot.CloseGripper(blocking=True)
-  print 'GripperPos=',robot.GripperPos()
+  print('GripperPos=',robot.GripperPos())
 
   robot.Cleanup()

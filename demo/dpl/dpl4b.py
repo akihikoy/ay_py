@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dpl4b.py
 #\brief   Test dpl4.py with toy_arm1.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -74,7 +74,7 @@ def Main(logdir='/tmp/arm/', options_in={}):
     #xs0['q_cmd']= SSA([0.0]*arm.N)  #Init guess
     xs0['q_cmd']= copy.deepcopy(xs0['q'])  #Init guess
     res= dpl.Plan('n0', xs0)
-    print 'xs0(after plan)=',xs0
+    print('xs0(after plan)=',xs0)
     #db_n0= dpl.DB.AddToSeq(parent=None,name='n0',xs=xs0)
 
     ptree= res.PTree

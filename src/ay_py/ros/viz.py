@@ -1,12 +1,12 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #ROS tools (visualization).
 import roslib; roslib.load_manifest('rospy')
 import rospy
 import visualization_msgs.msg
 import geometry_msgs.msg
 import std_msgs.msg
-from base import *
-from const import *
+from .base import *
+from .const import *
 from ..core.geom import *
 
 #Utility for RViz.

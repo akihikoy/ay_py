@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    cranex7_off.py
 #\brief   Reboot all Dynamixel of Crane-X7 Arm.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -12,9 +12,9 @@ from ay_py.ros.rbt_cranex7 import *
 if __name__=='__main__':
   rospy.init_node('mikata_off')
   robot= TRobotCraneX7()
-  print 'Initializing...'
+  print('Initializing...')
   robot.Init()
-  print 'Done.'
+  print('Done.')
 
   CPrint(1, 'Rebooting all Dynamixel...')
   robot.mikata.Reboot()

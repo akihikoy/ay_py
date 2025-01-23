@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 '''
 Dynamic programming and learning, using deep neural net.
 
@@ -544,8 +544,8 @@ class TDynPlanLearn2(object):
         self.ModifyIdeals(max(1,n))
         for i in range(self.Options['ideals_grad_iter']):
           self.UpdateIdealsGrad(max(1,n))
-        print 'self.ideals(x):'
-        for k in range(max(1,n),self.N+1):  print '  %i: %s'%(k,[(xar.x,xar.R) for xar in self.ideals[k]])
+        print('self.ideals(x):')
+        for k in range(max(1,n),self.N+1):  print('  %i: %s'%(k,[(xar.x,xar.R) for xar in self.ideals[k]]))
         #'''
 
         var_x_n= self.Options['plan_var_x']
@@ -575,18 +575,18 @@ class TDynPlanLearn2(object):
           var= self.Options['explore_noise_gain']*math.sqrt(sum(eval_n.VarR))
           if var>self.Options['explore_var_max']:  var= self.Options['explore_var_max']
           a_noise= np.mat([random.gauss(0.0,var) for d in range(Len(a_n))]).T
-          print 'var,a_noise=',var,a_noise.T
+          print('var,a_noise=',var,a_noise.T)
           #TEST---
           for ngain in (2.0, 1.0, 0.5, 0.1, 0.05, 0.01, 0.005):
-            print '####action noise effect (%f):'%ngain,
+            print('####action noise effect (%f):'%ngain, end=' ')
             for ia in range(Len(a_n)):
               #var= ngain*math.sqrt(sum(eval_n.VarR))
               var= ngain*math.sqrt(self.action_bounds[n][1][ia]-self.action_bounds[n][0][ia])
               var_a_map={n:np.diag([0.0]*Len(a_n))}
               var_a_map[n][ia,ia]= var
               eval_n_noise= self.EvalActMap(n, x_n, a_map, var_x_n=var_x_n, var_a_map=var_a_map)
-              print self.Criteria(eval_n_noise,cr=('EUCB','none'))-self.Criteria(eval_n,cr=('EUCB','none')),
-            print
+              print(self.Criteria(eval_n_noise,cr=('EUCB','none'))-self.Criteria(eval_n,cr=('EUCB','none')), end=' ')
+            print()
           #TEST---
           a_n+= a_noise
           a_n= ConstrainN(self.action_bounds[n], a_n)
@@ -608,7 +608,7 @@ class TDynPlanLearn2(object):
     criteria= self.Criteria
     fp= open(self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir']),'w')
     a_n,eval_n,value= OptCMA2(x0=a_n0,s0=s0,f_assess=feval,eval_criteria=criteria,bounds=bounds,fp=fp,maxfevals=300)
-    print 'PlanBFCMA: logged to:',self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir'])
+    print('PlanBFCMA: logged to:',self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir']))
     fp.close()
     return a_n,eval_n
 
@@ -791,7 +791,7 @@ class TDynPlanLearn2(object):
     criteria= self.Criteria
     fp= open(self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir']),'w')
     a_list,eval_n,value= OptCMA2(x0=a_list0,s0=s0,f_assess=feval,eval_criteria=criteria,bounds=bounds,fp=fp,maxfevals=300)
-    print 'PlanSCMA: logged to:',self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir'])
+    print('PlanSCMA: logged to:',self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir']))
     fp.close()
     #return self.DeserializeActList(n,a_list)[n],eval_n
     return self.DeserializeActList(n,a_list),eval_n
@@ -850,7 +850,7 @@ class TDynPlanLearn2(object):
       value= sum(eval_n.R)
       cvalue= self.Criteria(eval_n, cr=criteria)
       fp.write('%s # %f %f # %s\n'%(ToStr(ToList(a_map[n])), value, cvalue, ' '.join([ToStr([0.0]*Len(g)) for g in grad_data]) ))
-      print 'PlanGrad: logged to:',self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir'])
+      print('PlanGrad: logged to:',self.Options['opt_log_name'].format(i=self.logid,n=n,base=self.Options['base_dir']))
       fp.close()
     #return a_map[n], self.EvalActMap(n, x_n, a_map, var_x_n=var_x_n)
     return a_map, self.EvalActMap(n, x_n, a_map, var_x_n=var_x_n)

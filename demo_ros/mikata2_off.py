@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    mikata2_off.py
 #\brief   Turn off the Mikata arm (using TRobotMikata2).
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -12,10 +12,10 @@ from ay_py.ros.rbt_mikata2 import *
 if __name__=='__main__':
   rospy.init_node('mikata_off')
   robot= TRobotMikata2()
-  print 'Initializing...'
+  print('Initializing...')
   robot.Init()
   rospy.sleep(0.1)
-  print 'Done.'
+  print('Done.')
 
   CPrint(1, 'Robot is relaxing...')
   for effort in range(5,-1,-1):  

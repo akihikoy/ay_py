@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 from _path import *
 from ay_py.core import *
 
@@ -15,10 +15,10 @@ if __name__ == '__main__':
   reconstructed= np.dot(RFromAxisAngle(axis,angle),p1)
   reconstructed*= Norm(p2)/Norm(p1)
 
-  print 'p1=',p1
-  print 'p2=',p2
-  print 'axis=',axis,Norm(axis)
-  print 'angle=',angle
-  print 'reconstructed=',reconstructed
-  print 'same?',np.allclose(reconstructed,p2)
+  print('p1=',p1)
+  print('p2=',p2)
+  print('axis=',axis,Norm(axis))
+  print('angle=',angle)
+  print('reconstructed=',reconstructed)
+  print('same?',np.allclose(reconstructed,p2))
 

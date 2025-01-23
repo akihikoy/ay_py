@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_dxlo3.py
 #\brief   Control module of DxlO3 gripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Jan.28, 2020
-from dxl_util import TDynamixel1
+from .dxl_util import TDynamixel1
 from ..core.util import TRate, CPrint
 import time
 import threading
@@ -78,7 +78,7 @@ class TDxlO3(object):
       self._is_initialized= False
 
     #Check the thread lockers status:
-    print 'Count of port_locker:',self.port_locker._RLock__count
+    #print('Count of port_locker:',self.port_locker._is_owned())
 
   '''Range of gripper positions (return: lower, upper).'''
   def PosRange(self):
@@ -89,7 +89,7 @@ class TDxlO3(object):
     with self.port_locker:
       pos= [dxl.Position() for dxl in self.dxl]
     if None in pos:
-      print 'DxlG: Failed to read position;',pos
+      print('DxlG: Failed to read position;',pos)
       return None
     pos= self.gripper_cmd2pos(pos)
     return pos
@@ -150,7 +150,7 @@ class TDxlO3(object):
       if all([abs(c-p)<=dxl.GoalThreshold for c,p,dxl in zip(cmd,p_log[-1],self.dxl)]):  break
       #Detecting stuck:
       if len(p_log)>=50 and all([abs(p0-p1)<=dxl.GoalThreshold for p0,p1,dxl in zip(p_log[0],p_log[-1],self.dxl)]):
-        print 'DxlG: Control gets stuck. Abort.'
+        print('DxlG: Control gets stuck. Abort.')
         break
 
 

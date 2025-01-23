@@ -1,10 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_ezg.py
 #\brief   Control module of DxlpY1.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    May.21, 2022
-from dxl_gripper import TDxlGripperBase
+from .dxl_gripper import TDxlGripperBase
 
 '''DxlpY1 utility class'''
 class TDxlpY1(TDxlGripperBase):

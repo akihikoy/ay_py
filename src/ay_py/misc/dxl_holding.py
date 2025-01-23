@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_holding.py
 #\brief   Holding controller for Dynamixel.
 #\author  Akihiko Yamaguchi, info@akihikoy.net

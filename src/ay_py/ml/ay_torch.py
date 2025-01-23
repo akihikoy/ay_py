@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    ay_torch.py
 #\brief   PyTorch utility.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -10,6 +10,8 @@ import torchvision
 import torchinfo
 import time
 import copy
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d
 from PIL import Image as PILImage

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_gripper.py
 #\brief   Control module of Dynamixel Gripper (3D-printed Gripper with Dynamixel).
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -7,7 +7,7 @@
 #\version 0.2
 #\date    May.21, 2022
 #         Refactored the code.
-from dxl_util import TDynamixel1
+from .dxl_util import TDynamixel1
 from ..misc.dxl_holding import TDxlHolding
 from ..core.util import TRate, CPrint
 import time
@@ -81,7 +81,7 @@ class TDxlGripperBase(object):
       self._is_initialized= False
 
     #Check the thread lockers status:
-    print 'Count of port_locker:',self.port_locker._RLock__count
+    #print('Count of port_locker:',self.port_locker._is_owned())
 
   '''Range of gripper position.'''
   def PosRange(self):
@@ -92,7 +92,7 @@ class TDxlGripperBase(object):
     with self.port_locker:
       pos= self.dxl.Position()
     if pos is None:
-      print 'DxlG: Failed to read position'
+      print('DxlG: Failed to read position')
       return None
     pos= self.gripper_cmd2pos(pos)
     return pos

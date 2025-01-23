@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dpl4a.py
 #\brief   Test dpl4.py with toy1.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -68,7 +68,7 @@ def Main(logdir='/tmp/g1/', options_in={}):
     xs0= {}  #XSSA
 
     res= dpl.Plan('n0', xs0)
-    print 'xs0(after plan)=',xs0
+    print('xs0(after plan)=',xs0)
     #ptree= ddp_sol.GetPTree('n0', xs0, max_visits=ddp_sol.Options['max_visits'])
     #print '########', [ddp_sol.Value(ptree)]
     res.PTree.Dump()
@@ -79,7 +79,7 @@ def Main(logdir='/tmp/g1/', options_in={}):
 
     dpl.MM.Update('F1',xs0,xs1)
     res= dpl.Plan('n1', xs1)  #No actions to be planned.
-    print 'xs1(after plan)=',xs1
+    print('xs1(after plan)=',xs1)
     db_n1= dpl.DB.AddToSeq(parent=db_n0,name='n1',xs=xs1)
 
     xs2= CopyXSSA(xs1)
@@ -89,13 +89,13 @@ def Main(logdir='/tmp/g1/', options_in={}):
     db_n2= dpl.DB.AddToSeq(parent=db_n1,name='n2',xs=xs2)
 
     xs3= dpl.Forward('R',xs2)
-    print 'xs3=',xs3
+    print('xs3=',xs3)
     db_n3= dpl.DB.AddToSeq(parent=db_n2,name='n3',xs=xs3)
     CPrint(1,'R=',xs3[REWARD_KEY])
 
     dpl.EndEpisode()
     fp.write(dpl.DB.DumpOneYAML())
-    print i,dpl.DB.DumpOne()
+    print(i,dpl.DB.DumpOne())
   fp.close()
 
   SaveYAML(dpl.MM.Save(dpl.MM.Options['base_dir']), dpl.MM.Options['base_dir']+'model_mngr.yaml')
@@ -154,7 +154,7 @@ def PlotGen(logdir='/tmp/g1/'):
   #print '''qplot -x -3d -cs 'u 1:2:6' /tmp/g1/f1.dat w l /tmp/g1/f1_est.dat w l /tmp/g1/f1_smp.dat -cs '' /tmp/g1/f1_ideals.dat u 1:2:'(0.0)' '''
 
 def PlotGraphs(logdir='/tmp/g1/'):
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   PlotGen(logdir)
   optpr='003'
@@ -171,13 +171,13 @@ def PlotGraphs(logdir='/tmp/g1/'):
   for cmd in commands:
     if cmd!='':
       cmd= (' '.join(cmd.splitlines())).replace('/tmp/g1/',logdir)
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill g1')
 
 if __name__=='__main__':

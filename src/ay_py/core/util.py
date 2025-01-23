@@ -1,6 +1,5 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Basic tools (utility).
-from __future__ import print_function
 import numpy as np
 import numpy.linalg as la
 import math
@@ -8,16 +7,14 @@ import os
 import sys
 import copy
 import threading
-try:
-  import Queue  #For thread communication
-except ModuleNotFoundError:
-  import queue as Queue
+import queue
 import time
 import datetime
 import random
 import traceback
 import importlib
 import hashlib
+import importlib
 
 #Speedup YAML using CLoader/CDumper
 from yaml import load as yamlload
@@ -31,6 +28,7 @@ from yaml import Dumper as yaml_Dumper
 def AskYesNo():
   while 1:
     sys.stdout.write('  (y|n) > ')
+    sys.stdout.flush()
     ans= sys.stdin.readline().strip()
     if ans=='y' or ans=='Y':  return True
     elif ans=='n' or ans=='N':  return False
@@ -40,6 +38,7 @@ def AskGen(*argv):
   assert(len(argv)>0)
   while 1:
     sys.stdout.write('  (%s) > ' % '|'.join(argv))
+    sys.stdout.flush()
     ans= sys.stdin.readline().strip()
     for a in argv:
       if ans==a:  return a
@@ -102,7 +101,7 @@ def Norm(x):
 
 #Max norm of a vector x
 def MaxNorm(x):
-  return max(map(abs,x))
+  return max(list(map(abs,x)))
 
 
 #Return a normalized vector with L2 norm
@@ -362,10 +361,10 @@ def ToStdType(x, except_cnv=lambda y:y):
   if isinstance(x, Types.npfloat):  return float(x)
   if isinstance(x, Types.stdprim):  return x
   if isinstance(x, np.ndarray):  return x.tolist()
-  if isinstance(x, (list,tuple,set)):  return map(lambda x2:ToStdType(x2,except_cnv), x)
-  if isinstance(x, dict):  return {ToStdType(k,except_cnv):ToStdType(v,except_cnv) for k,v in x.iteritems()}
+  if isinstance(x, (list,tuple,set)):  return [ToStdType(x2,except_cnv) for x2 in x]
+  if isinstance(x, dict):  return {ToStdType(k,except_cnv):ToStdType(v,except_cnv) for k,v in x.items()}
   try:
-    return {ToStdType(k,except_cnv):ToStdType(v,except_cnv) for k,v in x.__dict__.iteritems()}
+    return {ToStdType(k,except_cnv):ToStdType(v,except_cnv) for k,v in x.__dict__.items()}
   except AttributeError:
     return except_cnv(x)
     #pass
@@ -385,7 +384,7 @@ def AddSubDict(d,key):
 #c1,c2: internal variable (DO NOT USE)
 def PrintDict(d,max_level=-1,level=0,keyonly=False,col=None,c1='',c2=''):
   if col is not None:  c1,c2= ACol.I(col,None)
-  for k,v in d.iteritems():
+  for k,v in d.items():
     if type(v)==dict:
       print('%s%s[%s]%s= ...' % ('  '*level, c1, str(k), c2))
       if max_level<0 or level<max_level:
@@ -397,7 +396,7 @@ def PrintDict(d,max_level=-1,level=0,keyonly=False,col=None,c1='',c2=''):
 
 #Insert a new dictionary to the base dictionary
 def InsertDict(d_base, d_new):
-  for k_new,v_new in d_new.iteritems():
+  for k_new,v_new in d_new.items():
     if k_new in d_base and (type(v_new)==dict and type(d_base[k_new])==dict):
       InsertDict(d_base[k_new], v_new)
     else:
@@ -462,9 +461,11 @@ class TDualWriter(file):
     super(TDualWriter,self).flush()
   def write(self,str):
     sys.stdout.write(str)
+    sys.stdout.flush()
     super(TDualWriter,self).write(str)
   def writelines(self,sequence):
     sys.stdout.writelines(sequence)
+    sys.stdout.flush()
     super(TDualWriter,self).writelines(sequence)
 def DualWriter(file_name,interactive=True):
   OpenWCheck(file_name,'w',interactive)
@@ -489,7 +490,7 @@ def SmartImportReload(mod_id, __loaded={}):
     file_time= datetime.datetime.fromtimestamp(os.path.getmtime(PycToPy(mod.__file__)))
     #Reload if the file is modified:
     if file_time>loaded_time:
-      reload(mod)
+      importlib.reload(mod)
       __loaded[mod_id]= (datetime.datetime.now(), mod)  #Loaded time, module
     return mod
   else:
@@ -547,7 +548,7 @@ class Dumper_IndentPlus(yaml_Dumper):
 #Get an SHA-1 hash of a dictionary d.
 def GetSHA1HashOfDict(d):
   d_yaml= yamldump(d, Dumper=YDumper)
-  return hashlib.sha1(d_yaml).hexdigest()
+  return hashlib.sha1(d_yaml.encode('utf-8')).hexdigest()
 
 #Load a YAML and insert the data into a dictionary
 def InsertYAML(d_base, file_name):
@@ -626,15 +627,15 @@ class TContainerCore(object):
   def __repr__(self):
     return str(self.__dict__)
   def __iter__(self):
-    return self.__dict__.itervalues()
+    return iter(self.__dict__.values())
   def items(self):
-    return self.__dict__.items()
+    return list(self.__dict__.items())
   def iteritems(self):
-    return self.__dict__.iteritems()
+    return iter(self.__dict__.items())
   def keys(self):
-    return self.__dict__.keys()
+    return list(self.__dict__.keys())
   def values(self):
-    return self.__dict__.values()
+    return list(self.__dict__.values())
   def __getitem__(self,key):
     return self.__dict__[key]
   def __setitem__(self,key,value):
@@ -644,7 +645,7 @@ class TContainerCore(object):
   def __contains__(self,key):
     return key in self.__dict__
   def Cleanup(self):
-    keys= self.__dict__.keys()
+    keys= list(self.__dict__.keys())
     for k in keys:
       self.__dict__[k]= None
       del self.__dict__[k]
@@ -715,7 +716,7 @@ class TThreadManager:
   def __init__(self):
     self.thread_list= {}
     #self.main_running= True
-    #self.stop_messenger= Queue.Queue()
+    #self.stop_messenger= queue.Queue()
     #self.thread_stop_msg= threading.Thread(name='StopMessageHandler', target=lambda:self.StopMessageHandler())
     #self.thread_stop_msg.start()
   def __del__(self):
@@ -732,7 +733,7 @@ class TThreadManager:
       #try:
         #req= self.stop_messenger.get(timeout=5.0)
         #self.Stop(req)
-      #except Queue.Empty:
+      #except queue.Empty:
         #pass
 
   def Add(self,name,target,start=True):
@@ -757,7 +758,7 @@ class TThreadManager:
       self.thread_list[name].StopRequest()
 
   def StopAll(self):
-    for k in self.thread_list.keys():
+    for k in list(self.thread_list.keys()):
       print('Stop thread %r...' % k,end=' ')
       del self.thread_list[k]
       print('ok')
@@ -769,21 +770,21 @@ class TThreadManager:
 
 
 '''TSignal class for a thread to send a message to several threads.
-This is an extension of Queue.Queue.  The idea is queue-per-thread.
+This is an extension of queue.Queue.  The idea is queue-per-thread.
 Usage:
   In a wider scope, define this object, like a queue.
     signal= TSignal()
   In receivers, you can write either a with-statement form or a normal form.
-    with signal.NewQueue() as queue:
-      #use queue normally; e.g. data= queue.get()
+    with signal.NewQueue() as queue_:
+      #use queue_ normally; e.g. data= queue_.get()
   Or:
-    queue= signal.NewQueue()
-    #use queue normally; e.g. data= queue.get()
-    #at the end of this scope, queue is automatically released,
+    queue_= signal.NewQueue()
+    #use queue_ normally; e.g. data= queue_.get()
+    #at the end of this scope, queue_ is automatically released,
     #but if you want to do it explicitly, you can use either:
-    del queue
+    del queue_
     #or
-    queue= None
+    queue_= None
   In sender(s), you can write normally:
     signal.put(data)
 '''
@@ -796,24 +797,24 @@ class TSignal:
     idx= self.counter
     self.counter+= 1
     with self.locker:
-      self.queues[idx]= Queue.Queue()
-    queue= self.TQueue(self,idx,self.queues[idx])
-    return queue
+      self.queues[idx]= queue.Queue()
+    queue_= self.TQueue(self,idx,self.queues[idx])
+    return queue_
   def DeleteQueue(self,idx):
     with self.locker:
       if idx in self.queues:
         del self.queues[idx]
   def put(self,item,block=True,timeout=None):
     with self.locker:
-      items= self.queues.items()
-    for idx,queue in items:
-      queue.put(item,block,timeout)
+      items= list(self.queues.items())
+    for idx,queue_ in items:
+      queue_.put(item,block,timeout)
 
   class TQueue:
-    def __init__(self,parent,idx,queue):
+    def __init__(self,parent,idx,queue_):
       self.parent= parent
       self.idx= idx
-      self.queue= queue
+      self.queue_= queue_
     def __del__(self):
       self.parent.DeleteQueue(self.idx)
     def __enter__(self):
@@ -821,7 +822,7 @@ class TSignal:
     def __exit__(self,e_type,e_value,e_traceback):
       self.parent.DeleteQueue(self.idx)
     def get(self,block=True,timeout=None):
-      return self.queue.get(block,timeout)
+      return self.queue_.get(block,timeout)
 
 
 '''Modified rospy.Rate with standard time.

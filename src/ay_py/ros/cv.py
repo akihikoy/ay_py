@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #ROS computer vision utility.
 import roslib; roslib.load_manifest('sensor_msgs')
 import rospy

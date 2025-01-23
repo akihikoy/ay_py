@@ -1,7 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #State machine with a parameter adjustment architecture
-from __future__ import print_function
-from __future__ import absolute_import
 import os,time
 from .util import *
 
@@ -131,7 +129,7 @@ class TStateMachine:
     self.States[st]= TFSMState()
 
   def Show(self):
-    for id,st in self.States.items():
+    for id,st in list(self.States.items()):
       print('[%s].EntryAction= %r' % (id,st.EntryAction))
       print('[%s].ExitAction= %r' % (id,st.ExitAction))
       print('[%s].ElseAction= %r' % (id,st.ElseAction))

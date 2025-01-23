@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    cma1.py
 #\brief   CMA example
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -28,7 +28,7 @@ def Main():
     opt.Update(-f)
     fp.write('%f %f %f\n'%(x[0],x[1],f))
   fp.close
-  print 'Result=',opt.Result()
+  print('Result=',opt.Result())
 
   fp= OpenW('/tmp/cma1_true.dat')
   #X= np.mgrid[-2:2:0.1, -2:2:0.1]
@@ -43,7 +43,7 @@ def Main():
   fp.close
 
 def PlotGraphs():
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   commands=[
     '''qplot -x2 aaa -3d
@@ -58,13 +58,13 @@ def PlotGraphs():
   for cmd in commands:
     if cmd!='':
       cmd= ' '.join(cmd.splitlines())
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':

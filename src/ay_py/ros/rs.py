@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #RealSense utility.
 import roslib; roslib.load_manifest('rospy')
 import rospy
@@ -82,7 +82,7 @@ def SaveAsPickleRS(filepath, d, rs=None, save_rs_imgs_separately=True, compress=
         img_path= str(os.path.join(path_dir, img_name))
         cv2.imwrite(img_path, rs.img_rgb)
         rs.img_rgb= img_name
-  with open(filepath, 'w') as data_fp:
+  with open(filepath, 'wb') as data_fp:
     pickle.dump(d,data_fp)
   if compress:
     #The gzip command of the os is used.

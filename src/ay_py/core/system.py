@@ -1,6 +1,5 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Basic tools (system).
-from __future__ import absolute_import
 import sys, termios
 #import atexit
 import shutil
@@ -95,6 +94,7 @@ class TKBHit(object):
   #Print a character
   def PutCh(self,ch):
     sys.stdout.write(ch)
+    sys.stdout.flush()
 
   #Get a character
   def GetCh(self):

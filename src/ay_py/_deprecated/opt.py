@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Basic tools (optimization).
 import math
 import random
@@ -352,16 +352,16 @@ def CompOptInference(fmax_obj, options, database, db_search_key, infer_type,
       scale0_ratio= 1.0
 
   #If DB search or initial guess succeeded, set the parameter as an initial value:
-  if parameters0<>None:
+  if parameters0!=None:
     opt.SetParam0(parameters0)
     for name in opt.NamesInParam(parameters0,key='c'):
       opt.Opts[name].Options['scale0']*= scale0_ratio
     opt.SyncParams()
     opt.CreateOptimizers()
 
-  score0= fmax_obj(parameters0) if parameters0<>None else None
+  score0= fmax_obj(parameters0) if parameters0!=None else None
   CPrint(1,'parameters0=',parameters0)
-  CPrint(1,'      score=',score0 if score0<>None else None)
+  CPrint(1,'      score=',score0 if score0!=None else None)
   CPrint(1,'  maxfevals=',opt.Options['maxfevals'])
 
   if score0 is not None:
@@ -376,7 +376,7 @@ def CompOptInference(fmax_obj, options, database, db_search_key, infer_type,
   parameters_res,score_res= opt.Result()
 
   CPrint(1,'CMA-ES solution=',parameters_res)
-  CPrint(1,'          score=',score_res if score_res<>None else None)
+  CPrint(1,'          score=',score_res if score_res!=None else None)
   CPrint(1,'         fevals=',opt.Options['maxfevals']-opt.fevals)
   return parameters_res, score_res
 

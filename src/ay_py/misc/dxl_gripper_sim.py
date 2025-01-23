@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_gripper_sim.py
 #\brief   Dynamixel gripper simulation.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -9,6 +9,7 @@ import threading
 import numpy as np
 import time
 import copy
+import importlib
 from ..core.util import TRate, CPrint
 
 '''Multiple DoF simple gripper simulation model.'''
@@ -333,7 +334,7 @@ def TEST_dxl_gripper_sim():
       t_curr= time.time()-t_start
       if t_curr<1.0:          gripper1.MoveTo([0.1])
       elif 1.0<=t_curr<2.0:   gripper1.MoveTo([0.05])
-      print('Trg={} Pos={}, Vel={}'.format(gripper1.TargetPos(), gripper1.Position(), gripper1.Velocity()))
+      print(('Trg={} Pos={}, Vel={}'.format(gripper1.TargetPos(), gripper1.Position(), gripper1.Velocity())))
       rate_adjuster.sleep()
   except KeyboardInterrupt:
     print('Interrupted')
@@ -352,7 +353,7 @@ def TEST_dxl_gripper_sim():
       t_curr= time.time()-t_start
       if t_curr<1.0:          gripper2.MoveTo([0.05,0.2])
       elif 1.0<=t_curr<2.0:   gripper2.MoveTo([0.1,0.0])
-      print('Trg={} Pos={}, Vel={}'.format(gripper2.TargetPos(), gripper2.Position(), gripper2.Velocity()))
+      print(('Trg={} Pos={}, Vel={}'.format(gripper2.TargetPos(), gripper2.Position(), gripper2.Velocity())))
       rate_adjuster.sleep()
   except KeyboardInterrupt:
     print('Interrupted')
@@ -361,10 +362,10 @@ def TEST_dxl_gripper_sim():
 
   #Test of TDxlGripperSim
   print('Test of TGripperSim as an RHP12RNAGripper')
-  mod= __import__('ay_py.misc.dxl_rhp12rn',globals(),None,('TRHP12RN',))
+  mod= importlib.import_module('ay_py.misc.dxl_rhp12rn')
   dxlg_ref= mod.TRHP12RN(dev=None,type='(A)')
   def JointStatesCallback(state):
-    print state
+    print(state)
   gripper3= TDxlGripperSim(dxlg_ref)
   gripper3.Init()
   gripper3.StartStateObs(JointStatesCallback)
@@ -377,7 +378,7 @@ def TEST_dxl_gripper_sim():
       if t_curr<1.0:          gripper3.Open(blocking=False)
       elif 1.0<=t_curr<2.0:   gripper3.Close(blocking=True)
       elif 2.0<=t_curr<3.0:   gripper3.MoveTh(0.05)
-      print('{:.4f}: Trg={:.4f}, Pos={:.4f}, Vel={:.4f}'.format(t_curr, gripper3.moveth_cmd['pos'], gripper3.State()['position'], gripper3.State()['velocity']))
+      print(('{:.4f}: Trg={:.4f}, Pos={:.4f}, Vel={:.4f}'.format(t_curr, gripper3.moveth_cmd['pos'], gripper3.State()['position'], gripper3.State()['velocity'])))
       rate_adjuster.sleep()
   except KeyboardInterrupt:
     print('Interrupted')

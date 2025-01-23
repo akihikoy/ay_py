@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Universal Robots UR*.
-from const import *
+from .const import *
 
 import roslib
 import rospy
@@ -11,9 +11,10 @@ import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
 import copy
+import importlib
 
-from robot import *
-from kdl_kin import *
+from .robot import *
+from .kdl_kin import *
 
 '''Robot control class for single Universal Robots UR* with an empty gripper.'''
 class TRobotUR(TMultiArmRobot):
@@ -104,14 +105,14 @@ class TRobotUR(TMultiArmRobot):
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
 
     if not self.is_sim:
-      ur_dashboard_msgs= __import__('ur_dashboard_msgs',globals(),None,('msg',))
+      ur_dashboard_msgs= importlib.import_module('ur_dashboard_msgs')
       ra(self.AddSub('robot_mode', '/ur_hardware_interface/robot_mode', ur_dashboard_msgs.msg.RobotMode, self.RobotModeCallback))
       ra(self.AddSub('safety_mode', '/ur_hardware_interface/safety_mode', ur_dashboard_msgs.msg.SafetyMode, self.SafetyModeCallback))
       ra(self.AddSub('robot_program_running', '/ur_hardware_interface/robot_program_running', std_msgs.msg.Bool, self.RobotProgramRunningCallback))
       #roslib.load_manifest('ur_msgs')
 
     #2023-04-10 modified to subscribe io_states even in simulator for simulated io_states topics.
-    ur_msgs= __import__('ur_msgs',globals(),None,('msg',))
+    ur_msgs= importlib.import_module('ur_msgs')
     ra(self.AddSub('io_states', '/ur_hardware_interface/io_states', ur_msgs.msg.IOStates, self.IOStatesCallback))
 
     self.grippers= [TFakeGripper()]
@@ -148,9 +149,9 @@ class TRobotUR(TMultiArmRobot):
       return all((self.robot_mode.mode==self.robot_mode.RUNNING, self.safety_mode.mode==self.safety_mode.NORMAL, self.robot_program_running))
 
   def PrintStatus(self):
-    print 'robot_mode: {0} ({1})'.format(self.robot_mode.mode, 'running' if self.robot_mode.mode==self.robot_mode.RUNNING else 'not running')
-    print 'safety_mode: {0} ({1})'.format(self.safety_mode.mode, 'normal' if self.safety_mode.mode==self.safety_mode.NORMAL else 'not normal')
-    print 'robot_program_running: {0}'.format(self.robot_program_running)
+    print('robot_mode: {0} ({1})'.format(self.robot_mode.mode, 'running' if self.robot_mode.mode==self.robot_mode.RUNNING else 'not running'))
+    print('safety_mode: {0} ({1})'.format(self.safety_mode.mode, 'normal' if self.safety_mode.mode==self.safety_mode.NORMAL else 'not normal'))
+    print('robot_program_running: {0}'.format(self.robot_program_running))
 
   def RobotIP(self):
     return self.robot_ip

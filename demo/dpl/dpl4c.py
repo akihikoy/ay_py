@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dpl4c.py
 #\brief   Test dpl4.py with toy_arm1 and multiple targets.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -128,7 +128,7 @@ def Main(logdir='/tmp/arm/', options_in={}):
     #xs0['Q_cmd']= SSA([0.0]*arm.N*Nsel)  #Init guess
     xs0['Q_cmd']= SSA(ToList(xs0['q'].X)*Nsel)
     res= dpl.Plan('n0', xs0)
-    print 'xs0(after plan)=',xs0
+    print('xs0(after plan)=',xs0)
     #db_n0= dpl.DB.AddToSeq(parent=None,name='n0',xs=xs0)
 
     ptree= res.PTree
@@ -163,7 +163,7 @@ def Main(logdir='/tmp/arm/', options_in={}):
 
 
 def PlotGraphs():
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   commands=[
     '''qplot -x2 aaa
@@ -183,13 +183,13 @@ def PlotGraphs():
   for cmd in commands:
     if cmd!='':
       cmd= ' '.join(cmd.splitlines())
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':

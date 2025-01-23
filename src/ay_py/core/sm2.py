@@ -1,7 +1,5 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #Simple new version of state machines.
-from __future__ import print_function
-from __future__ import absolute_import
 import os,time
 from .util import *
 

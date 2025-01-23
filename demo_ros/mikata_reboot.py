@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    mikata_off.py
 #\brief   Reboot all Dynamixel of Mikata Arm.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -14,9 +14,9 @@ if __name__=='__main__':
   dev= sys.argv[1] if len(sys.argv)>1 else DXLG_DEV
   rospy.init_node('mikata_off')
   robot= TRobotMikata(dev=dev)
-  print 'Initializing...'
+  print('Initializing...')
   robot.Init()
-  print 'Done.'
+  print('Done.')
 
   CPrint(1, 'Rebooting all Dynamixel...')
   robot.mikata.Reboot()

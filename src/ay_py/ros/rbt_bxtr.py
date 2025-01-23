@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Baxter.
-from const import *
+from .const import *
 #if ROS_ROBOT not in ('ANY','Baxter','Baxter_SIM','BaxterN','RobotiqNB'):
   #raise ImportError('Stop importing: ROS_ROBOT is not Baxter')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
@@ -19,9 +19,9 @@ import time, math, sys, copy
 import cv2
 import cv_bridge
 
-from robot import *
-from rbt_rq import TRobotiq
-from kdl_kin import *
+from .robot import *
+from .rbt_rq import TRobotiq
+from .kdl_kin import *
 
 '''Robot control class for Baxter.'''
 class TRobotBaxter(TDualArmRobot):
@@ -78,13 +78,13 @@ class TRobotBaxter(TDualArmRobot):
     self.epgripper= TBaxterEPG('right')
     self.grippers= [self.epgripper, self.robotiq]
 
-    print 'Enabling the robot...'
+    print('Enabling the robot...')
     baxter_interface.RobotEnable(baxter_interface.CHECK_VERSION).enable()
 
-    print 'Calibrating electric parallel gripper...'
+    print('Calibrating electric parallel gripper...')
     ra(self.epgripper.Init())
 
-    print 'Initializing and activating Robotiq gripper...'
+    print('Initializing and activating Robotiq gripper...')
     ra(self.robotiq.Init())
 
     if False not in res:  self._is_initialized= True

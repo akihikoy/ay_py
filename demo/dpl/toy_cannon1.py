@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    toy_cannon1.py
 #\brief   Simple 2D cannon example.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -51,7 +51,7 @@ def SolveAnalytically(p0, pe, v0):
   th= []
   for theta_i in theta:
     th.append( (pe[0]-p0[0])/(v0*math.cos(theta_i)) )
-  th_theta= zip(th,theta)
+  th_theta= list(zip(th,theta))
   th_theta.sort()
   th,theta= th_theta[0][0], th_theta[0][1]
   #print 'th_theta=',th_theta
@@ -75,8 +75,8 @@ def Main1():
   #pe= [1.327, 0.3]
   v0= 3.0
   theta= SolveAnalytically(p0, pe, v0)
-  print 'theta=', theta
-  print 'th,pyh=', CannonForward(p0+pe+[v0]+[theta],with_grad=False) if theta is not None else None
+  print('theta=', theta)
+  print('th,pyh=', CannonForward(p0+pe+[v0]+[theta],with_grad=False) if theta is not None else None)
   if theta is not None:
     fp= open('/tmp/cannon1.dat','w')
     Simulate(p0, pe, v0, theta, fp)
@@ -90,13 +90,13 @@ def Main2():
   pe= [0.225, 0.5]
   v0= 3.5
   theta1,theta2= SolveAnalytically(p1, pe, v0), SolveAnalytically(p2, pe, v0)
-  print 'theta1,2=', theta1,theta2
-  print 'th1,pyh1=', CannonForward(p1+pe+[v0]+[theta1],with_grad=False)
-  print 'th2,pyh2=', CannonForward(p2+pe+[v0]+[theta2],with_grad=False)
+  print('theta1,2=', theta1,theta2)
+  print('th1,pyh1=', CannonForward(p1+pe+[v0]+[theta1],with_grad=False))
+  print('th2,pyh2=', CannonForward(p2+pe+[v0]+[theta2],with_grad=False))
   theta= 2.29605378903
-  print '(dpl)theta=', theta
-  print '(dpl)th1,pyh1=', CannonForward(p1+pe+[v0]+[theta],with_grad=False)
-  print '(dpl)th2,pyh2=', CannonForward(p2+pe+[v0]+[theta],with_grad=False)
+  print('(dpl)theta=', theta)
+  print('(dpl)th1,pyh1=', CannonForward(p1+pe+[v0]+[theta],with_grad=False))
+  print('(dpl)th2,pyh2=', CannonForward(p2+pe+[v0]+[theta],with_grad=False))
 
 def Main():
   Main1()
@@ -104,7 +104,7 @@ def Main():
 
 
 def PlotGraphs():
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   commands=[
     '''qplot -x2 aaa /tmp/cannon1.dat w l &''',
@@ -114,13 +114,13 @@ def PlotGraphs():
   for cmd in commands:
     if cmd!='':
       cmd= ' '.join(cmd.splitlines())
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':

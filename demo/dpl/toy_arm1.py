@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    toy_arm1.py
 #\brief   Arm robot test.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -81,7 +81,7 @@ def VisualizeTraj2D(arm, q_traj, x_trg, file_name):
   fp.close()
 
 def PlotGraphs():
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   commands=[
     '''qplot -x2 aaa
@@ -97,13 +97,13 @@ def PlotGraphs():
   for cmd in commands:
     if cmd!='':
       cmd= ' '.join(cmd.splitlines())
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':
@@ -111,7 +111,7 @@ if __name__=='__main__':
   if len(sys.argv)>1 and sys.argv[1] in ('p','plot','Plot','PLOT'):
     PlotGraphs()
     sys.exit(0)
-  print 'f:FK, i:IK'
+  print('f:FK, i:IK')
   cmd= AskGen('f','i')
   #FK test
   if cmd=='f':

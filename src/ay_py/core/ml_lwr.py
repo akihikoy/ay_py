@@ -1,10 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 '''
 Incremental version of LWR, locally weighted regression.
 - Gaussian kernel with max norm is available.
 - Subclass of TFunctionApprox.
 '''
-from __future__ import absolute_import
 from .util import *
 from .ml import *
 import six.moves.cPickle as pickle
@@ -105,9 +104,9 @@ class TLWR(TFunctionApprox):
     TFunctionApprox.Init(self)
     L= self.Locate
     if self.Params['data_x'] != None:
-      self.DataX= pickle.load(open(L(self.Params['data_x']), 'rb'))
+      self.DataX= pickle.load(open(L(self.Params['data_x']), 'rb'), encoding='latin1')
     if self.Params['data_y'] != None:
-      self.DataY= pickle.load(open(L(self.Params['data_y']), 'rb'))
+      self.DataY= pickle.load(open(L(self.Params['data_y']), 'rb'), encoding='latin1')
 
     self.C= []
     self.Closests= []
@@ -145,7 +144,7 @@ class TLWR(TFunctionApprox):
     for n in range(N):
       W[n,n]= self.kernel((x-self.X[n])[:,:D], np.array([self.C[n]*self.C[n]]*D)+x_var)
     if self.Importance!=None:
-      for k,v in self.Importance.iteritems():
+      for k,v in self.Importance.items():
         W[k,k]*= v
     return W
 

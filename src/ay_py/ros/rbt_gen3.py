@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Kinova Gen3.
-from const import *
+from .const import *
 
 import roslib
 import rospy
@@ -9,8 +9,8 @@ import control_msgs.msg
 import sensor_msgs.msg
 import copy
 
-from robot import *
-from kdl_kin import *
+from .robot import *
+from .kdl_kin import *
 
 
 '''Interpolate a trajectory consisting of q_traj and t_traj with an interval dt.

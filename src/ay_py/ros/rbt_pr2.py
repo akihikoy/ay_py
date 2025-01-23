@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for PR2.
-from const import *
+from .const import *
 #if ROS_ROBOT not in ('ANY','PR2','PR2_SIM'):
   #raise ImportError('Stop importing: ROS_ROBOT is not PR2')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
@@ -14,7 +14,7 @@ import trajectory_msgs.msg
 import pr2_controllers_msgs.msg
 import pr2_mechanism_msgs.srv
 
-from robot import *
+from .robot import *
 
 '''Robot control class for PR2.'''
 class TRobotPR2(TDualArmRobot):
@@ -438,7 +438,7 @@ class TPR2Mannequin(TROSUtil):
 
   def Activate(self, arm):
     if self.is_mannequin[arm]:
-      print '%s arm is already mannequin mode.' % LRToStr(arm)
+      print('%s arm is already mannequin mode.' % LRToStr(arm))
       return
 
     if not self.Init():  return
@@ -459,11 +459,11 @@ class TPR2Mannequin(TROSUtil):
     switch_req.start_controllers= [self.mannequin_controllers[arm]]
     res= self.srvp.switch_control(switch_req)
     self.is_mannequin[arm]= True
-    print '%s arm is mannequin mode.' % LRToStr(arm)
+    print('%s arm is mannequin mode.' % LRToStr(arm))
 
   def Deactivate(self, arm):
     if not self.is_mannequin[arm]:
-      print '%s arm is not mannequin mode.' % LRToStr(arm)
+      print('%s arm is not mannequin mode.' % LRToStr(arm))
       return
 
     if arm==RIGHT and 'r_mann_state' in self.sub:
@@ -480,7 +480,7 @@ class TPR2Mannequin(TROSUtil):
     switch_req.start_controllers= [self.standard_controllers[arm]]
     res= self.srvp.switch_control(switch_req)
     self.is_mannequin[arm]= False
-    print '%s arm have finished mannequin mode.' % LRToStr(arm)
+    print('%s arm have finished mannequin mode.' % LRToStr(arm))
 
   def JointStateCallback(self, msg, arm):
     if self.is_mannequin[arm]:

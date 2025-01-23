@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Module cma implements the CMA-ES (Covariance Matrix Adaptation Evolution Strategy).
 
 CMA-ES is a stochastic optimizer for robust non-linear non-convex
@@ -244,22 +244,18 @@ From a python shell::
 # 08/10/24: more refactorizing
 # 10/03/09: upper bound exp(min(1,...)) for step-size control
 
-from __future__ import division
+
 # future is >= 3.0, this code has mainly been used with 2.6 & 2.7
-from __future__ import with_statement
+
 # only necessary for python 2.5 and not in heavy use
-from __future__ import print_function
+
 # available from python 2.6, code should also work without
-from __future__ import absolute_import
-from __future__ import unicode_literals
+
+
 # from __future__ import collections.MutableMapping
 # does not exist in future, otherwise Python 2.5 would work, since 0.91.01
 
 import sys
-if not sys.version.startswith('2'):  # in python 3
-    xrange = range
-    raw_input = input
-    basestring = str
 import time  # not really essential
 try:
   from collections import MutableMapping as collections_MutableMapping
@@ -273,6 +269,7 @@ from numpy import inf, array, dot, exp, log, sqrt, sum
 # removes the imported sum and recovers the shadowed build-in
 try:
     import matplotlib
+    matplotlib.use('TkAgg')
     import matplotlib.pyplot as pyplot  # also: use ipython -pyplot
     savefig = pyplot.savefig  # now we can use cma.savefig() etc
     closefig = pyplot.close
@@ -370,7 +367,7 @@ use_archives = True
 #
 def rglen(ar):
     """shortcut for the iterator ``xrange(len(ar))``"""
-    return xrange(len(ar))
+    return range(len(ar))
 
 def is_feasible(x, f):
     """default to check feasibility, see also ``cma_default_options``"""
@@ -771,7 +768,7 @@ class BoundaryHandlerBase(object):
         if self.bounds is None or self.bounds[ib] is None:
             return array(dimension * [sign_ * np.Inf])
         res = []
-        for i in xrange(dimension):
+        for i in range(dimension):
             res.append(self.bounds[ib][min([i, len(self.bounds[ib]) - 1])])
             if res[-1] is None:
                 res[-1] = sign_ * np.Inf
@@ -821,7 +818,7 @@ class BoundaryHandlerBase(object):
                     l[i] = 1
             b = []  # bounds in different format
             try:
-                for i in xrange(max(l)):
+                for i in range(max(l)):
                     b.append([bounds[0][i] if i < l[0] else None,
                               bounds[1][i] if i < l[1] else None])
             except (TypeError, IndexError):
@@ -1053,7 +1050,7 @@ class BoundPenalty(BoundaryHandlerBase):
         # compute varis = sigma**2 * C_ii
         varis = es.sigma**2 * array(N * [es.C] if np.isscalar(es.C) else (# scalar case
                                 es.C if np.isscalar(es.C[0]) else  # diagonal matrix case
-                                [es.C[i][i] for i in xrange(N)]))  # full matrix case
+                                [es.C[i][i] for i in range(N)]))  # full matrix case
 
         # relative violation in geno-space
         dmean = (es.mean - es.gp.geno(self.repair(es.gp.pheno(es.mean)))) / varis**0.5
@@ -1241,10 +1238,10 @@ class BoxConstraintsLinQuadTransformation(BoxConstraintsTransformationBase):
         max_i = min((len(self.bounds) - 1, length - 1))
         self._lb = array([self.bounds[min((i, max_i))][0]
                           if self.bounds[min((i, max_i))][0] is not None else -np.Inf
-                          for i in xrange(length)], copy=False)
+                          for i in range(length)], copy=False)
         self._ub = array([self.bounds[min((i, max_i))][1]
                           if self.bounds[min((i, max_i))][1] is not None else np.Inf
-                          for i in xrange(length)], copy=False)
+                          for i in range(length)], copy=False)
         lb = self._lb
         ub = self._ub
         # define added values for lower and upper bound
@@ -2500,7 +2497,7 @@ class CMAEvolutionStrategy(OOOptimizer):
 
         # extract/expand options
         N = self.N_pheno
-        assert isinstance(opts['fixed_variables'], (basestring, dict)) \
+        assert isinstance(opts['fixed_variables'], (str, dict)) \
             or opts['fixed_variables'] is None
         # TODO: in case of a string we need to eval the fixed_variables
         if isinstance(opts['fixed_variables'], dict):
@@ -2996,7 +2993,7 @@ class CMAEvolutionStrategy(OOOptimizer):
         fit = []  # or np.NaN * np.empty(number)
         X_first = self.ask(popsize)
         X = []
-        for k in xrange(int(popsize)):
+        for k in range(int(popsize)):
             x, f = X_first.pop(0), None
             nreject = -1
             while nreject < 0 or not is_feasible(x, f):  # rejection sampling
@@ -3015,7 +3012,7 @@ class CMAEvolutionStrategy(OOOptimizer):
                 # zzzzzzzzzzzzzzzzzzzzzzzzz
                 f = func(x, *args) if kappa == 1 else func(xmean + kappa * length_normalizer * (x - xmean), *args)
                 if is_feasible(x, f) and evaluations > 1:
-                    f = aggregation([f] + [(func(x, *args) if kappa == 1 else func(xmean + kappa * length_normalizer * (x - xmean), *args)) for _i in xrange(int(evaluations - 1))])
+                    f = aggregation([f] + [(func(x, *args) if kappa == 1 else func(xmean + kappa * length_normalizer * (x - xmean), *args)) for _i in range(int(evaluations - 1))])
                 if nreject + 1 % 1000 == 0:
                     print('  %d solutions rejected (f-value NaN or None) at iteration %d' %
                           (nreject, self.countiter))
@@ -3184,7 +3181,7 @@ class CMAEvolutionStrategy(OOOptimizer):
                 if len(check_points):
                     idx = check_points
             except:
-                idx = xrange(sp.popsize)
+                idx = range(sp.popsize)
 
             for k in idx:
                 self.repair_genotype(pop[k])
@@ -3267,7 +3264,7 @@ class CMAEvolutionStrategy(OOOptimizer):
             else:  # separable/diagonal linear case
                 assert(c1 + cmu <= 1)
                 Z = np.zeros(N)
-                for k in xrange(sp.mu):
+                for k in range(sp.mu):
                     z = (pop[k] - mold) / (self.sigma * self.sigma_vec)  # TODO see above
                     Z += sp.weights[k] * z * z  # is 1-D
                 self.C = (1 - c1a - cmu) * self.C + c1 * self.pc * self.pc + cmu * Z
@@ -3286,7 +3283,7 @@ class CMAEvolutionStrategy(OOOptimizer):
             self.sigma = self.opts['minstd'] / min(self.dC)**0.5
         # g = self.countiter
         # N = self.N
-        mindx = eval(self.opts['mindx']) if isinstance(self.opts['mindx'], basestring) else self.opts['mindx']
+        mindx = eval(self.opts['mindx']) if isinstance(self.opts['mindx'], str) else self.opts['mindx']
         if self.sigma * min(self.D) < mindx:  # TODO: sigma_vec is missing here
             self.sigma = mindx / min(self.D)
 
@@ -3796,7 +3793,7 @@ class CMAOptions(dict):
         if s is None:
             super(CMAOptions, self).__init__(CMAOptions.defaults())  # dict.__init__(self, CMAOptions.defaults()) should be the same
             # self = CMAOptions.defaults()
-        elif isinstance(s, basestring):
+        elif isinstance(s, str):
             super(CMAOptions, self).__init__(CMAOptions().match(s))
             # we could return here
         else:
@@ -3910,9 +3907,9 @@ class CMAOptions(dict):
         if loc is None:
             loc = self  # TODO: this hack is not so useful: popsize could be there, but N is missing
         try:
-            if isinstance(val, basestring):
+            if isinstance(val, str):
                 val = val.split('#')[0].strip()  # remove comments
-                if isinstance(val, basestring) and key.find('filename') < 0 and key.find('mindx') < 0:
+                if isinstance(val, str) and key.find('filename') < 0 and key.find('mindx') < 0:
                     val = eval(val, globals(), loc)
             # invoke default
             # TODO: val in ... fails with array type, because it is applied element wise!
@@ -4107,7 +4104,7 @@ class CMAStopDict(dict):
             # noeffectaxis (CEC: 0.1sigma), noeffectcoord (CEC:0.2sigma), conditioncov
             self._addstop('noeffectcoord',
                          any([es.mean[i] == es.mean[i] + 0.2 * es.sigma * sqrt(es.dC[i])
-                              for i in xrange(N)]))
+                              for i in range(N)]))
             if opts['CMA_diagonal'] is not True and es.countiter > opts['CMA_diagonal']:
                 i = es.countiter % N
                 self._addstop('noeffectaxis',
@@ -4993,7 +4990,7 @@ class CMADataLogger(BaseDataLogger):
         the new value
 
         """
-        if not nameprefix or not isinstance(nameprefix, basestring):
+        if not nameprefix or not isinstance(nameprefix, str):
             raise _Error('filename prefix must be a nonempty string')
 
         if nameprefix == self.default_prefix:
@@ -5665,7 +5662,7 @@ class DEAPCMADataLogger(BaseDataLogger):
                         + str(es.update_count * es.lambda_) + ' '
                         + str(es.sigma) + ' '
                         + '0 0 '
-                        + ' '.join(map(str, es.sigma * np.sqrt([es.C[i][i] for i in xrange(es.dim)])))
+                        + ' '.join(map(str, es.sigma * np.sqrt([es.C[i][i] for i in range(es.dim)])))
                         + '\n')
             # xmean
             fn = self.name_prefix + 'xmean.dat'
@@ -5701,7 +5698,7 @@ class DEAPCMADataLogger(BaseDataLogger):
         the new value
 
         """
-        if not nameprefix or not isinstance(nameprefix, basestring):
+        if not nameprefix or not isinstance(nameprefix, str):
             raise _Error('filename prefix must be a nonempty string')
 
         if nameprefix == self.default_prefix:
@@ -6428,9 +6425,9 @@ class NoiseHandler(object):
                     self.fitre[i] = fagg(func(ask(evals, X_i, self.epsilon), *args))
                 else:
                     self.fitre[i] = fagg([func(ask(1, X_i, self.epsilon)[0], *args)
-                                            for _k in xrange(evals)])
+                                            for _k in range(evals)])
             else:
-                self.fitre[i] = fagg([func(X_i, *args) for _k in xrange(evals)])
+                self.fitre[i] = fagg([func(X_i, *args) for _k in range(evals)])
         self.evaluations_just_done = evals * len(self.idx)
         return self.fit, self.fitre, self.idx
 
@@ -6656,7 +6653,7 @@ class Sections(object):
         """load from file"""
         import pickle
         name = name if name else self.name
-        s = pickle.load(open(name + '.pkl', 'rb'))
+        s = pickle.load(open(name + '.pkl', 'rb'), encoding='latin1')
         self.res = s.res  # disregard the class
         return self
 
@@ -6821,12 +6818,12 @@ class Misc(object):
                 l = 0
 
             if l == 0:
-                return array([Mh.cauchy_with_variance_one() for _i in xrange(size)])
+                return array([Mh.cauchy_with_variance_one() for _i in range(size)])
             elif l == 1:
-                return array([Mh.cauchy_with_variance_one() for _i in xrange(size[0])])
+                return array([Mh.cauchy_with_variance_one() for _i in range(size[0])])
             elif l == 2:
-                return array([[Mh.cauchy_with_variance_one() for _i in xrange(size[1])]
-                             for _j in xrange(size[0])])
+                return array([[Mh.cauchy_with_variance_one() for _i in range(size[1])]
+                             for _j in range(size[0])])
             else:
                 raise _Error('len(size) cannot be large than two')
 
@@ -7195,7 +7192,7 @@ class Misc(object):
 
         N = len(C[0])
         if 1 < 3:
-            V = [[x[i] for i in xrange(N)] for x in C]  # copy each "row"
+            V = [[x[i] for i in range(N)] for x in C]  # copy each "row"
             d = N * [0.]
             e = N * [0.]
 
@@ -7217,9 +7214,9 @@ def pprint(to_be_printed):
         if isinstance(to_be_printed, dict):
             print('{')
             for k, v in to_be_printed.items():
-                print("'" + k + "'" if isinstance(k, basestring) else k,
+                print("'" + k + "'" if isinstance(k, str) else k,
                       ': ',
-                      "'" + v + "'" if isinstance(k, basestring) else v,
+                      "'" + v + "'" if isinstance(k, str) else v,
                       sep="")
             print('}')
         else:
@@ -7252,8 +7249,8 @@ class Rotation(object):
         N = x.shape[0]  # can be an array or matrix, TODO: accept also a list of arrays?
         if str(N) not in self.dicMatrices:  # create new N-basis for once and all
             B = np.random.randn(N, N)
-            for i in xrange(N):
-                for j in xrange(0, i):
+            for i in range(N):
+                for j in range(0, i):
                     B[i] -= np.dot(B[i], B[j]) * B[j]
                 B[i] /= sum(B[i]**2)**0.5
             self.dicMatrices[str(N)] = B
@@ -7539,7 +7536,7 @@ class FitnessFunctions(object):
         # ((8 * np.sin(7 * (x[i] - 0.9)**2)**2 ) + (6 * np.sin()))
         res = np.sum((x[i - 1] + 10 * x[i])**2 + 5 * (x[i + 1] - x[i + 2])**2 +
                      (x[i] - 2 * x[i + 1])**4 + 10 * (x[i - 1] - x[i + 2])**4
-                     for i in xrange(1, len(x) - 2))
+                     for i in range(1, len(x) - 2))
         return 1 + res
     def styblinski_tang(self, x):
         return (39.1661657037714171054273576010019 * len(x))**1 + sum(x**4 - 16*x**2 + 5*x) / 2
@@ -7740,7 +7737,7 @@ def main(argv=None):
             fun = None
         elif argv[1] in ('plot',):
             plot(name=argv[2] if len(argv) > 2 else None)
-            raw_input('press return')
+            input('press return')
             fun = None
         elif len(argv) > 3:
             fun = eval('fcts.' + argv[1])
@@ -7756,7 +7753,7 @@ def main(argv=None):
             sig0 = eval(argv[3])
 
         opts = {}
-        for i in xrange(5, len(argv), 2):
+        for i in range(5, len(argv), 2):
             opts[argv[i - 1]] = eval(argv[i])
 
         # run fmin

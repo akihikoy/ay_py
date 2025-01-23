@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #\file    simple_panel1.py
 #\brief   Qt-based simple panel designer.
@@ -11,9 +11,9 @@ import os, sys, copy, math
 if 'PYQT_VERSION' not in os.environ:
   os.environ['PYQT_VERSION']= '5'
 if str(os.environ['PYQT_VERSION'])=='4':
-  from PyQt4 import QtCore,QtGui
+  from PyQt4 import QtCore,QtGui,QtTest
 elif str(os.environ['PYQT_VERSION'])=='5':
-  from PyQt5 import QtCore,QtWidgets
+  from PyQt5 import QtCore,QtWidgets,QtTest
   import PyQt5.QtGui as PyQt5QtGui
   QtGui= QtWidgets
   for component in ('QFont', 'QFontMetrics', 'QIntValidator', 'QDoubleValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter'):
@@ -24,13 +24,15 @@ else:
 try:
   import roslib
   roslib.load_manifest('rviz')
-  import rviz
+  from rviz import bindings as rviz
 except:
-  print 'Failed to import rviz'
+  print('Failed to import rviz')
 
+def _disp_float(value):
+  return str(round(value, 8))
 
 def MergeDict(d_base, d_new):
-  for k_new,v_new in d_new.iteritems():
+  for k_new,v_new in d_new.items():
     if k_new in d_base and (type(v_new)==dict and type(d_base[k_new])==dict):
       MergeDict(d_base[k_new], v_new)
     else:
@@ -98,7 +100,7 @@ class TSlider(QtGui.QWidget):
     self.setLabel(value)
 
   def setLabel(self, value):
-    self.label.setText(str(value).rjust(len(str(self.range_step[1]))))
+    self.label.setText(_disp_float(value).rjust(len(_disp_float(self.range_step[1]))))
 
   #style: 0:Default, 1:Variable handle size.
   def Construct(self, range_step, n_labels, slider_style, onvaluechange):
@@ -135,7 +137,7 @@ class TSlider(QtGui.QWidget):
       #tick_font= QtGui.QFont(self.label.font().family(), self.label.font().pointSize()*0.6)
       label_step= (range_step[1]-range_step[0])/(n_labels-1)
       for i_label in range(n_labels):
-        label= str(range_step[0]+i_label*label_step)
+        label= _disp_float(range_step[0]+i_label*label_step)
         tick_label= QtGui.QLabel(label,self)
         #tick_label.setFont(tick_font)
         if i_label<(n_labels-1)/2:  align= QtCore.Qt.AlignLeft
@@ -151,7 +153,7 @@ class TSlider(QtGui.QWidget):
     self.setStyleForFont(self.label.font())
 
   def setStyleForFont(self, f):
-    tick_f= QtGui.QFont(f.family(), f.pointSize()*0.6)
+    tick_f= QtGui.QFont(f.family(), int(f.pointSize()*0.6))
     for tick_label in self.tick_labels:
       tick_label.setFont(tick_f)
     if self.slider_style==0:
@@ -188,7 +190,7 @@ class TPrimitivePainter(QtGui.QWidget):
 
     self.shape= shape
     self.margin= margin  #(horizontal_margin(ratio),vertical_margin(ratio))
-    self.color= color
+    self.color= list(map(int,color))
     self.min_size= 100
     self.max_size= 400
     self.width_height_ratio= 1.2
@@ -201,11 +203,11 @@ class TPrimitivePainter(QtGui.QWidget):
     self.setSizePolicy(size_policy)
 
   def setPaintColor(self, rgb):
-    self.color= rgb
+    self.color= list(map(int,rgb))
     self.update()
 
   def setRandomColor(self):
-    self.setPaintColor([255*random.random(),255*random.random(),255*random.random()])
+    self.setPaintColor(list(map(int,[255*random.random(),255*random.random(),255*random.random()])))
 
   def setShape(self, shape):
     self.update()
@@ -222,11 +224,11 @@ class TPrimitivePainter(QtGui.QWidget):
     return QtCore.QSize(self.max_size, self.heightForWidth(self.max_size))
 
   def heightForWidth(self, width):
-    return width*self.width_height_ratio
+    return int(width*self.width_height_ratio)
 
   def paintEvent(self, event):
     col1= QtGui.QColor(*self.color)
-    col2= QtGui.QColor(0.6*self.color[0], 0.6*self.color[1], 0.6*self.color[2])
+    col2= QtGui.QColor(int(0.6*self.color[0]), int(0.6*self.color[1]), int(0.6*self.color[2]))
     linear_gradient= QtGui.QLinearGradient(0, 0, self.width(), self.height())
     linear_gradient.setColorAt(0.0, QtCore.Qt.white)
     linear_gradient.setColorAt(0.2, col1)
@@ -242,10 +244,10 @@ class TPrimitivePainter(QtGui.QWidget):
     painter.translate(0, 0)
 
     if self.shape in ('ellipse','rect'):
-      rect= QtCore.QRect(self.width()*self.margin[0], self.height()*self.margin[1], self.width()*(1.0-2.0*self.margin[0]), self.height()*(1.0-2.0*self.margin[1]))
+      rect= QtCore.QRect(int(self.width()*self.margin[0]), int(self.height()*self.margin[1]), int(self.width()*(1.0-2.0*self.margin[0])), int(self.height()*(1.0-2.0*self.margin[1])))
     elif self.shape in ('circle','square'):
-      l= min(self.width()*(1.0-2.0*self.margin[0]), self.height()*(1.0-2.0*self.margin[1]))
-      rect= QtCore.QRect((self.width()-l)/2, (self.height()-l)/2, l, l)
+      l= int(min(self.width()*(1.0-2.0*self.margin[0]), self.height()*(1.0-2.0*self.margin[1])))
+      rect= QtCore.QRect((self.width()-l)//2, (self.height()-l)//2, l, l)
 
     if self.shape in ('ellipse','circle'):
       painter.drawEllipse(rect)
@@ -422,7 +424,7 @@ class TVirtualJoyStick(QtGui.QWidget):
     #return QtCore.QSize(400, self.heightForWidth(400))
 
   #def heightForWidth(self, width):
-    #return width*1.2
+    #return int(width*1.2)
 
   #Return the current joystick position.
   def position(self):
@@ -435,10 +437,10 @@ class TVirtualJoyStick(QtGui.QWidget):
       return [self.stick_pos.p2().y()]
 
   def getGradient(self, color, bounds, reverse=False):
-    col0= QtGui.QColor(min(255,1.5*color[0]), min(255,1.5*color[1]), min(255,1.5*color[2]))
-    col1= QtGui.QColor(*color)
-    col2= QtGui.QColor(0.6*color[0], 0.6*color[1], 0.6*color[2])
-    col3= QtGui.QColor(0.2*color[0], 0.2*color[1], 0.2*color[2])
+    col0= QtGui.QColor(min(255,int(1.5*color[0])), min(255,int(1.5*color[1])), min(255,int(1.5*color[2])))
+    col1= QtGui.QColor(*map(int,color))
+    col2= QtGui.QColor(int(0.6*color[0]), int(0.6*color[1]), int(0.6*color[2]))
+    col3= QtGui.QColor(int(0.2*color[0]), int(0.2*color[1]), int(0.2*color[2]))
     positions= [0.0,0.2,0.8,1.0]
     #colors= [QtCore.Qt.white,col1,col2,QtCore.Qt.black]
     colors= [col0,col1,col2,col3]
@@ -611,7 +613,7 @@ class TSimplePanel(QtGui.QWidget):
   #Add widgets from widget description dict.
   def AddWidgets(self, widgets):
     duplicate_req= []
-    for name,(w_type, w_param) in widgets.iteritems():
+    for name,(w_type, w_param) in widgets.items():
       if name in self.widgets_in:
         raise Exception('TSimplePanel.AddWidgets: widget already exists: {0}'.format(name))
       if w_type=='duplicate':
@@ -620,7 +622,7 @@ class TSimplePanel(QtGui.QWidget):
         self.widgets_in[name]= (w_type, w_param)
     for name,w_param in duplicate_req:
       self.widgets_in[name]= self.widgets_in[w_param]
-    for name in widgets.iterkeys():
+    for name in widgets.keys():
       w_type, w_param= self.widgets_in[name]
       self.widgets[name]= self.widget_generator[w_type](w_param)
 
@@ -650,7 +652,7 @@ class TSimplePanel(QtGui.QWidget):
 
   def ResizeTextOfObj(self, obj, font_size_range, size):
     font_size= min(font_size_range[1],max(font_size_range[0],int(size*font_size_range[0])))
-    f= QtGui.QFont('', font_size)
+    f= QtGui.QFont('', int(font_size))
     if isinstance(obj,QtGui.QLineEdit):
       #obj.resize(obj.sizeHint().width(),obj.height())
       text= obj.text()
@@ -663,7 +665,7 @@ class TSimplePanel(QtGui.QWidget):
 
   def ResizeText(self, event):
     s= self.rect().height()/self.font_height_scale
-    for name,obj in self.widgets.iteritems():
+    for name,obj in self.widgets.items():
       if not hasattr(obj,'font_size_range'):  continue
       self.ResizeTextOfObj(obj, obj.font_size_range, s)
 
@@ -996,8 +998,8 @@ def RunPanelApp(exit_at_close=True):
 
 if __name__=='__main__':
   def Print(*s):
-    for ss in s:  print ss,
-    print ''
+    for ss in s:  print(ss, end=' ')
+    print('')
 
   widgets= {
     'btn1': (

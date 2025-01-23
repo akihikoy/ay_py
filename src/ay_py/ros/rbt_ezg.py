@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #\brief   Robot controller for SAKE EZGripper Gen2.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
@@ -6,9 +6,9 @@
 #\version 0.2
 #\date    Feb.28, 2020
 #         Completely modified the implementation: now we use the gripper driver ROS node.
-from const import *
+from .const import *
 
-from rbt_dxlg import TDxlGripper, TRobotDxlGripper
+from .rbt_dxlg import TDxlGripper, TRobotDxlGripper
 
 
 '''SAKE EZGripper Gen2 utility class'''

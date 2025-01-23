@@ -1,12 +1,12 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Universal Robots UR* with DxlpO2 gripper.
-from const import *
+from .const import *
 
 import roslib
 import rospy
 
-from rbt_ur import *
-from rbt_dxlpo2 import TDxlpO2Gripper
+from .rbt_ur import *
+from .rbt_dxlpo2 import TDxlpO2Gripper
 
 '''Robot control class for single Universal Robots UR* with DxlpO2 gripper.'''
 class TRobotURDxlpO2(TRobotUR):
@@ -37,7 +37,7 @@ class TRobotURDxlpO2(TRobotUR):
     #self.dxlpo2_gripper= TSimGripper2F1(pos_range=self.gripper_range)
     self.grippers= [self.dxlpo2_gripper]
 
-    print 'Initializing and activating DxlGripper gripper...'
+    print('Initializing and activating DxlGripper gripper...')
     ra(self.dxlpo2_gripper.Init())
 
     if False not in res:  self._is_initialized= True

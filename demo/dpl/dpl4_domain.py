@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dpl4_domain.py
 #\brief   Test dpl4.py, print domain information.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -116,16 +116,16 @@ def Main():
   if PROB_KEY not in domain.SpaceDefs:  domain.SpaceDefs[PROB_KEY]= SP('state',0);
 
   for tp in ('state','action','select'):
-    print 'Total {tp} dim= {dim} ({num} types)'.format(
+    print('Total {tp} dim= {dim} ({num} types)'.format(
       tp=tp,
-      dim=sum(sp.D for sp in domain.SpaceDefs.itervalues() if sp.Type==tp),
-      num=sum(1 for sp in domain.SpaceDefs.itervalues() if sp.Type==tp) )
+      dim=sum(sp.D for sp in domain.SpaceDefs.values() if sp.Type==tp),
+      num=sum(1 for sp in domain.SpaceDefs.values() if sp.Type==tp) ))
 
-  for key,(In,Out,F) in domain.Models.iteritems():
-    print '{key}:\t dim_in= {dim_in},\t dim_out= {dim_out}'.format(
+  for key,(In,Out,F) in domain.Models.items():
+    print('{key}:\t dim_in= {dim_in},\t dim_out= {dim_out}'.format(
       key=key,
       dim_in=sum(DimsXSSA(domain.SpaceDefs,In)),
-      dim_out=sum(DimsXSSA(domain.SpaceDefs,Out)) )
+      dim_out=sum(DimsXSSA(domain.SpaceDefs,Out)) ))
 
 if __name__=='__main__':
   Main()

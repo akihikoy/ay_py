@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dpl4e.py
 #\brief   Test dpl4.py with toy_arm1, trajectory optimization, collision check.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -124,7 +124,7 @@ def Main(logdir='/tmp/arm/', options_in={}):
     xs0['pqf']= copy.deepcopy(xs0['q'])  #Init guess
     xs0['pvia']= SSA([0.0]*(arm.N*2))  #Init guess
     res= dpl.Plan('n0', xs0)
-    print 'xs0(after plan)=',xs0
+    print('xs0(after plan)=',xs0)
     #db_n0= dpl.DB.AddToSeq(parent=None,name='n0',xs=xs0)
 
     CPrint(1,'R=',dpl.Value(res.PTree))
@@ -142,7 +142,7 @@ def Main(logdir='/tmp/arm/', options_in={}):
   SaveYAML(dpl.Save(), logdir+'dpl.yaml')
 
 def PlotGraphs():
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   commands=[
     '''qplot -x2 aaa
@@ -159,13 +159,13 @@ def PlotGraphs():
   for cmd in commands:
     if cmd!='':
       cmd= ' '.join(cmd.splitlines())
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 

@@ -1,7 +1,7 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Crane-X7 Arm (using ay_util/mikata_driver).
 
-from rbt_mikata2 import *
+from .rbt_mikata2 import *
 
 '''CraneX7 Gripper utility class'''
 class TCraneX7Gripper(TMikataGripper2):

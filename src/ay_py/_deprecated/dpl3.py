@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 '''
 Dynamic programming and learning over network dynamical system.
 '''
@@ -208,9 +208,9 @@ class TChainRLUtil(object):
   def CheckOptions(self,options):
     res= True
     defaults= self.DefaultOptions()
-    for key,val in options.iteritems():
+    for key,val in options.items():
       if not key in defaults:
-        print 'Invalid option: %s'%(key)
+        print('Invalid option: %s'%(key))
         res= False
     return res
 
@@ -1017,9 +1017,9 @@ class TChainTraj:
       if x_n is not None:  self.Seq[n_start].x0= x_n
       if var_x_n is not None:  self.Seq[n_start].cov_x0= var_x_n
       if a_map is not None:
-        for k,a in a_map.iteritems():
+        for k,a in a_map.items():
           if k in self.Seq:  self.Seq[k].a0= a
-          else:  print 'Warning in TChainTraj.__init__: ignoring action in a_map:',k,a
+          else:  print('Warning in TChainTraj.__init__: ignoring action in a_map:',k,a)
     else:
       self.Seq= {}
       self.Start= None
@@ -1195,15 +1195,15 @@ class TChainDDPSolver2(TChainDPUtil):
     cr0,cr1= cr
     if cr0=='none':  value= 0.0
     #Sum of reward criteria:
-    elif cr0=='sum':  value= sum([io0.r1 for k,io0 in traj.Seq.iteritems()])
+    elif cr0=='sum':  value= sum([io0.r1 for k,io0 in traj.Seq.items()])
     #Expected sum of (reward + std-deviation) criteria (i.e. UCB):
     elif cr0=='ucb':
       f= self.Options['UCB_f']
-      value= sum([io0.r1 + math.sqrt(io0.var_r1)*f for k,io0 in traj.Seq.iteritems()])
+      value= sum([io0.r1 + math.sqrt(io0.var_r1)*f for k,io0 in traj.Seq.items()])
     #Expected sum of (reward - std-deviation) criteria (i.e. LCB or negative UCB):
     elif cr0=='lcb':
       f= self.Options['LCB_f']
-      value= sum([io0.r1 - math.sqrt(io0.var_r1)*f for k,io0 in traj.Seq.iteritems()])
+      value= sum([io0.r1 - math.sqrt(io0.var_r1)*f for k,io0 in traj.Seq.items()])
     else:  raise Exception('Unknown criteria: %s' % repr(cr))
     #Reward shaping with References:
     if cr1=='none':  pass
@@ -1213,7 +1213,7 @@ class TChainDDPSolver2(TChainDPUtil):
       f= 1.0 if cr0=='none' else self.Options['reward_shape_f']
       value+= -f*sum([
         (la.norm(MCVec(refs[k+1][0].x)-io0.x1)**2 + la.norm(MCVec(refs[k+1][0].y)-io0.y1)**2) if len(refs[k+1])>0 else 0.0
-        for k,io0 in traj.Seq.iteritems()])
+        for k,io0 in traj.Seq.items()])
     else:  raise Exception('Unknown criteria: %s' % repr(cr))
     return value
 
@@ -1639,7 +1639,7 @@ class TChainDynPlanLearn(TChainRLUtil):
   #End the current episode.
   def EndEpisode(self):
     if self.database.Entry[-1].Len!=self.d.N+1:
-      print 'Warning: broken database entry:',self.database.CurrentId
+      print('Warning: broken database entry:',self.database.CurrentId)
       return
     self.database.UpdateR()
 
@@ -1689,8 +1689,8 @@ class TChainDynPlanLearn(TChainRLUtil):
       elif self.Options['ddp_ver']==2:
         traj= ddp_sol.Plan(n, x_n)
         a_n= traj.Seq[n].a0
-        sum_var_r= sum([io.var_r1 for k,io in traj.Seq.iteritems()])
-      print 'Select: logged to:',self.Options['opt_log_name'].format(i=self.database.CurrentId,n=n,base=self.Options['base_dir'])
+        sum_var_r= sum([io.var_r1 for k,io in traj.Seq.items()])
+      print('Select: logged to:',self.Options['opt_log_name'].format(i=self.database.CurrentId,n=n,base=self.Options['base_dir']))
       logfp.close()
 
       #TODO:Save plan_time into a database.
@@ -1703,7 +1703,7 @@ class TChainDynPlanLearn(TChainRLUtil):
         var= self.Options['explore_noise_gain']*math.sqrt(sum_var_r)
         if var>self.Options['explore_var_max']:  var= self.Options['explore_var_max']
         a_noise= np.mat([random.gauss(0.0,var) for d in range(Len(a_n))]).T
-        print 'var,a_noise=',var,a_noise.T
+        print('var,a_noise=',var,a_noise.T)
         ##TEST---
         #for ngain in (2.0, 1.0, 0.5, 0.1, 0.05, 0.01, 0.005):
           #print '####action noise effect (%f):'%ngain,

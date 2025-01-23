@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #ROS tools (pointcloud).
 import roslib; roslib.load_manifest('rospy')
 import rospy

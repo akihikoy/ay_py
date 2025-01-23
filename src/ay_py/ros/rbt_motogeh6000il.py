@@ -1,12 +1,12 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Motoman robots with GEH6000IL Gripper.
-from const import *
+from .const import *
 
 import roslib
 import rospy
 
-from rbt_moto import *
-from rbt_geh6000il import TGEH6000ILGripper
+from .rbt_moto import *
+from .rbt_geh6000il import TGEH6000ILGripper
 
 '''Robot control class for single Motoman robots with GEH6000IL Gripper.'''
 class TRobotMotomanGEH6000IL(TRobotMotoman):
@@ -29,7 +29,7 @@ class TRobotMotomanGEH6000IL(TRobotMotoman):
     self.geh_gripper= TGEH6000ILGripper(node_name=self.gripper_node)
     self.grippers= [self.geh_gripper]
 
-    print 'Initializing and activating GEH6000ILGripper...'
+    print('Initializing and activating GEH6000ILGripper...')
     ra(self.geh_gripper.Init())
 
     if False not in res:  self._is_initialized= True

@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Mikata Arm (type 2: using ay_util/mikata_driver).
-from const import *
+from .const import *
 
 import roslib
 import rospy
@@ -11,9 +11,9 @@ import trajectory_msgs.msg
 import ay_util_msgs.srv
 import copy
 
-from robot import *
-from kdl_kin import *
-from rbt_dxlg import TDxlGripper
+from .robot import *
+from .kdl_kin import *
+from .rbt_dxlg import TDxlGripper
 from ..misc.dxl_util import TDynamixel1
 from ..misc.dxl_holding import TDxlHolding
 
@@ -396,7 +396,7 @@ class TRobotMikata2(TMultiArmRobot):
       if not res and q is not None:
         p_err= la.norm(np.array(xw_trg[:3])-self.FK(q, arm=arm)[:3])
         if p_err<1.0e-3:  res= True
-        else: print 'IK error:',p_err,xw_trg[:3]-self.FK(q, arm=arm)[:3]
+        else: print('IK error:',p_err,xw_trg[:3]-self.FK(q, arm=arm)[:3])
     if q is not None:  q= list(q)
 
     if res:  return (q, True) if with_st else q
@@ -511,10 +511,10 @@ class TRobotMikata2(TMultiArmRobot):
   #Read to Dynamixel.  data: {joint_name:value}
   def DxlWrite(self, address, data):
     req= ay_util_msgs.srv.DxlIORequest()
-    req.joint_names= data.keys()
+    req.joint_names= list(data.keys())
     req.command= 'Write'
     req.data_s= address
-    req.data_ia= data.values()
+    req.data_ia= list(data.values())
     with self.port_locker:
       res= self.srvp.robot_io(req)
 
@@ -548,9 +548,9 @@ class TRobotMikata2(TMultiArmRobot):
   def MoveTo(self, target, blocking=True):
     if self.is_sim:  return
     req= ay_util_msgs.srv.DxlIORequest()
-    req.joint_names= target.keys()
+    req.joint_names= list(target.keys())
     req.command= 'MoveTo'
-    req.data_fa= target.values()
+    req.data_fa= list(target.values())
     req.data_b= blocking
     with self.port_locker:
       res= self.srvp.robot_io(req)
@@ -560,9 +560,9 @@ class TRobotMikata2(TMultiArmRobot):
   def SetCurrent(self, current):
     if self.is_sim:  return
     req= ay_util_msgs.srv.DxlIORequest()
-    req.joint_names= current.keys()
+    req.joint_names= list(current.keys())
     req.command= 'SetCurrent'
-    req.data_fa= current.values()
+    req.data_fa= list(current.values())
     with self.port_locker:
       res= self.srvp.robot_io(req)
 
@@ -571,9 +571,9 @@ class TRobotMikata2(TMultiArmRobot):
   def SetVelocity(self, velocity):
     if self.is_sim:  return
     req= ay_util_msgs.srv.DxlIORequest()
-    req.joint_names= velocity.keys()
+    req.joint_names= list(velocity.keys())
     req.command= 'SetVelocity'
-    req.data_fa= velocity.values()
+    req.data_fa= list(velocity.values())
     with self.port_locker:
       res= self.srvp.robot_io(req)
 
@@ -582,9 +582,9 @@ class TRobotMikata2(TMultiArmRobot):
   def SetPWM(self, pwm):
     if self.is_sim:  return
     req= ay_util_msgs.srv.DxlIORequest()
-    req.joint_names= pwm.keys()
+    req.joint_names= list(pwm.keys())
     req.command= 'SetPWM'
-    req.data_fa= pwm.values()
+    req.data_fa= list(pwm.values())
     with self.port_locker:
       res= self.srvp.robot_io(req)
 

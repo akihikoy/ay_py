@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dxl_rhp12rn.py
 #\brief   Control module of RH-P12-RN (Thormang3 gripper).
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -10,7 +10,7 @@
 #\version 0.3
 #\date    Sep.19, 2022
 #         Added RH-P12-RN(A).
-from dxl_gripper import TDxlGripperBase
+from .dxl_gripper import TDxlGripperBase
 
 '''
 RH-P12-RN Gripper (Thormang3 gripper) utility class.

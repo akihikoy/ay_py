@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #ROS basic tools.
 import rospy
 import actionlib as al
@@ -64,12 +64,12 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
 
 
 def SetupServiceProxy(name, srv_type, persistent=False, time_out=None):
-  print 'Waiting for %s... (t/o: %r)' % (name, time_out)
+  print('Waiting for %s... (t/o: %r)' % (name, time_out))
   try:
     rospy.wait_for_service(name, time_out)
   except rospy.exceptions.ROSException as e:
-    print 'Failed to connect the service %s' % name
-    print '  Error:',str(e)
+    print('Failed to connect the service %s' % name)
+    print('  Error:',str(e))
     return None
   srvp= rospy.ServiceProxy(name, srv_type, persistent=persistent)
   return srvp
@@ -90,21 +90,21 @@ def SetupSimpleActionClient(name, act_type, time_out=None, num_wait=1):
   if time_out is None:  time_out= rospy.Duration()
   elif not isinstance(time_out, rospy.Duration):  time_out= rospy.Duration(time_out)
   while num_wait is None or num_wait>0:
-    print 'Waiting for %s... (t/o: %r, #: %r)' % (name, time_out.to_sec(), num_wait)
+    print('Waiting for %s... (t/o: %r, #: %r)' % (name, time_out.to_sec(), num_wait))
     if actc.wait_for_server(time_out):
       return actc
     num_wait-= 1
-  print 'Failed to connect the action service %s' % name
+  print('Failed to connect the action service %s' % name)
 
 
 def SetupDynamicReconfigureClient(name, time_out=None):
-  print 'Waiting for %s... (t/o: %r)' % (name, time_out)
+  print('Waiting for %s... (t/o: %r)' % (name, time_out))
   try:
     client= dynamic_reconfigure.client.Client(name, timeout=time_out)
     return client
   except rospy.exceptions.ROSException as e:
-    print 'Failed to connect the dynamic_reconfigure.client %s' % name
-    print '  Error:',str(e)
+    print('Failed to connect the dynamic_reconfigure.client %s' % name)
+    print('  Error:',str(e))
     return None
 
 
@@ -293,44 +293,44 @@ class TROSUtil(object):
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
 
-    for k in self.acts.keys():
-      print 'Delete action server %r...' % k,
+    for k in list(self.acts.keys()):
+      print('Delete action server %r...' % k, end=' ')
       del self.acts[k]
-      print 'ok'
+      print('ok')
 
-    for k in self.sub.keys():
-      print 'Stop subscribing %r...' % k,
+    for k in list(self.sub.keys()):
+      print('Stop subscribing %r...' % k, end=' ')
       self.sub[k].unregister()
       del self.sub[k]
-      print 'ok'
+      print('ok')
 
-    for k in self.pub.keys():
-      print 'Stop publishing %r...' % k,
+    for k in list(self.pub.keys()):
+      print('Stop publishing %r...' % k, end=' ')
       self.pub[k].publish()
       self.pub[k].unregister()
       del self.pub[k]
-      print 'ok'
+      print('ok')
 
-    for k in self.srvp.keys():
-      print 'Delete service proxy %r...' % k,
+    for k in list(self.srvp.keys()):
+      print('Delete service proxy %r...' % k, end=' ')
       del self.srvp[k]
-      print 'ok'
+      print('ok')
 
-    for k in self.srv.keys():
-      print 'Shutdown service %r...' % k,
+    for k in list(self.srv.keys()):
+      print('Shutdown service %r...' % k, end=' ')
       self.srv[k].shutdown()
       del self.srv[k]
-      print 'ok'
+      print('ok')
 
-    for k in self.actc.keys():
-      print 'Delete action client %r...' % k,
+    for k in list(self.actc.keys()):
+      print('Delete action client %r...' % k, end=' ')
       del self.actc[k]
-      print 'ok'
+      print('ok')
 
-    for k in self.dynconfig.keys():
-      print 'Delete dynamic reconfigure client %r...' % k,
+    for k in list(self.dynconfig.keys()):
+      print('Delete dynamic reconfigure client %r...' % k, end=' ')
       del self.dynconfig[k]
-      print 'ok'
+      print('ok')
 
   def IsInitialized(self):
     return self._is_initialized
@@ -345,7 +345,7 @@ class TROSUtil(object):
   def AddSubW(self, name, port_name, port_type, call_back, callback_args=None, queue_size=None, buff_size=65536, tcp_nodelay=False, time_out=None):
     if name not in self.sub:
       try:
-        print 'Waiting for %s... (t/o: %r)' % (port_name, time_out)
+        print('Waiting for %s... (t/o: %r)' % (port_name, time_out))
         msg= rospy.wait_for_message(port_name, port_type, time_out)
         if callback_args is None:  call_back(msg)
         else:                      call_back(msg,callback_args)

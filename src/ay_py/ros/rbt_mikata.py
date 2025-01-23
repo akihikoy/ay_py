@@ -1,6 +1,6 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Robot controller for Mikata Arm.
-from const import *
+from .const import *
 #if ROS_ROBOT not in ('ANY','Mikata','Mikata_SIM'):
   #raise ImportError('Stop importing: ROS_ROBOT is not Mikata')
 #if ROS_DISTRO not in ('groovy','hydro','indigo'):  return
@@ -14,11 +14,11 @@ import copy
 import threading
 
 #TODO:FIXME:For Mikata simulator, avoid loading DynamixelSDK.
-from robot import *
-from rbt_dxlg import TDxlGripper
+from .robot import *
+from .rbt_dxlg import TDxlGripper
 from ..misc.dxl_mikata import TMikata
 from ..misc.dxl_holding import TDxlHolding
-from kdl_kin import *
+from .kdl_kin import *
 
 
 '''Mikata Gripper utility class (the same as TDxlGripper)'''
@@ -118,7 +118,7 @@ class TDummyMikata(TROSUtil):
 
   def __del__(self):
     self.Cleanup()
-    print '%s: bye.'%self.Name
+    print('%s: bye.'%self.Name)
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -302,7 +302,7 @@ class TRobotMikata(TMultiArmRobot):
       self.mikata_gripper= TDummyMikataGripper()
     self.grippers= [self.mikata_gripper]
 
-    print 'Initializing and activating Mikata arm...'
+    print('Initializing and activating Mikata arm...')
     ra(self.mikata.Setup())
     ra(self.mikata_gripper.Init(self.mikata))
 
@@ -478,7 +478,7 @@ class TRobotMikata(TMultiArmRobot):
       if not res and q is not None:
         p_err= la.norm(np.array(xw_trg[:3])-self.FK(q, arm=arm)[:3])
         if p_err<1.0e-3:  res= True
-        else: print 'IK error:',p_err,xw_trg[:3]-self.FK(q, arm=arm)[:3]
+        else: print('IK error:',p_err,xw_trg[:3]-self.FK(q, arm=arm)[:3])
     if q is not None:  q= list(q)
 
     if res:  return (q, True) if with_st else q

@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    test_bx.py
 #\brief   Test TRobotBaxter
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -16,9 +16,9 @@ from ay_py.ros.rbt_bxtr import *
 if __name__=='__main__':
   rospy.init_node('ay_py_test')
   robot= TRobotBaxter()
-  print 'Initializing...'
+  print('Initializing...')
   robot.Init()
-  print 'Done.'
+  print('Done.')
 
   q0= [
     [1.0185632419921875, -0.13920875634155275, -0.24850488735351564, 1.7452866394226076, -0.08436894323730469, -0.32060198430175785, 0.01725728384399414],
@@ -35,22 +35,22 @@ if __name__=='__main__':
     [ 0.69312312,  0.26250569, -0.07036491,  0.15024859,  0.77267414, -0.12000001,  0.60497936] ]
 
   def interrupt(msg):
-    res= raw_input(msg)
+    res= input(msg)
     if res=='q':  sys.exit(0)
 
   interrupt('continue: Q > ')
-  print 'Q(arm=RIGHT)=', robot.Q(arm=RIGHT)
-  print 'Q(arm=LEFT)=', robot.Q(arm=LEFT)
+  print('Q(arm=RIGHT)=', robot.Q(arm=RIGHT))
+  print('Q(arm=LEFT)=', robot.Q(arm=LEFT))
 
   interrupt('continue: FK > ')
-  print 'FK(arm=RIGHT)=', robot.FK(arm=RIGHT)
-  print 'FK(arm=LEFT)=', robot.FK(arm=LEFT)
+  print('FK(arm=RIGHT)=', robot.FK(arm=RIGHT))
+  print('FK(arm=LEFT)=', robot.FK(arm=LEFT))
 
   interrupt('continue: IK > ')
-  print 'IK(x1[RIGHT],arm=RIGHT)=', robot.IK(x1[RIGHT],arm=RIGHT)
-  print '  Error=',Dist(q1[RIGHT], robot.IK(x1[RIGHT],arm=RIGHT))
-  print 'IK(x1[LEFT],arm=LEFT)=', robot.IK(x1[LEFT],arm=LEFT)
-  print '  Error=',Dist(q1[LEFT], robot.IK(x1[LEFT],arm=LEFT))
+  print('IK(x1[RIGHT],arm=RIGHT)=', robot.IK(x1[RIGHT],arm=RIGHT))
+  print('  Error=',Dist(q1[RIGHT], robot.IK(x1[RIGHT],arm=RIGHT)))
+  print('IK(x1[LEFT],arm=LEFT)=', robot.IK(x1[LEFT],arm=LEFT))
+  print('  Error=',Dist(q1[LEFT], robot.IK(x1[LEFT],arm=LEFT)))
   
   interrupt('continue: FollowQTraj > ')
   q_traj= [q0[RIGHT],q1[RIGHT],q0[RIGHT]]

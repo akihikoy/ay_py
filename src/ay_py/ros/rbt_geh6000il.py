@@ -1,16 +1,16 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    rbt_geh6000il.py
 #\brief   Gripper control interface for GEH6000IL.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Nov.19, 2023
-from const import *
+from .const import *
 
 import roslib
 import rospy
 import threading
 
-from robot import TGripper2F1,TMultiArmRobot
+from .robot import TGripper2F1,TMultiArmRobot
 import sensor_msgs.msg
 import ay_util_msgs.srv
 

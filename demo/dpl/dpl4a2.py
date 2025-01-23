@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dpl4a2.py
 #\brief   Test dpl4.py w.r.t. a simple selection.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -55,7 +55,7 @@ def Main(logdir='/tmp/g2/', options_in={}):
     xs0['x']= SSA([Rand(0.0,1.0)])
 
     res= dpl.Plan('n0', xs0)
-    print 'xs0(after plan)=',xs0
+    print('xs0(after plan)=',xs0)
     db_n0= dpl.DB.AddToSeq(parent=None,name='n0',xs=xs0)
 
     ptree= res.PTree
@@ -72,7 +72,7 @@ def Main(logdir='/tmp/g2/', options_in={}):
 
     dpl.EndEpisode()
     fp.write(dpl.DB.DumpOneYAML())
-    print i,dpl.DB.DumpOne()
+    print(i,dpl.DB.DumpOne())
   fp.close()
 
   SaveYAML(dpl.MM.Save(dpl.MM.Options['base_dir']), dpl.MM.Options['base_dir']+'model_mngr.yaml')
@@ -86,7 +86,7 @@ def PlotGen(logdir='/tmp/g2/'):
   db.SDump(open(logdir+'dpl_sdump.dat','w'), ('n0',0,'x','s'))
 
 def PlotGraphs(logdir='/tmp/g2/'):
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   PlotGen(logdir)
   commands=[
@@ -97,13 +97,13 @@ def PlotGraphs(logdir='/tmp/g2/'):
   for cmd in commands:
     if cmd!='':
       cmd= (' '.join(cmd.splitlines())).replace('/tmp/g2/',logdir)
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill g1')
 
 if __name__=='__main__':

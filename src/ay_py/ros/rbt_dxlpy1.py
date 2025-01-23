@@ -1,11 +1,11 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #\brief   Robot controller for DxlpY1 gripper.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    May.21, 2022
-from const import *
+from .const import *
 
-from rbt_dxlg import TDxlGripper, TRobotDxlGripper
+from .rbt_dxlg import TDxlGripper, TRobotDxlGripper
 
 
 '''DxlpY1 gripper utility class'''

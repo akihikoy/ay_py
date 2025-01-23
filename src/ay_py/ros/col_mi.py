@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #ROS tools (collision detection with MoveIt!).
 import roslib
 roslib.load_manifest('rospy')
@@ -14,7 +14,7 @@ import shape_msgs.msg
 roslib.load_manifest('ay_util_msgs')
 import ay_util_msgs.srv
 
-from base import *
+from .base import *
 from ..core.geom import *
 
 

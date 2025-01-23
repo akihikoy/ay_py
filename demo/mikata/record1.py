@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #Record key points by moving the arm manually.
 #Press a key to print the current pose.  Press q to exit.
 
@@ -24,7 +24,7 @@ try:
     if c=='q':  break
     elif c is not None:
       #print mikata.State()
-      print mikata.State()['position']
+      print(mikata.State()['position'])
     #mikata.MoveTo(mikata.Position(as_dict=True),wait=False)
     time.sleep(0.0025)
 except KeyboardInterrupt:

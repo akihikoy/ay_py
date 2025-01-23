@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 '''
 NOTE: Internal use only (by base_ml_dnn).
 Loss function for error model.

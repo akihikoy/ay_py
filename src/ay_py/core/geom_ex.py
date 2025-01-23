@@ -1,7 +1,5 @@
-#! /usr/bin/env python
+#! /usr/bin/env python3
 #Basic tools (advanced geometry).
-from __future__ import print_function
-from __future__ import absolute_import
 import numpy as np
 import numpy.linalg as la
 import math
@@ -86,14 +84,14 @@ def LinePolygonIntersection(p1, p2, points, return_rs=False, keep_none=False):
   pIs= [LineLineIntersection(p1,p2,pA,pB,return_rs=return_rs)
         for pA,pB in zip(points, points[1:]+[points[0]])]
   if keep_none:  return pIs
-  return filter(None,pIs)
+  return [_f for _f in pIs if _f]
 
 #Return a list of intersections between inf line (p1+r*dp1) and a polygon (points).
 def InfLinePolygonIntersection(p1, dp1, points, return_rs=False, keep_none=False):
   pIs= [InfLineLineIntersection(p1,dp1,pA,pB,return_rs=return_rs)
         for pA,pB in zip(points, points[1:]+[points[0]])]
   if keep_none:  return pIs
-  return filter(None,pIs)
+  return [_f for _f in pIs if _f]
 
 #Get intersections of a line segment (p1,p2) and a circle (pc,rad).
 #  Return [t1,t2] or [t1] or [] where tN is a scolar representing an intersection:
@@ -253,7 +251,7 @@ def SplitPolygonByInfLine(p1, dp1, points):
   points= list(points)
   rs_list= InfLinePolygonIntersection(p1, dp1, points, return_rs=True, keep_none=True)
   r_list= [rs if rs is None else rs[0] for rs in rs_list]
-  num_intersect= len(filter(None,r_list))
+  num_intersect= len([_f for _f in r_list if _f])
   if num_intersect<2:  return [points]
   r_list= np.array(r_list)
   r_list[r_list==None]= np.nan
@@ -456,7 +454,7 @@ class TPCA:
     return np.dot(points-self.Mean, self.EVecs)
 
   def Reconstruct(self,proj,idx=None):
-    if idx is None:  idx= range(len(self.EVecs))
+    if idx is None:  idx= list(range(len(self.EVecs)))
     return np.dot(proj, self.EVecs[:,idx].T) + self.Mean
 
 class TPCA_SVD(TPCA):
@@ -561,8 +559,8 @@ class TParameterizedPolygon:
       self.Angles.append(self.Angles[0])
       self.Points.append(points[0])
       self.Points2D.append(pca.Projected[0,[0,1]])
-    self.IdxAngleMin= min(range(len(self.Angles)), key=lambda i: self.Angles[i])
-    self.IdxAngleMax= max(range(len(self.Angles)), key=lambda i: self.Angles[i])
+    self.IdxAngleMin= min(list(range(len(self.Angles))), key=lambda i: self.Angles[i])
+    self.IdxAngleMax= max(list(range(len(self.Angles))), key=lambda i: self.Angles[i])
     #print 'angles:',angles
     #print 'self.Angles:',self.Angles
     self.Bounds= self.ComputeBounds()
@@ -596,7 +594,7 @@ class TParameterizedPolygon:
       alpha= abs(angle-self.Angles[i_closest])
       alpha2= 2.0*math.pi+self.Angles[i_closest2]-angle
     else:
-      i_closest= filter(lambda i: IsAngleIn(angle,[self.Angles[i],self.Angles[i+1]]), range(len(self.Angles)-1))
+      i_closest= [i for i in range(len(self.Angles)-1) if IsAngleIn(angle,[self.Angles[i],self.Angles[i+1]])]
       if len(i_closest)==0:  return None
       i_closest= i_closest[0]
       i_closest2= i_closest+1
@@ -769,10 +767,10 @@ def CircleFitX(marker_data):
   n_x= n_x/la.norm(n_x)
   n_y= np.cross(n_z,n_x)
 
-  print('p_mean= ',p_mean)
-  print('n_x= ',n_x)
-  print('n_y= ',n_y)
-  print('n_z= ',n_z)
+  #print('p_mean= ',p_mean)
+  #print('n_x= ',n_x)
+  #print('n_y= ',n_y)
+  #print('n_z= ',n_z)
 
   #Project the data onto the plane n_x, n_y
   p_data= []
@@ -784,24 +782,24 @@ def CircleFitX(marker_data):
     #print 'lx,ly= ',lx,ly
 
   #print p_data
-  p_file= file('/tmp/original.dat','w')
-  for x in marker_data:
-    p_file.write('%f %f %f\n' % (x[0],x[1],x[2]))
-  p_file.close()
+  #p_file= open('/tmp/original.dat','w')
+  #for x in marker_data:
+    #p_file.write('%f %f %f\n' % (x[0],x[1],x[2]))
+  #p_file.close()
 
   #Compute the circle parameters
   lcx, radius= CircleFit2D(p_data)
   x_center= lcx[0]*n_x + lcx[1]*n_y + p_mean
   #print x_center, radius
 
-  p_file= file('/tmp/circle.dat','w')
-  for ith in range(1000):
-    th= (2.0*math.pi)/1000.0*float(ith)
-    lx= lcx[0]+radius*math.cos(th)
-    ly= lcx[1]+radius*math.sin(th)
-    x= lx*n_x + ly*n_y + p_mean
-    p_file.write('%f %f %f\n' % (x[0],x[1],x[2]))
-  p_file.close()
+  #p_file= file('/tmp/circle.dat','w')
+  #for ith in range(1000):
+    #th= (2.0*math.pi)/1000.0*float(ith)
+    #lx= lcx[0]+radius*math.cos(th)
+    #ly= lcx[1]+radius*math.sin(th)
+    #x= lx*n_x + ly*n_y + p_mean
+    #p_file.write('%f %f %f\n' % (x[0],x[1],x[2]))
+  #p_file.close()
 
   return x_center, radius
 
@@ -881,18 +879,18 @@ def BoxPlaneIntersection(box, x_box, x_plane):
                [ W*0.5,  D*0.5,  H*0.5],
                [-W*0.5,  D*0.5,  H*0.5]]
   #Project box_points onto the x_plane frame:
-  l_box_points= map(lambda p: TransformLeftInv(x_plane,Transform(x_box,p)), box_points)
+  l_box_points= [TransformLeftInv(x_plane,Transform(x_box,p)) for p in box_points]
 
   #Indexes of box edges.
   box_edges= [[0,1],[1,2],[2,3],[3,0],
               [4,5],[5,6],[6,7],[7,4],
               [1,5],[4,0],[3,7],[6,2]]
   #Extract box edges that have an intersection with the plane.
-  box_edges= filter(lambda i1,i2: l_box_points[i1][2]<=0<=l_box_points[i2][2] or l_box_points[i2][2]<=0<=l_box_points[i1][2], box_edges)
+  box_edges= [i1_i2 for i1_i2 in box_edges if l_box_points[i1_i2[0]][2]<=0<=l_box_points[i1_i2[1]][2] or l_box_points[i1_i2[1]][2]<=0<=l_box_points[i1_i2[0]][2]]
   if len(box_edges)==0:  return []
   #Calculate intersection points.
   f_intersect= lambda p1,p2: [(p1[0]*p2[2]-p1[2]*p2[0])/(p2[2]-p1[2]), (p1[1]*p2[2]-p1[2]*p2[1])/(p2[2]-p1[2])] if abs(p2[2]-p1[2])>EPS else [(p1[0]+p2[0])*0.5, (p1[1]+p2[1])*0.5]
-  l_p_intersect= map(lambda i1,i2:f_intersect(l_box_points[i1],l_box_points[i2]), box_edges)
+  l_p_intersect= [f_intersect(l_box_points[i1_i21[0]],l_box_points[i1_i21[1]]) for i1_i21 in box_edges]
 
   #Make it convex:
   try:

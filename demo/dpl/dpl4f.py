@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 #\file    dpl4f.py
 #\brief   Test dpl4.py with toy_cannon1.
 #\author  Akihiko Yamaguchi, info@akihikoy.net
@@ -79,7 +79,7 @@ def Main(logdir='/tmp/c1/', options_in={}):
     #print dpl.Value(ptree)
 
     res= dpl.Plan('n0', xs0)
-    print 'xs0(after plan)=',xs0
+    print('xs0(after plan)=',xs0)
     #res.PTree.Dump()
     theta1a= SolveAnalytically(p1, pe, v0)
     theta2a= SolveAnalytically(p2, pe, v0)
@@ -108,7 +108,7 @@ def Main(logdir='/tmp/c1/', options_in={}):
 
 
 def PlotGraphs(argv):
-  print 'Plotting graphs..'
+  print('Plotting graphs..')
   import os
   logdir= argv[0] if len(argv)>0 else '/tmp/c1/'
   qopt= argv[1] if len(argv)>1 else ''
@@ -145,13 +145,13 @@ def PlotGraphs(argv):
       if qopt!='':
         cmd= cmd.replace('qplot -x2 aaa','qplot '+qopt)
         if cmd[-1]=='&':  cmd= cmd[:-1]
-      print '###',cmd
+      print('###',cmd)
       os.system(cmd)
 
-  print '##########################'
-  print '###Press enter to close###'
-  print '##########################'
-  raw_input()
+  print('##########################')
+  print('###Press enter to close###')
+  print('##########################')
+  input()
   os.system('qplot -x2kill aaa')
 
 if __name__=='__main__':
