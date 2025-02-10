@@ -36,12 +36,14 @@ class TTerminalTab(QtGui.QWidget):
   def __init__(self,title,widgets,exit_command,size=(800,400),horizontal=True,no_focus=True,term_width=400):
     QtGui.QWidget.__init__(self)
     self.pid= str(os.getpid())+'-'
+    self.UserOpt= dict()  #Options that the users can freely use.
     self.InitUI(title,widgets,exit_command,size,horizontal,no_focus,term_width)
 
   # Get a dict of option name: option content
   def ExpandOpt(self):
     opt= {name:str(rbgroup.checkedButton().text()) for name,rbgroup in self.RBOptions.items()}
     opt.update({name:str(cmbbx.currentText()) for name,cmbbx in self.CBOptions.items()})
+    opt.update({name:value for name,value in self.UserOpt.items()})
     return opt
 
   # Save the option dict as a yaml file
