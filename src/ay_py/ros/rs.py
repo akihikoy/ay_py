@@ -17,6 +17,7 @@ from ..core.util import TContainer
 def GetEmptyRSContainer(with_helper=True):
   rs= TContainer()
   rs.options= None  #Dict of RealSense utility options.
+  rs.name= None
   rs.proj_mat= None  #Projection matrix. Use GetCameraProjectionMatrix().
   rs.msg_depth= None  #Original depth message.
   rs.img_depth= None  #Depth image (for OpenCV).
