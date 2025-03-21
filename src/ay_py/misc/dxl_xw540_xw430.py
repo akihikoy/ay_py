@@ -4,7 +4,7 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Mar.21, 2025
-from dxl_mikata import *
+from .dxl_mikata import *
 
 class TXW540XW430(TMikata):
   def __init__(self, dev='/dev/ttyUSB0'):
