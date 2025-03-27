@@ -106,6 +106,7 @@ class TRobotUR(TMultiArmRobot):
 
     if not self.is_sim:
       ur_dashboard_msgs= importlib.import_module('ur_dashboard_msgs')
+      importlib.import_module('ur_dashboard_msgs.msg')
       ra(self.AddSub('robot_mode', '/ur_hardware_interface/robot_mode', ur_dashboard_msgs.msg.RobotMode, self.RobotModeCallback))
       ra(self.AddSub('safety_mode', '/ur_hardware_interface/safety_mode', ur_dashboard_msgs.msg.SafetyMode, self.SafetyModeCallback))
       ra(self.AddSub('robot_program_running', '/ur_hardware_interface/robot_program_running', std_msgs.msg.Bool, self.RobotProgramRunningCallback))
