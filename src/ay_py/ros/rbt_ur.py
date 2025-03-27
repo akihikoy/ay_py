@@ -114,6 +114,7 @@ class TRobotUR(TMultiArmRobot):
 
     #2023-04-10 modified to subscribe io_states even in simulator for simulated io_states topics.
     ur_msgs= importlib.import_module('ur_msgs')
+    importlib.import_module('ur_msgs.msg')
     ra(self.AddSub('io_states', '/ur_hardware_interface/io_states', ur_msgs.msg.IOStates, self.IOStatesCallback))
 
     self.grippers= [TFakeGripper()]
