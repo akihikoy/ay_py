@@ -488,11 +488,15 @@ class TRobotMikata(TMultiArmRobot):
   '''Follow a joint angle trajectory.
     arm: arm id, or None (==currarm).
     q_traj: joint angle trajectory [q0,...,qD]*N.
+    dq_traj: joint angular velocity trajectory [dq0,...,dqD]*N (optional).
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
+  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None):
     assert(len(q_traj)==len(t_traj))
-    arm= 0
+    if arm is None:  arm= self.Arm
+
+    if dq_traj is not None:
+      CPrint(3,'WARNING: dq_traj is given, but is not used.')
 
     with self.control_locker:
       self.mikata.FollowTrajectory(self.joint_names[arm], q_traj, t_traj, blocking=(blocking==True))

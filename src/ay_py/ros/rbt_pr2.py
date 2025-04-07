@@ -261,15 +261,16 @@ class TRobotPR2(TDualArmRobot):
   '''Follow a joint angle trajectory.
     arm: LEFT, RIGHT, or None (==currarm).
     q_traj: joint angle trajectory [q0,...,qD]*N.
+    dq_traj: joint angular velocity trajectory [dq0,...,dqD]*N (optional).
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
+  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None):
     assert(len(q_traj)==len(t_traj))
     if arm is None:  arm= self.Arm
 
     #copy q_traj, t_traj to goal
     goal= pr2_controllers_msgs.msg.JointTrajectoryGoal()
-    goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj)
+    goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
 
     with self.control_locker:
       actc= self.actc.r_traj if arm==RIGHT else self.actc.l_traj

@@ -184,9 +184,10 @@ class TMultiArmRobot(TROSUtil):
   '''Follow a joint angle trajectory.
     arm: arm id, or None (==currarm).
     q_traj: joint angle trajectory [q0,...,qD]*N.
+    dq_traj: joint angular velocity trajectory [dq0,...,dqD]*N (optional).
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
+  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None):
     raise NotImplementedError('FollowQTraj is not implemented for:',self.Name)
 
   '''Follow a self.EndLink(arm)-pose trajectory.

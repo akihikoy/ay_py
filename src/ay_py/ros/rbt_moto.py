@@ -285,9 +285,10 @@ class TRobotMotoman(TMultiArmRobot):
   '''Follow a joint angle trajectory.
     arm: arm id, or None (==currarm).
     q_traj: joint angle trajectory [q0,...,qD]*N.
+    dq_traj: joint angular velocity trajectory [dq0,...,dqD]*N (optional).
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False):
+  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None):
     assert(len(q_traj)==len(t_traj))
     if arm is None:  arm= self.Arm
 
@@ -301,8 +302,13 @@ class TRobotMotoman(TMultiArmRobot):
     if t_traj[0]>1.0e-4:
       t_traj.insert(0,0.0)
       q_traj.insert(0,self.Q(arm=arm))
+      if dq_traj is not None:
+        dq_traj.insert(0,[0.0]*self.DoF(arm))
 
-    dq_traj= QTrajToDQTraj(q_traj, t_traj)
+    if dq_traj is None:
+      dq_traj= QTrajToDQTraj(q_traj, t_traj)
+    else:
+      assert(len(q_traj)==len(dq_traj))
 
     for i_retry in range(self.NumTrajCtrlRetry+1):
       #copy q_traj, t_traj to goal
