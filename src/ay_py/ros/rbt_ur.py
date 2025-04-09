@@ -324,8 +324,9 @@ class TRobotUR(TMultiArmRobot):
     q_traj: joint angle trajectory [q0,...,qD]*N.
     dq_traj: joint angular velocity trajectory [dq0,...,dqD]*N (optional).
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None):
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
+    stop_before_start: if True, stop before starting the trajectory.'''
+  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None, stop_before_start=True):
     assert(len(q_traj)==len(t_traj))
     if arm is None:  arm= self.Arm
 
@@ -333,7 +334,8 @@ class TRobotUR(TMultiArmRobot):
       self.PrintStatus()
       raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
-    self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
+    if stop_before_start:
+      self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
 
     #Insert current position to beginning.
     if t_traj[0]>1.0e-4:

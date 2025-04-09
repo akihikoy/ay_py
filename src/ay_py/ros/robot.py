@@ -186,8 +186,9 @@ class TMultiArmRobot(TROSUtil):
     q_traj: joint angle trajectory [q0,...,qD]*N.
     dq_traj: joint angular velocity trajectory [dq0,...,dqD]*N (optional).
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None):
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
+    stop_before_start: if True, stop before starting the trajectory.'''
+  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None, stop_before_start=True):
     raise NotImplementedError('FollowQTraj is not implemented for:',self.Name)
 
   '''Follow a self.EndLink(arm)-pose trajectory.
@@ -195,30 +196,33 @@ class TMultiArmRobot(TROSUtil):
     x_traj: self.EndLink(arm)-pose trajectory [x,y,z,qx,qy,qz,qw]*N.
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
+    stop_before_start: if True, stop before starting the trajectory.
     x_ext: a local pose on the self.EndLink(arm) frame.
       If not None, the final joint angles q satisfies self.FK(q,x_ext,arm)==x_trg. '''
-  def FollowXTraj(self, x_traj, t_traj, x_ext=None, arm=None, blocking=False):
+  def FollowXTraj(self, x_traj, t_traj, x_ext=None, arm=None, blocking=False, stop_before_start=True):
     if arm is None:  arm= self.Arm
     q_traj= self.XTrajToQTraj(x_traj, x_ext=x_ext, arm=arm)
-    self.FollowQTraj(q_traj, t_traj, arm=arm, blocking=blocking)
+    self.FollowQTraj(q_traj, t_traj, arm=arm, blocking=blocking, stop_before_start=stop_before_start)
 
   '''Control an arm to the target joint angles.
     arm: arm id, or None (==currarm).
     q_trg: target joint angles.
     dt: duration time in seconds.
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def MoveToQ(self, q_trg, dt=4.0, arm=None, blocking=False):
-    self.FollowQTraj(q_traj=[q_trg], t_traj=[dt], arm=arm, blocking=blocking)
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
+    stop_before_start: if True, stop before starting the trajectory. '''
+  def MoveToQ(self, q_trg, dt=4.0, arm=None, blocking=False, stop_before_start=True):
+    self.FollowQTraj(q_traj=[q_trg], t_traj=[dt], arm=arm, blocking=blocking, stop_before_start=stop_before_start)
 
   '''Control an arm to the target self.EndLink(arm) pose.
     arm: arm id, or None (==currarm).
     x_trg: target pose.
     dt: duration time in seconds.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
+    stop_before_start: if True, stop before starting the trajectory.
     x_ext: a local pose on the self.EndLink(arm) frame.
       If not None, the final joint angles q satisfies self.FK(q,x_ext,arm)==x_trg. '''
-  def MoveToX(self, x_trg, dt=4.0, x_ext=None, arm=None, blocking=False):
-    self.FollowXTraj(x_traj=[x_trg], t_traj=[dt], x_ext=x_ext, arm=arm, blocking=blocking)
+  def MoveToX(self, x_trg, dt=4.0, x_ext=None, arm=None, blocking=False, stop_before_start=True):
+    self.FollowXTraj(x_traj=[x_trg], t_traj=[dt], x_ext=x_ext, arm=arm, blocking=blocking, stop_before_start=stop_before_start)
 
   '''Control an arm to the target self.EndLink(arm) pose with a linearly interpolated trajectory.
     arm: arm id, or None (==currarm).
@@ -226,11 +230,12 @@ class TMultiArmRobot(TROSUtil):
     dt: duration time in seconds (this is modified when limit_vel=True and acc_phase>1).
     inum: number of interpolation points.
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
+    stop_before_start: if True, stop before starting the trajectory.
     x_ext: a local pose on the self.EndLink(arm) frame.
       If not None, the final joint angles q satisfies self.FK(q,x_ext,arm)==x_trg.
     limit_vel: If True, joint angular velocities are limited to JointVelLimits.
     acc_phase: Number of points in the acceleration and deceleration phases (>=1). '''
-  def MoveToXI(self, x_trg, dt=4.0, x_ext=None, inum=30, arm=None, blocking=False, limit_vel=True, acc_phase=9):
+  def MoveToXI(self, x_trg, dt=4.0, *, x_ext=None, inum=30, arm=None, blocking=False, stop_before_start=True, limit_vel=True, acc_phase=9):
     if arm is None:  arm= self.Arm
 
     x_curr= self.FK(q=None, x_ext=x_ext, arm=arm)
@@ -242,7 +247,7 @@ class TMultiArmRobot(TROSUtil):
     q_traj= self.XTrajToQTraj(x_traj, x_ext=x_ext, start_angles=q_curr, arm=arm)
     if limit_vel:
       LimitQTrajVel(q_start=q_curr, q_traj=q_traj, t_traj=t_traj, qvel_limits=self.JointVelLimits(arm), acc_phase=acc_phase)
-    self.FollowQTraj(q_traj, t_traj, arm=arm, blocking=blocking)
+    self.FollowQTraj(q_traj, t_traj, arm=arm, blocking=blocking, stop_before_start=stop_before_start)
 
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''

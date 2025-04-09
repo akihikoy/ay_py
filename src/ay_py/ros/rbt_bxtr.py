@@ -242,8 +242,9 @@ class TRobotBaxter(TDualArmRobot):
     q_traj: joint angle trajectory [q0,...,qD]*N.
     dq_traj: joint angular velocity trajectory [dq0,...,dqD]*N (optional).
     t_traj: corresponding times in seconds from start [t1,t2,...,tN].
-    blocking: False: move background, True: wait until motion ends, 'time': wait until tN. '''
-  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None):
+    blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
+    stop_before_start: if True, stop before starting the trajectory.'''
+  def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None, stop_before_start=True):
     assert(len(q_traj)==len(t_traj))
     if arm is None:  arm= self.Arm
 
@@ -251,6 +252,8 @@ class TRobotBaxter(TDualArmRobot):
     if t_traj[0]>1.0e-4:
       t_traj.insert(0,0.0)
       q_traj.insert(0,self.Q(arm=arm))
+      if dq_traj is not None:
+        dq_traj.insert(0,[0.0]*self.DoF(arm))
 
     #copy q_traj, t_traj to goal
     goal= control_msgs.msg.FollowJointTrajectoryGoal()
@@ -263,6 +266,20 @@ class TRobotBaxter(TDualArmRobot):
       actc.send_goal(goal)
       BlockAction(actc, blocking=blocking, duration=t_traj[-1])
       #actc.wait_for_result(timeout=rospy.Duration(t_traj[-1]+5.0))  WARNING: Maybe it's better to set timeout
+
+  '''Stop motion such as FollowQTraj.
+    arm: arm id, or None (==currarm). '''
+  def StopMotion(self, arm=None):
+    if arm is None:  arm= self.Arm
+
+    with self.control_locker:
+      actc= self.actc.r_traj if arm==RIGHT else self.actc.l_traj
+      actc.cancel_goal()
+      try:
+        BlockAction(actc, blocking=True, duration=10.0)  #duration does not matter.
+      except ROSError as e:
+        #There will be an error when there is no goal. Ignoring.
+        pass
 
 
   '''Open a gripper.
