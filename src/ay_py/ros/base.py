@@ -63,14 +63,28 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
   raise Exception('BlockAction: invalid blocking type: %r'%blocking)
 
 
-def SetupServiceProxy(name, srv_type, persistent=False, time_out=None):
-  print('Waiting for %s... (t/o: %r)' % (name, time_out))
-  try:
-    rospy.wait_for_service(name, time_out)
-  except rospy.exceptions.ROSException as e:
-    print('Failed to connect the service %s' % name)
-    print('  Error:',str(e))
-    return None
+'''Setup ServiceProxy with waiting for the service establishment.
+  If a proxy is returned (i.e. not None), the connection is ensured.
+  When time_out is None, the function waits for the service forever.
+  The waiting behavior can be configured as follows:
+    wait_mode='no_wait': Does not wait for the service. time_out is not used.
+    wait_mode='require_ready': Wait for time_out, and return None if the service is not available (default).
+    wait_mode='allow_unready': Wait for time_out, and return the proxy regardless the service availability.
+'''
+def SetupServiceProxy(name, srv_type, persistent=False, time_out=None, wait_mode='require_ready'):
+  if wait_mode=='no_wait':
+    pass
+  elif wait_mode in ('require_ready','allow_unready'):
+    print(f'Waiting for {name}... (t/o: {time_out})')
+    try:
+      rospy.wait_for_service(name, time_out)
+    except rospy.exceptions.ROSException as e:
+      print('Failed to connect the service %s' % name)
+      print('  Error:',str(e))
+      if wait_mode=='require_ready':
+        return None
+  else:
+    raise Exception(f'SetupServiceProxy: Unknown wait_mode={wait_mode}')
   srvp= rospy.ServiceProxy(name, srv_type, persistent=persistent)
   return srvp
 
@@ -360,10 +374,10 @@ class TROSUtil(object):
       self.pub[name]= rospy.Publisher(port_name, port_type, subscriber_listener, tcp_nodelay, latch, headers, queue_size)
     return True
 
-  #Add a service proxy.
-  def AddSrvP(self, name, port_name, port_type, persistent=False, time_out=None):
+  #Add a service proxy.  cf. SetupServiceProxy
+  def AddSrvP(self, name, port_name, port_type, persistent=False, time_out=None, wait_mode='require_ready'):
     if name not in self.srvp:
-      srvp= SetupServiceProxy(port_name, port_type, persistent, time_out)
+      srvp= SetupServiceProxy(port_name, port_type, persistent, time_out, wait_mode)
       if srvp is None:  return False
       else:  self.srvp[name]= srvp
     return True
