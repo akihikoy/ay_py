@@ -16,12 +16,15 @@ from .rbt_dxlg import TDxlGripper, TRobotDxlGripper
 class TDxlO3Gripper(TDxlGripper,TGripper2FN):
   def __init__(self, node_name='gripper_driver'):
     TDxlGripper.__init__(self, node_name=node_name, gripper_type='DxlO3Gripper')
-    TGripper2FN.__iadd__(self, dof=2)
+    TGripper2FN.__init__(self, dof=2)
 
     #Gripper position-angles conversions (for 2F1 emulation mode).
-    self.g2f1_ang_open= 0.6136  #cmd=+400
-    self.g2f1_ang_close= 0.1657  #cmd=+108; With FV+
-    self.g2f1_range= [0.0,0.118]  #cmd=[108,400]; With FV+
+    #self.g2f1_ang_open= 0.6136  #cmd=+400
+    #self.g2f1_ang_close= 0.1657  #cmd=+108; With FV+
+    #self.g2f1_range= [0.0,0.118]  #cmd=[108,400]; With FV+
+    self.g2f1_ang_open= 0.9
+    self.g2f1_ang_close= 0.16
+    self.g2f1_range= [0.0,0.16]
     self.g2f1_ang2pos= lambda ang: max(self.g2f1_range[0], self.g2f1_range[0] + (ang-self.g2f1_ang_close)*(self.g2f1_range[1]-self.g2f1_range[0])/(self.g2f1_ang_open-self.g2f1_ang_close))
     self.g2f1_pos2ang= lambda pos: self.g2f1_ang_close + (pos-self.g2f1_range[0])*(self.g2f1_ang_open-self.g2f1_ang_close)/(self.g2f1_range[1]-self.g2f1_range[0])
 

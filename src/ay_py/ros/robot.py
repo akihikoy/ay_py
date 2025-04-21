@@ -375,10 +375,11 @@ class TGripper2FN(TGripper2F1):
   def __init__(self, dof=2):
     super(TGripper2FN,self).__init__()
     self.dof= dof
+    self.gripper_class= f'Gripper2F{self.dof}'
 
   '''Answer to a query q by {True,False}. e.g. Is('Robotiq').'''
   def Is(self, q):
-    if q in ('Gripper','Gripper2FN'):  return True
+    if q in ('Gripper','Gripper2FN',self.gripper_class):  return True
     return False
 
   '''Range of gripper positions.'''
