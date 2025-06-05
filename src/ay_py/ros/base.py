@@ -1,6 +1,7 @@
 #! /usr/bin/env python3
 #ROS basic tools.
 import rospy
+import rospkg
 import actionlib as al
 import geometry_msgs.msg
 import trajectory_msgs.msg
@@ -22,6 +23,21 @@ class ROSError(Exception):
     return 'ROSError({kind},{msg})'.format(kind=repr(self.Kind), msg=repr(self.Msg))
   def __repr__(self):
     return 'ROSError({kind},{msg})'.format(kind=repr(self.Kind), msg=repr(self.Msg))
+
+'''
+Convert environmental variable and ROS package reference in str s.
+s can include ${env XXX} and ${pkg YYY} to refer an environmental variable XXX
+and a ROS package YYY.
+'''
+def ResolveEnvROSPkg(s):
+  f= ResolveEnvROSPkg
+  if not hasattr(f, 'env_var_pattern'):
+    f.env_var_pattern= re.compile(r'\$\{env\s+([A-Za-z0-9_]+)\}')
+  if not hasattr(f, 'ros_pkg_pattern'):
+    f.ros_pkg_pattern= re.compile(r'\$\{pkg\s+([A-Za-z0-9_]+)\}')
+  s= f.env_var_pattern.sub(lambda m: os.getenv(m.group(1), m.group(0)), s)
+  s= f.ros_pkg_pattern.sub(lambda m: rospkg.RosPack().get_path(m.group(1)), s)
+  return s
 
 ACTC_STATE_TO_STR= {getattr(actionlib_msgs.msg.GoalStatus,key):key for key in ('PENDING', 'ACTIVE', 'RECALLED', 'REJECTED', 'PREEMPTED', 'ABORTED', 'SUCCEEDED', 'LOST')}
 ACTC_RESULT_TO_STR= {getattr(control_msgs.msg.FollowJointTrajectoryResult,key):key for key in ('GOAL_TOLERANCE_VIOLATED', 'INVALID_GOAL', 'INVALID_JOINTS', 'OLD_HEADER_TIMESTAMP', 'PATH_TOLERANCE_VIOLATED', 'SUCCESSFUL')}

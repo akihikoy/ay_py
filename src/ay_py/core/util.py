@@ -15,6 +15,7 @@ import traceback
 import importlib
 import hashlib
 import importlib
+import re
 
 #Speedup YAML using CLoader/CDumper
 from yaml import load as yamlload
@@ -441,9 +442,20 @@ def OpenWCheck(file_name, mode, interactive):
     CPrint(2,'OpenW: File exists:',file_name)
     CPrint(2,'Overwrite? (if No, raise IOError)')
     if not AskYesNo():  raise IOError(2,'Canceled to open file as file exists:',file_name)
+
 def OpenW(file_name, mode='w', interactive=True):
   OpenWCheck(file_name,mode,interactive)
   return open(file_name,mode)
+
+#List files whose names are [prefix][index][suffix] in dir_path,
+# and sort them by index in ascending order.
+# [index] can be '' which is sorted to the beginning.
+def ListAndSortIndexFiles(dir_path, prefix, suffix):
+  pattern= rf'{re.escape(prefix)}([\d ]*){re.escape(suffix)}'
+  matched_files= [re.fullmatch(pattern, f) for f in os.listdir(dir_path)]
+  matched_files= sorted([(m.group(0),m.group(1)) for m in matched_files if m],
+                        key=lambda m: -1 if m[1]=='' else int(m[1].strip()))
+  return [os.path.join(dir_path,f) for f,idx in matched_files]
 
 '''
 Virtual file pointer to write the same contents into a file A and std-out.
