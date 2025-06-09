@@ -44,7 +44,7 @@ def MergeDict2(d_base, *d_new):
     MergeDict(d_base, d)
   return d_base  #NOTE: d_base is overwritten. Returning it is for the convenience.
 
-def AskYesNoDialog(parent, message, title='Inquiry', font_size=12):
+def AskYesNoDialog(parent, message, title='Inquiry', font_size=12, width=None, height=None):
   #return QtGui.QMessageBox.question(parent, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
   msg_box= QtGui.QMessageBox(parent)
   msg_box.setIcon(QtGui.QMessageBox.Question)
@@ -53,6 +53,13 @@ def AskYesNoDialog(parent, message, title='Inquiry', font_size=12):
   msg_box.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
   # Set font size via stylesheet
   msg_box.setStyleSheet(f"QLabel{{font-size: {font_size}pt;}} QPushButton{{font-size: {font_size}pt;}}")
+  # Resize dialog width and height
+  if width is not None and height is not None:
+    msg_box.setFixedSize(width, height)
+  elif width is not None:
+    msg_box.setFixedWidth(width)
+  elif height is not None:
+    msg_box.setFixedHeight(height)
   result= msg_box.exec_()
   return result == QtGui.QMessageBox.Yes
 
