@@ -53,13 +53,19 @@ def AskYesNoDialog(parent, message, title='Inquiry', font_size=12, width=None, h
   msg_box.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
   # Set font size via stylesheet
   msg_box.setStyleSheet(f"QLabel{{font-size: {font_size}pt;}} QPushButton{{font-size: {font_size}pt;}}")
-  # Resize dialog width and height
-  if width is not None and height is not None:
-    msg_box.setFixedSize(width, height)
-  elif width is not None:
-    msg_box.setFixedWidth(width)
-  elif height is not None:
-    msg_box.setFixedHeight(height)
+
+  # Force dialog layout update
+  msg_box.setSizeGripEnabled(True)
+  msg_box.show()
+  msg_box.adjustSize()
+
+  # Explicitly set the size by directly manipulating the internal layout
+  if width or height:
+    layout= msg_box.layout()
+    spacer= QtGui.QSpacerItem(width if width else 0, height if height else 0,
+                              QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
+    layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
+
   result= msg_box.exec_()
   return result == QtGui.QMessageBox.Yes
 
