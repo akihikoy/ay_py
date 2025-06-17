@@ -1048,6 +1048,10 @@ def RunPanelApp(exit_at_close=True):
   if exit_at_close:  sys.exit(exit_code)
   return exit_code
 
+def GetApp():
+  global app
+  return app
+
 #Relaunch the program.
 #  e.g. RelaunchProgram(['-lang=ja'])
 def RelaunchProgram(additional_args=None):
