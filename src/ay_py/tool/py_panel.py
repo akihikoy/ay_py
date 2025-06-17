@@ -5,6 +5,9 @@
 #\author  Akihiko Yamaguchi, info@akihikoy.net
 #\version 0.1
 #\date    Apr.14, 2021
+#\version 0.2
+#\date    June.17, 2025
+#         Implemented a language option.
 
 import os, sys, copy, math
 
@@ -46,10 +49,11 @@ def MergeDict2(d_base, *d_new):
 
 def AskYesNoDialog(parent, message, title='Inquiry', font_size=12, width=None, height=None):
   #return QtGui.QMessageBox.question(parent, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
+  tr= parent.tr if hasattr(parent,'tr') else (lambda text: text)
   msg_box= QtGui.QMessageBox(parent)
   msg_box.setIcon(QtGui.QMessageBox.Question)
-  msg_box.setWindowTitle(title)
-  msg_box.setText(message)
+  msg_box.setWindowTitle(tr(title))
+  msg_box.setText(tr(message))
   msg_box.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
   # Set font size via stylesheet
   msg_box.setStyleSheet(f"QLabel{{font-size: {font_size}pt;}} QPushButton{{font-size: {font_size}pt;}}")
@@ -111,7 +115,7 @@ class TSlider(QtGui.QWidget):
     return min(self.range_step[1], self.range_step[0] + self.range_step[2]*slider_value)
 
   def convert_to(self, value):
-    return max(0,min(self.slider_max,(value-self.range_step[0])/self.range_step[2]))
+    return max(0,min(self.slider_max,(value-self.range_step[0])//self.range_step[2]))
 
   def value(self):
     return self.convert_from(self.slider.value())
@@ -127,7 +131,7 @@ class TSlider(QtGui.QWidget):
   #style: 0:Default, 1:Variable handle size.
   def Construct(self, range_step, n_labels, slider_style, onvaluechange):
     self.range_step= range_step
-    self.slider_max= (self.range_step[1]-self.range_step[0])/self.range_step[2]
+    self.slider_max= (self.range_step[1]-self.range_step[0])//self.range_step[2]
     self.slider_style= slider_style
 
     self.layout= QtGui.QGridLayout()
@@ -582,7 +586,7 @@ if 'rviz' in sys.modules:
 
 
 class TSimplePanel(QtGui.QWidget):
-  def __init__(self, title, size=(800,400), font_height_scale=100.0):
+  def __init__(self, title, size=(800,400), font_height_scale=100.0, lang='en'):
     QtGui.QWidget.__init__(self)
     self.close_callback= None
     self.font_height_scale= font_height_scale
@@ -631,6 +635,8 @@ class TSimplePanel(QtGui.QWidget):
     self.widgets= {}
     self.layout_in= None
     self.layouts= {}
+    self.translations= {'en':{}}  #Translation object (dict like: {language: {source text: translated text}}.
+    self.language= lang  #One of languages defined in self.translations.
 
   #Add widgets from widget description dict.
   def AddWidgets(self, widgets):
@@ -704,7 +710,7 @@ class TSimplePanel(QtGui.QWidget):
       'text': 'button',
       'onclick': None,
       }, w_param)
-    btn= QtGui.QPushButton(param['text'], self)
+    btn= QtGui.QPushButton(self.tr(param['text']), self)
     btn.setFocusPolicy(QtCore.Qt.NoFocus)
     #btn.setFlat(True)
     #btn.setToolTip('Click to make something happen')
@@ -722,13 +728,13 @@ class TSimplePanel(QtGui.QWidget):
       'onclick': None,
       'ontoggled': None,
       }, w_param)
-    btn= QtGui.QPushButton(param['text'][0], self)
+    btn= QtGui.QPushButton(self.tr(param['text'][0]), self)
     btn.setFocusPolicy(QtCore.Qt.NoFocus)
     btn.setCheckable(True)
     btn.setChecked(param['checked'])
     if param['onclick']:  btn.clicked.connect(lambda checked=False,bnt=btn: (param['onclick'][0](self,btn) if param['onclick'][0] else None) if btn.isChecked() else (param['onclick'][1](self,btn) if param['onclick'][1] else None) )
-    if param['ontoggled']:  btn.toggled.connect(lambda checked=False,bnt=btn: (param['ontoggled'][0](self,btn) if param['ontoggled'][0] else None, btn.setText(param['text'][1])) if btn.isChecked() else (param['ontoggled'][1](self,btn) if param['ontoggled'][1] else None, btn.setText(param['text'][0])) )
-    else:  btn.toggled.connect(lambda checked=False,bnt=btn: btn.setText(param['text'][1]) if btn.isChecked() else btn.setText(param['text'][0]) )
+    if param['ontoggled']:  btn.toggled.connect(lambda checked=False,bnt=btn: (param['ontoggled'][0](self,btn) if param['ontoggled'][0] else None, btn.setText(self.tr(param['text'][1]))) if btn.isChecked() else (param['ontoggled'][1](self,btn) if param['ontoggled'][1] else None, btn.setText(self.tr(param['text'][0]))) )
+    else:  btn.toggled.connect(lambda checked=False,bnt=btn: btn.setText(self.tr(param['text'][1])) if btn.isChecked() else btn.setText(self.tr(param['text'][0])) )
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(220, 100)
@@ -741,7 +747,7 @@ class TSimplePanel(QtGui.QWidget):
       'checked': False,
       'onclick': None,
       }, w_param)
-    chkbx= QtGui.QCheckBox(param['text'], self)
+    chkbx= QtGui.QCheckBox(self.tr(param['text']), self)
     chkbx.setChecked(param['checked'])
     chkbx.setFocusPolicy(QtCore.Qt.NoFocus)
     if param['onclick']:  chkbx.clicked.connect(lambda checked=False,chkbx=chkbx: param['onclick'](self,chkbx))
@@ -761,9 +767,9 @@ class TSimplePanel(QtGui.QWidget):
     cmbbx= QtGui.QComboBox(self)
     #cmbbx.setFocusPolicy(QtCore.Qt.NoFocus)
     for option in param['options']:
-      cmbbx.addItem(option)
+      cmbbx.addItem(self.tr(option))
     if param['index'] is not None:  cmbbx.setCurrentIndex(param['index'])
-    if param['text'] is not None:  cmbbx.setCurrentText(param['text'])
+    if param['text'] is not None:  cmbbx.setCurrentText(self.tr(param['text']))
     if param['editable'] is not None:  cmbbx.setEditable(param['editable'])
     if param['size_adjust_policy'] is not None:
       policy= {'all_contents':  QtGui.QComboBox.AdjustToContents,
@@ -786,7 +792,7 @@ class TSimplePanel(QtGui.QWidget):
       'ontextchanged': None,
       }, w_param)
     edit= QtGui.QLineEdit(self)
-    if param['text'] is not None:  edit.setText(param['text'])
+    if param['text'] is not None:  edit.setText(self.tr(param['text']))
     if param['validator']=='int':    edit.setValidator(QtGui.QIntValidator())
     if param['validator']=='float':  edit.setValidator(QtGui.QDoubleValidator())
     if param['ontextchanged']:  edit.textChanged.connect(lambda _,edit=edit:param['ontextchanged'](self,edit))
@@ -808,7 +814,7 @@ class TSimplePanel(QtGui.QWidget):
     radiobox= TRadioBox(self)
     if param['onclick']:  clicked= lambda _,radiobox=radiobox:param['onclick'](self,radiobox)
     else:  clicked= None
-    radiobox.Construct(param['layout'], param['options'], index=param['index'], onclick=clicked)
+    radiobox.Construct(param['layout'], map(self.tr,param['options']), index=param['index'], onclick=clicked)
     self.ApplyCommonWidgetConfig(radiobox, param)
     return radiobox
 
@@ -846,7 +852,7 @@ class TSimplePanel(QtGui.QWidget):
       'text':'',
       'selectable_by_mouse':False,  #Text is selectable by mouse.
       }, w_param)
-    label= QtGui.QLabel(param['text'], self)
+    label= QtGui.QLabel(self.tr(param['text']), self)
     #label.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     if param['selectable_by_mouse']:
       label.setTextInteractionFlags(QtCore.Qt.TextSelectableByMouse)
@@ -859,7 +865,7 @@ class TSimplePanel(QtGui.QWidget):
       'read_only':False,
       }, w_param)
     text= QtGui.QTextEdit(self)
-    text.setText(param['text'])
+    text.setText(self.tr(param['text']))
     text.setReadOnly(param['read_only'])
     #text.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Preferred)
     self.ApplyCommonWidgetConfig(text, param)
@@ -891,6 +897,8 @@ class TSimplePanel(QtGui.QWidget):
       'columns':3,
       }, w_param)
     statusgrid= TStatusGrid(self)
+    for item in param['list_status']:
+      item['label']= self.tr(item['label'])
     statusgrid.Construct(**{key: param[key] for key in ('list_status', 'direction', 'shape', 'margin', 'rows', 'columns')})
     self.ApplyCommonWidgetConfig(statusgrid, param)
     return statusgrid
@@ -978,6 +986,7 @@ class TSimplePanel(QtGui.QWidget):
       layout.tab= []
       layout.tab_name_to_index= {}
       for tab_name,tab_layout in items:
+        tab_name= self.tr(tab_name)
         tab= QtGui.QWidget()
         layout.tab.append(tab)
         layout.tab_name_to_index[tab_name]= len(layout.tab)-1
@@ -985,9 +994,9 @@ class TSimplePanel(QtGui.QWidget):
         sublayout= self.AddLayouts(tab_layout)
         tab.setLayout(sublayout)
       #For convenience, we define a setCurrentTab method to show a tab by name.
-      layout.setCurrentTab= lambda tab_name:layout.tabs.setCurrentIndex(layout.tab_name_to_index[tab_name])
+      layout.setCurrentTab= lambda tab_name:layout.tabs.setCurrentIndex(layout.tab_name_to_index[self.tr(tab_name)])
       #For convenience, we define a setCurrentTab method to show a tab by name.
-      layout.setTabEnabled= lambda tab_name,enabled:layout.tabs.setTabEnabled(layout.tab_name_to_index[tab_name],enabled)
+      layout.setTabEnabled= lambda tab_name,enabled:layout.tabs.setTabEnabled(layout.tab_name_to_index[self.tr(tab_name)],enabled)
 
     self.layouts[name]= layout
     return layout
@@ -1003,6 +1012,28 @@ class TSimplePanel(QtGui.QWidget):
     else:
       event.accept()
 
+  def SetTranslations(self, tr):
+    MergeDict(self.translations, tr)
+
+  # Translate text with a dictionary self.translations.
+  def tr(self, text):
+    if self.translations is None:  return text
+    lang_translations= self.translations.get(self.language, {})
+    translated= lang_translations.get(text)
+    #print(f'translate:{text}:{translated}; lang:{self.language}')
+
+    # Return original text if translation is not found
+    if translated is None:
+      return text
+
+    if str(os.environ.get('PYQT_VERSION', '5')) == '4':
+      # Return as QString for PyQt4
+      return QtCore.QString.fromUtf8(
+        translated.encode('utf-8') if isinstance(translated, str) else translated)
+    else:
+      # Return as a regular string for PyQt5
+      return translated
+
 
 app= None
 
@@ -1017,8 +1048,24 @@ def RunPanelApp(exit_at_close=True):
   if exit_at_close:  sys.exit(exit_code)
   return exit_code
 
+#Relaunch the program.
+#  e.g. RelaunchProgram(['-lang=ja'])
+def RelaunchProgram(additional_args=None):
+  print("Relaunching program...")
+  python= sys.executable
+  args= sys.argv[:]
+  if additional_args:
+    args.extend(additional_args)
+  os.execl(python, python, *args)
 
 if __name__=='__main__':
+  import yaml
+  def get_arg(opt_name, default):
+    exists= [a.startswith(opt_name) for a in sys.argv]
+    if any(exists):  return sys.argv[exists.index(True)].replace(opt_name,'')
+    else:  return default
+  lang= get_arg('-lang=',get_arg('--lang=','en'))
+
   def Print(*s):
     for ss in s:  print(ss, end=' ')
     print('')
@@ -1031,8 +1078,8 @@ if __name__=='__main__':
     'btn2': (
       'buttonchk',{
         'text':('TurnOn','TurnOff'),
-        'onclick': (lambda w,obj:Print('ON!'),
-                    lambda w,obj:Print('OFF!'))}),
+        'onclick': (lambda w,obj:Print(w.tr('ON!')),
+                    lambda w,obj:Print(w.tr('OFF!')))}),
     'btn_totab10': (
       'button',{
         'text':'To tab1',
@@ -1056,7 +1103,7 @@ if __name__=='__main__':
         'options':('Option-0','Option-1','Option-2','Other'),
         'index':1,
         'onactivated': lambda w,obj:(Print('Selected',obj.currentText()),
-                                     w.widgets['edit_cmb1other'].setEnabled(obj.currentText()=='Other'))}),
+                                     w.widgets['edit_cmb1other'].setEnabled(obj.currentText()==w.tr('Other')))}),
     'cmb2': (
       'combobox',{
         'options':('Text-0','Text-1','Text-2'),
@@ -1073,7 +1120,7 @@ if __name__=='__main__':
         'layout': 'h',
         'index': 0,
         'onclick': lambda w,obj:(Print('Selected',obj.group.checkedButton().text()),
-                                 w.widgets['edit_radbox1other'].setEnabled(obj.group.checkedButton().text()=='Other'))}),
+                                 w.widgets['edit_radbox1other'].setEnabled(obj.group.checkedButton().text()==w.tr('Other')))}),
     'edit_radbox1other': (
       'lineedit',{
         'validator':'int',
@@ -1084,7 +1131,16 @@ if __name__=='__main__':
         'layout': 'v',
         'index': None,
         'onclick': lambda w,obj:(Print('Selected',obj.group.checkedButton().text()),
-                                 w.widgets['slider_radbox2other'].setEnabled(obj.group.checkedButton().text()=='Other'))}),
+                                 w.widgets['slider_radbox2other'].setEnabled(obj.group.checkedButton().text()==w.tr('Other')))}),
+    'radbox3': (
+      'radiobox',{
+        'options':('en','ja'),
+        'layout': 'h',
+        'index': {'en':0,'ja':1}[lang],
+        'onclick': lambda w,obj:(Print('Selected',obj.group.checkedButton().text()),
+                                 setattr(w,'new_lang',obj.group.checkedButton().text()),
+                                 (setattr(w,'flag_relaunch', True), w.close()) if AskYesNoDialog(w,w.tr('Restarting the program is needed to make the new configuration effective.')+'\n'+w.tr('Do you want to restart now?')) else None
+                                 )}),
     'slider_radbox2other': (
       'sliderh',{
         'range': (1000,1800,100),
@@ -1176,6 +1232,7 @@ if __name__=='__main__':
                                   ('cmb2',1,0),('cmb1',1,1),('edit_cmb1other',1,2)) ),
                   ('boxh',None, ('radbox1','edit_radbox1other') ),
                   ('boxv',None, ('radbox2','slider_radbox2other') ),
+                  ('boxv',None, ('radbox3',) ),
                   ('boxh',None, ('btn_totab20', 'btn_totab30') ),
                   'spacer1',
                 )) ),
@@ -1191,8 +1248,19 @@ if __name__=='__main__':
             ))
 
   InitPanelApp()
-  panel= TSimplePanel('Simple Panel Example', size=(600,400), font_height_scale=300.0)
+  panel= TSimplePanel('Simple Panel Example', size=(600,450), font_height_scale=400.0, lang=lang)
+  with open(os.path.join(os.path.dirname(__file__), 'translations.yaml'),'r') as fp:
+    panel.SetTranslations(yaml.safe_load(fp.read())['TRANSLATIONS'])
+    #print(f'panel.translations:{panel.translations}')
   panel.AddWidgets(widgets)
   panel.Construct(layout)
-  RunPanelApp()
+  #print(f'widgets-in: {widgets}')
 
+  #Additional flags.
+  panel.flag_relaunch= False  #True for relaunching the app.
+  panel.new_lang= panel.language
+
+  RunPanelApp(exit_at_close=False)
+
+  if panel.flag_relaunch:
+    RelaunchProgram([f'-lang={panel.new_lang}'])

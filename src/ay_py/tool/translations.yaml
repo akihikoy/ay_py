@@ -1,0 +1,65 @@
+#Example translation file for py_panel.
+
+TRANSLATIONS:
+  en: {}
+  ja:
+    'Close': '閉じる'
+    'TurnOn': 'オンにする'
+    'TurnOff': 'オフにする'
+    'ON!': 'オン!'
+    'OFF!': 'オフ!'
+
+    'Option-0': 'オプション0'
+    'Option-1': 'オプション1'
+    'Option-2': 'オプション2'
+    'Option-A': 'オプションA'
+    'Option-B': 'オプションB'
+    'Option-C': 'オプションC'
+
+    'Text-0': 'テキスト0'
+    'Text-1': 'テキスト1'
+    'Text-2': 'テキスト2'
+
+    'tab1': 'タブ1'
+    'tab2': 'タブ2'
+    'tab3': 'タブ3'
+    'tab4': 'タブ4'
+    'tab5': 'タブ5'
+    'tab6': 'タブ6'
+
+    'To tab1': 'タブ1へ'
+    'To tab2': 'タブ2へ'
+    'To tab3': 'タブ3へ'
+    'To tab4': 'タブ4へ'
+    'To tab5': 'タブ5へ'
+    'To tab6': 'タブ6へ'
+
+    'Other': 'その他'
+
+    'Safety1': '安全1'
+    'Safety2': '安全2'
+    'Safety3': '安全3'
+    'Safety4': '安全4'
+    'Safety5': '安全5'
+
+    'Arm1': 'アーム1'
+    'Arm2': 'アーム2'
+
+    'Sensor1': 'センサー1'
+    'Sensor2': 'センサー2'
+    'Sensor3': 'センサー3'
+
+    'Gripper1': 'グリッパ1'
+    'Gripper2': 'グリッパ2'
+    'Gripper3': 'グリッパ3'
+
+    'Type': 'タイプ'
+    'Counter': 'カウンター'
+
+    'Inquiry': '質問'
+    'Select a tab to go': '遷移するタブを選んでください'
+    'Please check!': 'チェックしてください！'
+    'Are you sure to quit?': '終了しますか？'
+    'Restarting the program is needed to make the new configuration effective.': '変更の反映にはアプリの再起動が必要です．'
+    'Do you want to restart now?': '今すぐ再起動しますか？'
+
