@@ -611,6 +611,7 @@ class TSimplePanel(QtGui.QWidget):
       'minimum_size': None,  #None, or (horizontal_minimum_size, vertical_minimum_size)
       'maximum_size': None,  #None, or (horizontal_maximum_size, vertical_maximum_size)
       'size_policy': ('expanding', 'expanding'),  #(horizontal_size_policy, vertical_size_policy), or size_policy
+      'style_sheet': None,
       }
     self.widget_generator= {
       #'duplicate': self.DuplicateWidget,
@@ -665,6 +666,8 @@ class TSimplePanel(QtGui.QWidget):
     self.show()
 
   def ApplyCommonWidgetConfig(self, widget, param):
+    if param['style_sheet'] is not None:
+      widget.setStyleSheet(param['style_sheet'])
     if hasattr(widget,'setFont') and param['font_size_range'] is not None:
       widget.font_size_range= param['font_size_range']
       widget.setFont(QtGui.QFont('', widget.font_size_range[0]))
@@ -1096,6 +1099,7 @@ if __name__=='__main__':
     'btn1': (
       'button',{
         'text':'Close',
+        'style_sheet': 'background-color: pink',
         'onclick':lambda w,obj:w.close() if w.widgets['btn2'].isChecked() and AskYesNoDialog(w,'Are you sure to quit?') else w.widgets['btn2'].setChecked(True)}),
     'btn2': (
       'buttonchk',{
