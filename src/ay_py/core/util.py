@@ -26,6 +26,7 @@ except ImportError:
   from yaml import Loader as YLoader, Dumper as YDumper
 from yaml import Dumper as yaml_Dumper
 
+
 def AskYesNo():
   while 1:
     sys.stdout.write('  (y|n) > ')
@@ -540,7 +541,7 @@ def DumpYAML(d, except_cnv=lambda y:y, directive=None, correct_indent=True, to_s
   if directive is not None:
     s+= directive+'\n'
   d= ToStdType(d,except_cnv)
-  s+= yamldump(d, Dumper=Dumper_IndentPlus if correct_indent else YDumper)
+  s+= yamldump(d, Dumper=Dumper_IndentPlus if correct_indent else YDumper, width=float('inf'))
   return s
 
 #Save a dictionary d into a file file_name in YAML format.

@@ -636,6 +636,7 @@ class TSimplePanel(QtGui.QWidget):
     self.layout_in= None
     self.layouts= {}
     self.translations= {'en':{}}  #Translation object (dict like: {language: {source text: translated text}}.
+    self.reverse_translations= {'en':{}}  #Reverse translation object.
     self.language= lang  #One of languages defined in self.translations.
 
   #Add widgets from widget description dict.
@@ -1015,6 +1016,11 @@ class TSimplePanel(QtGui.QWidget):
   def SetTranslations(self, tr):
     MergeDict(self.translations, tr)
 
+    # Create a reverse lookup dictionary
+    self.reverse_translations= {lang: {v: k for k, v in lang_translations.items()}
+                                for lang, lang_translations in self.translations.items()}
+
+
   # Translate text with a dictionary self.translations.
   def tr(self, text):
     if self.translations is None:  return text
@@ -1034,6 +1040,18 @@ class TSimplePanel(QtGui.QWidget):
       # Return as a regular string for PyQt5
       return translated
 
+  # Reverse translate text with a dictionary self.reverse_translations.
+  def rev_tr(self, translated_text):
+    # Convert QtCore.QString to Python str for PyQt4 compatibility
+    if str(os.environ.get('PYQT_VERSION', '5')) == '4':
+      translated_text= str(translated_text)
+
+    if self.reverse_translations is None:  return translated_text
+
+    lang_reverse_translations= self.reverse_translations.get(self.language, {})
+    original_text= lang_reverse_translations.get(translated_text)
+
+    return original_text if original_text is not None else translated_text
 
 app= None
 
