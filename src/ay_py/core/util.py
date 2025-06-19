@@ -45,15 +45,15 @@ def AskGen(*argv):
     for a in argv:
       if ans==a:  return a
 
-def TimeStr(fmt='short',now=None):
-  if now is None: now= time.localtime()
-  if fmt=='short':
-    return '%04i%02i%02i%02i%02i%02i' % (now.tm_year,now.tm_mon,now.tm_mday,now.tm_hour,now.tm_min,now.tm_sec)
-  elif fmt=='short2':
-    return '%04i%02i%02i-%02i%02i%02i' % (now.tm_year,now.tm_mon,now.tm_mday,now.tm_hour,now.tm_min,now.tm_sec)
-  elif fmt=='normal':
-    return '%04i.%02i.%02i-%02i.%02i.%02i' % (now.tm_year,now.tm_mon,now.tm_mday,now.tm_hour,now.tm_min,now.tm_sec)
-  return '%r'%now
+def TimeStr(fmt='short', now=None):
+  if now is None:  now= datetime.datetime.now()
+  if fmt=='normal':  return now.strftime('%Y.%m.%d-%H.%M.%S')
+  if fmt=='normal_ms':  return now.strftime('%Y.%m.%d-%H.%M.%S.%f')[:-3]
+  if fmt=='normal_us':  return now.strftime('%Y.%m.%d-%H.%M.%S.%f')
+  if fmt=='short':   return now.strftime('%Y%m%d%H%M%S')
+  if fmt=='short2':  return now.strftime('%Y%m%d-%H%M%S')
+  if fmt=='short3':  return now.strftime('%Y%m%d-%H%M%S-%f')
+  raise Exception('TimeStr: Invalid format:', fmt)
 
 def IfNone(x,y):
   return x if x!=None else y
