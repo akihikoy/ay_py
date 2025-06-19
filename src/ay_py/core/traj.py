@@ -5,6 +5,7 @@ import numpy.linalg as la
 import math
 import random
 import copy
+import itertools
 from .util import *
 from .geom import *
 
@@ -205,7 +206,7 @@ TODO:FIXME: Especially the mapping of FK takes long compt. time (map(f_fk, q_tra
 def CheckXQTrajValidity(q_traj, x_traj, f_fk, dp_lim=np.inf, dq_lim=0.1, N_int=5):
   if len(q_traj)<=1:  return True
   x_traj_int= [list(x_traj[0])] + sum([XInterpolation(x1,x2,N_int) for x1,x2 in zip(x_traj[:-1],x_traj[1:])], [])
-  q_traj_int= [q_traj[0]] + sum([(q1+(np.array(q2)-q1)*np.linspace(0,1,N_int+1)[1:].reshape(-1,1)).tolist() for q1,q2 in zip(q_traj[:-1],q_traj[1:])], [])
+  q_traj_int= QTrajInterpolationByFixedNum(q_traj, N_int)
   x_traj_est= list(map(f_fk, q_traj_int))
   x_diff= [np.linalg.norm(d[:3])<dp_lim and np.linalg.norm(d[3:])<dq_lim for d in [DiffX(xi,xe) for xi,xe in zip(x_traj_int,x_traj_est)]]
   return all(x_diff)
@@ -237,6 +238,34 @@ def QInterpolation(q1,q2,N):
     R= np.dot(Rodrigues(float(t+1)/float(N)*w),R1)
     traj.append(RotToQ(R))
   return traj
+
+#Interpolate a joint angle trajectory (list of joint angle vector (list of float))
+#  where each interval is divided into fixed number of sub-steps (N) of the same interval.
+def QTrajInterpolationByFixedNum(q_traj, N):
+  def sub_interpolate(q1, q2, N):
+    q1, q2 = np.array(q1), np.array(q2)
+    return (q1 + (q2 - q1) * np.linspace(0, 1, N + 1)[1:, None]).tolist()
+  q_traj_array= [np.array(q) for q in q_traj]
+  interpolated= itertools.chain.from_iterable(
+    [sub_interpolate(q1, q2, N) for q1, q2 in zip(q_traj_array[:-1], q_traj_array[1:])])
+  return [q_traj[0]] + list(interpolated)
+
+#Interpolate a joint angle trajectory (list of joint angle vector (list of float))
+#  where each interval is divided so that a maximum difference of a joint angle is less than dq_max.
+def QTrajInterpolationByInterval(q_traj, dq_max):
+  def sub_interpolate(q1, q2, N_int):
+    q1, q2= np.array(q1), np.array(q2)
+    if N_int <= 1:
+      return [q2.tolist()]
+    return (q1 + (q2 - q1) * np.linspace(0, 1, N_int + 1)[1:, None]).tolist()
+  q_traj_array= np.array(q_traj)
+  max_dq= np.max(np.abs(np.diff(q_traj_array, axis=0)), axis=1)
+  N_int_array= np.ceil(max_dq / dq_max).astype(int)
+  #print(f'N_int_array={N_int_array}')
+  interpolated= itertools.chain.from_iterable(
+    sub_interpolate(q_traj_array[idx], q_traj_array[idx + 1], N_int)
+    for idx, N_int in enumerate(N_int_array))
+  return [q_traj[0]] + list(interpolated)
 
 '''Transform a Cartesian trajectory to joint angle trajectory.
   func_ik: IK function (x, q_start).
