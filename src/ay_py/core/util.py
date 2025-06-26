@@ -25,6 +25,7 @@ try:
 except ImportError:
   from yaml import Loader as YLoader, Dumper as YDumper
 from yaml import Dumper as yaml_Dumper
+from yaml.representer import SafeRepresenter
 
 
 def AskYesNo():
@@ -541,7 +542,7 @@ def DumpYAML(d, except_cnv=lambda y:y, directive=None, correct_indent=True, to_s
   if directive is not None:
     s+= directive+'\n'
   d= ToStdType(d,except_cnv)
-  s+= yamldump(d, Dumper=Dumper_IndentPlus if correct_indent else YDumper, width=float('inf'))
+  s+= yamldump(d, Dumper=Dumper_IndentPlusWithFix0Num if correct_indent else YDumper, width=float('inf'))
   return s
 
 #Save a dictionary d into a file file_name in YAML format.
@@ -557,6 +558,19 @@ def SaveYAML(d, file_name, except_cnv=lambda y:y, interactive=True, directive=No
 class Dumper_IndentPlus(yaml_Dumper):
   def increase_indent(self, flow=False, *args, **kwargs):
     return super(Dumper_IndentPlus,self).increase_indent(flow=flow, indentless=False)
+
+#Modify the YAML dumper to output a number 0123 as str '0123'.
+def quoted_str_representer(dumper, data):
+  return dumper.represent_scalar('tag:yaml.org,2002:str', data, style="'")
+def is_digit_like_str(s):
+  return isinstance(s, str) and re.fullmatch(r'0\d+', s) is not None
+class Dumper_IndentPlusWithFix0Num(Dumper_IndentPlus):
+  pass
+def custom_str_representer(dumper, data):
+  if is_digit_like_str(data):
+    return quoted_str_representer(dumper, data)
+  return SafeRepresenter.represent_str(dumper, data)
+Dumper_IndentPlusWithFix0Num.add_representer(str, custom_str_representer)
 
 #Get an SHA-1 hash of a dictionary d.
 def GetSHA1HashOfDict(d):
