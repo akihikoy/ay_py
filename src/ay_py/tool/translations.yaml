@@ -57,6 +57,13 @@ TRANSLATIONS:
     'Counter': 'カウンター'
 
     'Inquiry': '質問'
+    'Yes': 'はい'
+    'No': 'いいえ'
+    'OK': 'OK'
+    'Cancel': 'キャンセル'
+    'Apply': '適用'
+    'Reset': 'リセット'
+    'Close': '閉じる'
     'Select a tab to go': '遷移するタブを選んでください'
     'Please check!': 'チェックしてください！'
     'Are you sure to quit?': '終了しますか？'

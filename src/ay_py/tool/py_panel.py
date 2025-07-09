@@ -47,19 +47,50 @@ def MergeDict2(d_base, *d_new):
     MergeDict(d_base, d)
   return d_base  #NOTE: d_base is overwritten. Returning it is for the convenience.
 
-def AskYesNoDialog(parent, message, title='Inquiry', font_size=12, width=None, height=None):
-  #return QtGui.QMessageBox.question(parent, title, message, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No) == QtGui.QMessageBox.Yes
+# Show a general Inquiry dialog.
+# buttons: Combination of buttons (select from: Yes, No, Ok, Cancel, Apply, Reset, Close).
+def AskGenDialog(parent, message, sub_message=None, title='Inquiry', buttons=['Yes','No'],
+                 font_size=12, sub_font_size_ratio=0.7, width=None, height=None):
+  def buttons_to_flags(buttons):
+    flag= 0
+    for name in buttons:
+      if hasattr(QtGui.QMessageBox, name) and isinstance(getattr(QtGui.QMessageBox, name), QtGui.QMessageBox.StandardButton):
+        flag|= getattr(QtGui.QMessageBox, name)
+      else:
+        raise ValueError(f'AskGenDialog: Unknown button name: {name}')
+    return flag
+
+  def result_to_str(result, buttons):
+    for name in buttons:
+      value= getattr(QtGui.QMessageBox, name)
+      if result==value:  return name
+    return f"Unknown({result})"
+
   tr= parent.tr if hasattr(parent,'tr') else (lambda text: text)
   msg_box= QtGui.QMessageBox(parent)
   msg_box.setIcon(QtGui.QMessageBox.Question)
   msg_box.setWindowTitle(tr(title))
   msg_box.setText(tr(message))
-  msg_box.setStandardButtons(QtGui.QMessageBox.Yes | QtGui.QMessageBox.No)
+  if sub_message is not None:  msg_box.setInformativeText(tr(sub_message))
+
+  msg_box.setStandardButtons(buttons_to_flags(buttons))
+
+  #Translate button name with tr:
+  for name in buttons:
+    button= msg_box.button(getattr(QtGui.QMessageBox, name))
+    if button:  button.setText(tr(name))
+
   # Set font size via stylesheet
-  msg_box.setStyleSheet(f"QLabel{{font-size: {font_size}pt;}} QPushButton{{font-size: {font_size}pt;}}")
+  sub_font_size= int(font_size*sub_font_size_ratio)
+  msg_box.setStyleSheet(
+    f'QLabel#qt_msgbox_label {{ font-size: {font_size}pt; }} '
+    f'QLabel#qt_msgbox_informativelabel {{ font-size: {sub_font_size}pt; }} '
+    f'QPushButton {{ font-size: {font_size}pt; }}'
+    )
+  # f'QLabel{{min-width: 300px;}} '
 
   # Force dialog layout update
-  msg_box.setSizeGripEnabled(True)
+  # msg_box.setSizeGripEnabled(True)
   msg_box.show()
   msg_box.adjustSize()
 
@@ -71,7 +102,14 @@ def AskYesNoDialog(parent, message, title='Inquiry', font_size=12, width=None, h
     layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
 
   result= msg_box.exec_()
-  return result == QtGui.QMessageBox.Yes
+  return result_to_str(result, buttons)
+
+# Show a Yes-No Inquiry dialog.
+def AskYesNoDialog(parent, message, sub_message=None, title='Inquiry',
+                   font_size=12, sub_font_size_ratio=0.7, width=None, height=None):
+  result= AskGenDialog(parent, message, sub_message=sub_message, title=title, buttons=['Yes','No'],
+                       font_size=font_size, sub_font_size_ratio=sub_font_size_ratio, width=width, height=height)
+  return result=='Yes'
 
 class TRadioBox(QtGui.QWidget):
   def __init__(self, *args, **kwargs):
@@ -1086,10 +1124,11 @@ def RelaunchProgram(additional_args=None):
 if __name__=='__main__':
   import yaml
   def get_arg(opt_name, default):
-    exists= [a.startswith(opt_name) for a in sys.argv]
-    if any(exists):  return sys.argv[exists.index(True)].replace(opt_name,'')
-    else:  return default
+    for a in reversed(sys.argv):
+      if a.startswith(opt_name):  return a.replace(opt_name, '')
+    return default
   lang= get_arg('-lang=',get_arg('--lang=','en'))
+  print(f'Starting app with lang={lang}')
 
   def Print(*s):
     for ss in s:  print(ss, end=' ')
@@ -1100,7 +1139,7 @@ if __name__=='__main__':
       'button',{
         'text':'Close',
         'style_sheet': 'background-color: pink',
-        'onclick':lambda w,obj:w.close() if w.widgets['btn2'].isChecked() and AskYesNoDialog(w,'Are you sure to quit?') else w.widgets['btn2'].setChecked(True)}),
+        'onclick':lambda w,obj:w.close() if w.widgets['btn2'].isChecked() and AskYesNoDialog(w,'Are you sure to quit?',font_size=14) else w.widgets['btn2'].setChecked(True)}),
     'btn2': (
       'buttonchk',{
         'text':('TurnOn','TurnOff'),
@@ -1165,7 +1204,7 @@ if __name__=='__main__':
         'index': {'en':0,'ja':1}[lang],
         'onclick': lambda w,obj:(Print('Selected',obj.group.checkedButton().text()),
                                  setattr(w,'new_lang',obj.group.checkedButton().text()),
-                                 (setattr(w,'flag_relaunch', True), w.close()) if AskYesNoDialog(w,w.tr('Restarting the program is needed to make the new configuration effective.')+'\n'+w.tr('Do you want to restart now?')) else None
+                                 (setattr(w,'flag_relaunch', True), w.close()) if AskYesNoDialog(w,'Do you want to restart now?',sub_message=w.tr('Restarting the program is needed to make the new configuration effective.')+'\n'+w.tr('Do you want to restart now?'),font_size=14) else None
                                  )}),
     'slider_radbox2other': (
       'sliderh',{
