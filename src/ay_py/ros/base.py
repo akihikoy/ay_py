@@ -336,7 +336,7 @@ class TROSUtil(object):
 
     for k in list(self.pub.keys()):
       print('Stop publishing %r...' % k, end=' ')
-      self.pub[k].publish()
+      #self.pub[k].publish()
       self.pub[k].unregister()
       del self.pub[k]
       print('ok')
@@ -435,7 +435,7 @@ class TROSUtil(object):
 
   def DelPub(self, name):
     if name in self.pub:
-      self.pub[name].publish()
+      #self.pub[name].publish()
       self.pub[name].unregister()
       del self.pub[name]
 
