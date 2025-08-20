@@ -72,11 +72,19 @@ class TTerminalTab(QtGui.QWidget):
     print('Loaded options from {}'.format(file_name))
 
   def CmdToLambda(self,term,cmd):
+    if cmd is None:  return lambda:None
     if cmd==':close':  return self.close
-    if len(cmd)==0:  return lambda:None
-    if cmd[0]==':all':  return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
-    if cmd[0]==':saveopts':  return lambda:self.SaveOpts(cmd[1].format(**self.ExpandOpt()))
-    return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
+    if isinstance(cmd,(tuple,list)):
+      if len(cmd)==0:  return lambda:None
+      if cmd[0]==':all':
+        if len(cmd)<1:  raise Exception(f'In terminal {term}, :all command is defined without commands to execute: {cmd}')
+        return lambda:self.SendCmdToAll([c.format(**self.ExpandOpt()) for c in cmd[1:]])
+      if cmd[0]==':saveopts':
+        if len(cmd)!=2:  raise Exception(f'In terminal {term}, :saveopts command should follow the syntax [\':saveopts\', FILENAME], but: {cmd}')
+        return lambda:self.SaveOpts(cmd[1].format(**self.ExpandOpt()))
+      return lambda:self.SendCmd(term,[c.format(**self.ExpandOpt()) for c in cmd])
+    if callable(cmd):  return cmd
+    raise Exception(f'Invalid command definition for the terminal {term}: cmd={cmd}')
 
   def InitUI(self,title,widgets,exit_command,size,horizontal,no_focus,term_width,grid_type='vhbox'):
     # Set window size.
@@ -159,10 +167,7 @@ class TTerminalTab(QtGui.QWidget):
         label.setAlignment(QtCore.Qt.AlignCenter)
         add_widget(label)
         group= QtGui.QButtonGroup()
-        self.Objects[name]= {}
-        self.Objects[name]['label']= label
-        self.Objects[name]['group']= group
-        self.Objects[name]['radbtns']= []
+        radbtns= []
         for i,opt in enumerate(options):
           radbtn= QtGui.QRadioButton(opt)
           radbtn.setCheckable(True)
@@ -170,27 +175,41 @@ class TTerminalTab(QtGui.QWidget):
           if i==0:  radbtn.setChecked(True)
           group.addButton(radbtn,1)
           add_widget(radbtn)
-          self.Objects[name]['radbtns'].append(radbtn)
+          radbtns.append(radbtn)
+        self.Objects[name]= {}
+        self.Objects[name]['label']= label
+        self.Objects[name]['group']= group
+        self.Objects[name]['radbtns']= radbtns
+        self.Objects[name]['radbtns']= radbtns
         self.RBOptions[name]= group
       elif isinstance(line,(tuple,list)) and len(line)>1 and line[1]==':cmb':
         name,_,options= line
-        label= QtGui.QLabel()
-        label.setText(name)
-        label.setAlignment(QtCore.Qt.AlignCenter)
-        add_widget(label)
-        cmbbx= QtGui.QComboBox(self)
-        self.Objects[name]= {}
-        self.Objects[name]['label']= label
-        for opt in options:
-          cmbbx.addItem(opt)
-        cmbbx.setCurrentIndex(0)
+        #label= QtGui.QLabel()
+        #label.setText(name)
+        #label.setAlignment(QtCore.Qt.AlignCenter)
+        btn0= QtGui.QPushButton('{name}'.format(name=name))
+        btn0.setFlat(True)
+        btn0.setStyleSheet('QPushButton { text-decoration: underline; }')
+        if no_focus:  btn0.setFocusPolicy(QtCore.Qt.NoFocus)
+        if isinstance(options,(tuple,list)):
+          f_options= lambda opts=options: opts
+        elif callable(options):
+          f_options= options
+        else:
+          raise Exception(f'In {name}, the options should be a list/tuple, or a function to return list/tuple.')
+        cmbbx= self.CreateComboBox(f_options, cmbbx=None)
+        btn0.clicked.connect(lambda clicked,f_options=f_options,cmbbx=cmbbx:self.CreateComboBox(f_options,cmbbx=cmbbx))
+        add_widget(btn0)
         add_widget(cmbbx)
+        self.Objects[name]= {}
+        self.Objects[name]['label']= btn0
         self.Objects[name]['cmbbx']= cmbbx
         self.CBOptions[name]= cmbbx
       elif isinstance(line,(tuple,list)) and len(line)>1 and isinstance(line[1],(tuple,list)):
         term,row= line
         btn0= QtGui.QPushButton('({term})'.format(term=term))
         btn0.setFlat(True)
+        btn0.setStyleSheet('QPushButton { text-decoration: underline; }')
         if no_focus:  btn0.setFocusPolicy(QtCore.Qt.NoFocus)
         btn0.clicked.connect(lambda clicked,term=term:self.ShowTermTab(term))
         add_widget(btn0)
@@ -296,6 +315,20 @@ class TTerminalTab(QtGui.QWidget):
     #for r,(term,row) in enumerate(self.Terminals):
       #self.StartProc('tmux', ['send-keys', '-t', self.pid+term+':0'] + self.InitCommand)
     self.qttabs.setCurrentIndex(0)
+
+  def CreateComboBox(self, f_options, cmbbx=None):
+    if cmbbx is None:
+      cmbbx= QtGui.QComboBox(self)
+    current_text= cmbbx.currentText() if cmbbx.currentIndex()>=0 else None
+    cmbbx.clear()
+    options= f_options()
+    for opt in options:
+      cmbbx.addItem(opt)
+    if current_text in options:
+      cmbbx.setCurrentIndex(options.index(current_text))
+    else:
+      cmbbx.setCurrentIndex(0)
+    return cmbbx
 
   def Exit(self):
     for r,(term,row) in enumerate(self.Terminals):
