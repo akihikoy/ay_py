@@ -592,7 +592,7 @@ def Print(*s):
 class ACol:
   Fail    = '\033[91m'
   OKGreen = '\033[92m'
-  Warning = '\033[93m'
+  Warning = '\033[38;5;208m'  #Originally: '\033[93m' '\033[33m'
   OKBlue  = '\033[94m'
   Header  = '\033[95m'
   EndC    = '\033[0m'
