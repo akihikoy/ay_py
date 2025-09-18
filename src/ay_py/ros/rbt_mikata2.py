@@ -204,6 +204,9 @@ class TRobotMikata2(TMultiArmRobot):
     self.mikata.SetVelocity= self.SetVelocity
     self.mikata.SetPWM= self.SetPWM
 
+    self.q_curr= None
+    self.dq_curr= None
+
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
     self._is_initialized= False
@@ -237,7 +240,7 @@ class TRobotMikata2(TMultiArmRobot):
   def Cleanup(self):
     #NOTE: cleaning-up order is important. consider dependency
     for gripper in self.grippers:  gripper.Cleanup()
-    super(TRobotMikata2,self).Cleanup()
+    if TRobotMikata2 is not None:  super(TRobotMikata2,self).Cleanup()
 
   '''Configure a state validity checker.'''
   def ConfigureSVC(self, c):
@@ -315,14 +318,14 @@ class TRobotMikata2(TMultiArmRobot):
   def Q(self, arm=None):
     with self.sensor_locker:
       q= self.q_curr
-    return list(q)
+    return list(q) if q is not None else None
 
   '''Return joint velocities of an arm (list of floats).
     arm: arm id, or None (==currarm). '''
   def DQ(self, arm=None):
     with self.sensor_locker:
       dq= self.dq_curr
-    return list(dq)
+    return list(dq) if dq is not None else None
 
   '''Compute a forward kinematics of an arm.
   Return self.EndLink(arm) pose on self.BaseFrame.
