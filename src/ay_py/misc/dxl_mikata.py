@@ -11,10 +11,10 @@ import time
 import threading
 import copy
 from ..core.util import TRate, CPrint
-from ..core.traj import TCubicHermiteSpline
+from ..core.traj import TCubicHermiteSpline, TLinearInterpolator
 
 class TMikata(object):
-  def __init__(self, dev='/dev/ttyUSB0'):
+  def __init__(self, dev='/dev/ttyUSB0', interpolation='spline'):
     self.dev= dev
     self.baudrate= 1e6
     self.dxl_type= ['XM430-W350']*5
@@ -26,6 +26,7 @@ class TMikata(object):
     self.goal_pwm= [70, 50, 40, 40, 30]
     #self.goal_pwm= [50,50,50,50,50]
     #self.goal_pwm= [90,90,90,90,90]
+    self.interpolation= interpolation  #Interpolation method in FollowTrajectory (options: spline, linear).
 
     self.port_locker= threading.RLock()
     self.state_locker= threading.RLock()
@@ -298,10 +299,18 @@ class TMikata(object):
       t_traj= [0.0]+t_traj
 
     #Modeling the trajectory with spline.
-    splines= [TCubicHermiteSpline() for d in range(dof)]
-    for d in range(len(splines)):
-      data_d= [[t,q[d]] for q,t in zip(q_traj,t_traj)]
-      splines[d].Initialize(data_d, tan_method=splines[d].CARDINAL, c=0.0, m=0.0)
+    if self.interpolation=='spline':
+      splines= [TCubicHermiteSpline() for d in range(dof)]
+      for d in range(len(splines)):
+        data_d= [[t,q[d]] for q,t in zip(q_traj,t_traj)]
+        splines[d].Initialize(data_d, tan_method=splines[d].CARDINAL, c=0.0, m=0.0)
+    elif self.interpolation=='linear':
+      splines= [TLinearInterpolator() for d in range(dof)]
+      for d in range(len(splines)):
+        data_d= [[t,q[d]] for q,t in zip(q_traj,t_traj)]
+        splines[d].Initialize(data_d)
+    else:
+      raise Exception(f'Invalid interpolation method: {self.interpolation}')
 
     rate= TRate(self.hz_traj_ctrl)
     t0= time.time()

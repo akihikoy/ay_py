@@ -7,7 +7,7 @@
 from .dxl_mikata import *
 
 class TXW540XW430(TMikata):
-  def __init__(self, dev='/dev/ttyUSB0'):
+  def __init__(self, dev='/dev/ttyUSB0', interpolation='spline'):
     self.dev= dev
     self.baudrate= 2e6
     self.dxl_type= ['XW540-T260', 'XW430-T333']
@@ -16,6 +16,7 @@ class TXW540XW430(TMikata):
     self.dxl= {}  #{joint_name:TDynamixel1}
     self.op_mode= 'POSITION'
     self.goal_pwm= [100]*2
+    self.interpolation= interpolation  #Interpolation method in FollowTrajectory (options: spline, linear).
 
     self.port_locker= threading.RLock()
     self.state_locker= threading.RLock()
