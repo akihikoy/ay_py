@@ -197,3 +197,43 @@ def KBHAskGen(*argv, **kwargs):
     return kbhit.AskGen(*argv, **kwargs)
   return None
 
+
+#Dummy of TKBHit (does not turn the screen into termios).
+#  Useful to disable the CUI for a software integration.
+#  Typical usage:
+#    with (TKBHit() if not no_kbhit else TDummyKBHit()) as kbhit:
+class TDummyKBHit(object):
+  def __init__(self,activate=True):
+    self.is_active= False
+    if activate:  self.Activate()
+  def __del__(self):
+    self.Deactivate()
+  def __enter__(self, *args, **kwargs):
+    return self
+  def __exit__(self, *args, **kwargs):
+    self.Deactivate()
+  def IsActive(self):
+    return self.is_active
+  def Activate(self):
+    self.is_active= True
+  def Deactivate(self):
+    self.is_active= False
+  def SetNormalTerm(self):
+    pass
+  def SetCursesTerm(self):
+    pass
+  def PutCh(self,ch):
+    pass
+  def GetCh(self):
+    return ''
+  def GetChE(self):
+    return ''
+  def CheckKBHit(self, timeout=0):
+    return ''
+  def KBHit(self, echo=False, timeout=0):
+    return ''
+  def AskYesNo(self):
+    return AskYesNo()
+  def AskGen(self,*argv):
+    return AskGen(*argv)
+
