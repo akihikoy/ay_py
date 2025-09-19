@@ -312,16 +312,13 @@ class TMikata(object):
     else:
       raise Exception(f'Invalid interpolation method: {self.interpolation}')
 
-    rate= TRate(self.hz_traj_ctrl)
-    t0= time.time()
-    while all(((time.time()-t0)<t_traj[-1], self.threads['TrajectoryController'][0])):
-      t= time.time()-t0
+    def control_at_time(t):
       #q= [splines[d].Evaluate(t) for d in xrange(dof)]
       q_dq= [splines[d].Evaluate(t,with_tan=True) for d in range(dof)]
       q= [q for q,_ in q_dq]
       dq= [dq for _,dq in q_dq]
       if callback is not None:
-        if callback('loop_begin',t,q,dq)==False:  break
+        if callback('loop_begin',t,q,dq)==False:  return False
       #print t, q
       if current is None:
         with self.port_locker:
@@ -331,7 +328,19 @@ class TMikata(object):
           self.MoveToC({jname:(qj,ej) for jname,qj,ej in zip(joint_names,q,current)}, blocking=False)
       if callback is not None:
         callback('loop_end',None,None,None)
+      return True
+
+    rate= TRate(self.hz_traj_ctrl)
+    t0= time.time()
+    quit_anomaly= False
+    while all(((time.time()-t0)<t_traj[-1], self.threads['TrajectoryController'][0])):
+      t= time.time()-t0
+      if not control_at_time(t):
+        quit_anomaly= True
+        break
       rate.sleep()
+    if self.threads['TrajectoryController'][0] and not quit_anomaly:
+      control_at_time(t_traj[-1])  # Make sure to reach the end point.
 
     self.threads['TrajectoryController'][0]= False
     if callback is not None:
