@@ -993,9 +993,13 @@ class TSimplePanel(QtGui.QWidget):
             layout.addSpacerItem(widget)
           else:
             layout.addWidget(widget)
-        else:
+        elif item is None:
+          pass
+        elif isinstance(item, (tuple, list)):
           sublayout= self.AddLayouts(item)
           layout.addLayout(sublayout)
+        else:
+          raise Exception(f'TSimplePanel: Invalid item of layout: l_type={l_type}, name={name}, items={items}')
     elif l_type=='grid':
       layout= QtGui.QGridLayout()
       for item_loc in items:
@@ -1008,7 +1012,7 @@ class TSimplePanel(QtGui.QWidget):
         elif len(item_loc)==6:
           item,r,c,rs,cs,align= item_loc
         else:
-          raise Exception('Invalid grid item:',item_loc)
+          raise Exception('TSimplePanel: Invalid grid item:',item_loc)
         if isinstance(item,str):
           widget= self.widgets[item]
           if isinstance(widget,QtGui.QSpacerItem):
@@ -1027,14 +1031,16 @@ class TSimplePanel(QtGui.QWidget):
       layout.addWidget(layout.tabs)
       layout.tab= []
       layout.tab_name_to_index= {}
-      for tab_name,tab_layout in items:
-        tab_name= self.tr(tab_name)
-        tab= QtGui.QWidget()
-        layout.tab.append(tab)
-        layout.tab_name_to_index[tab_name]= len(layout.tab)-1
-        layout.tabs.addTab(tab,tab_name)
-        sublayout= self.AddLayouts(tab_layout)
-        tab.setLayout(sublayout)
+      for item in items:
+        if item is not None:
+          tab_name, tab_layout= item
+          tab_name= self.tr(tab_name)
+          tab= QtGui.QWidget()
+          layout.tab.append(tab)
+          layout.tab_name_to_index[tab_name]= len(layout.tab)-1
+          layout.tabs.addTab(tab,tab_name)
+          sublayout= self.AddLayouts(tab_layout)
+          tab.setLayout(sublayout)
       #For convenience, we define a setCurrentTab method to show a tab by name.
       layout.setCurrentTab= lambda tab_name:layout.tabs.setCurrentIndex(layout.tab_name_to_index[self.tr(tab_name)])
       #For convenience, we define a setCurrentTab method to show a tab by name.
