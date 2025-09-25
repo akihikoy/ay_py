@@ -192,9 +192,12 @@ class TDynamixelPortHandler(object):
 
   '''Start reopen thread to reopen all devices whose port is None.
     interval: Cycle of reopen attempt (sec). '''
-  def StartReopen(self, interval=1.0):
+  def StartReopen(self, interval=2.0):
     print('DxlPortHandler: Reopen is requested')
-    self.StopReopen()
+    if self.thread_reopen[0]:
+      print('DxlPortHandler: ...but Reopen is already active. Canceled')
+      return
+    self.StopReopen()  #Join the thread just in case.
     if len(self.opened)==0:
       print('DxlPortHandler: Reopen canceled')
       return
@@ -574,6 +577,8 @@ class TDynamixel1(object):
     self.packet_handler= None
     self.dxl_result= None
     self.dxl_err= None
+    self.is_error= None
+    self.torque_enabled= None  #Rather than reading from the device, we store the value.
 
     #Dictionary to memorize the current state.
     self.state_memory= {}
@@ -586,39 +591,57 @@ class TDynamixel1(object):
     self.Quit()
 
 
+  #Return if the Dynamixel is in error.
+  #is_error is checked in CheckTxRxResult.
+  def IsError(self):
+    return self.is_error
+
+  #Return if the Dynamixel torque is enabled.
+  #Memorized value is returned.
+  def TorqueEnabled(self):
+    return self.torque_enabled
+
   #Conversion from Dynamixel PWM value to PWM(percentage).
   def ConvPWM(self,value):
+    if value is None:  return None
     if self.MAX_PWM is None:  return None
     return value*100.0/self.MAX_PWM
   #Conversion from PWM(percentage) to Dynamixel PWM value.
   def InvConvPWM(self,value):
+    if value is None:  return None
     if self.MAX_PWM is None:  return None
     return int(value*self.MAX_PWM/100.0)
 
   #Conversion from Dynamixel current value to current(mA).
   def ConvCurr(self,value):
+    if value is None:  return None
     if self.CURRENT_UNIT is None:  return None
     return value*self.CURRENT_UNIT
   #Conversion from current(mA) to Dynamixel current value.
   def InvConvCurr(self,value):
+    if value is None:  return None
     if self.CURRENT_UNIT is None:  return None
     return int(value/self.CURRENT_UNIT)
 
   #Conversion from Dynamixel velocity value to velocity(rad/s).
   def ConvVel(self,value):
+    if value is None:  return None
     if self.VELOCITY_UNIT is None:  return None
     return value*self.VELOCITY_UNIT
   #Conversion from velocity(rad/s) to Dynamixel velocity value.
   def InvConvVel(self,value):
+    if value is None:  return None
     if self.VELOCITY_UNIT is None:  return None
     return int(value/self.VELOCITY_UNIT)
 
   #Conversion from Dynamixel position value to position(rad).
   def ConvPos(self,value):
+    if value is None:  return None
     if self.POSITION_UNIT is None or self.POSITION_OFFSET is None:  return None
     return (value-self.POSITION_OFFSET)*self.POSITION_UNIT
   #Conversion from position(rad) to Dynamixel position value.
   def InvConvPos(self,value):
+    if value is None:  return None
     if self.POSITION_UNIT is None or self.POSITION_OFFSET is None:  return None
     return int(value/self.POSITION_UNIT+self.POSITION_OFFSET)
 
@@ -642,6 +665,7 @@ class TDynamixel1(object):
     with port_locker:
       self.dxl_result,self.dxl_err= self.WriteFuncs[size](port_handler, self.Id, addr, value)
     self.state_memory[address]= value
+    if address=='TORQUE_ENABLE':  self.torque_enabled= value==self.TORQUE_ENABLE
 
   def Read(self, address):
     port_handler,port_locker= self.port_handler()
@@ -653,6 +677,7 @@ class TDynamixel1(object):
       print('{address} is not available with this Dynamixel.'.format(address=address))
       return None
     with port_locker:
+      port_handler.setPacketTimeoutMillis(200)
       value,self.dxl_result,self.dxl_err= self.ReadFuncs[size](port_handler, self.Id, addr)
     if size==2:
       #value= value & 255
@@ -685,6 +710,8 @@ class TDynamixel1(object):
 
     self.MemorizeState()
     DxlPortHandler.SetOnReopened(self.RecallState)
+
+    self.is_error= False
     return True
 
   def Quit(self):
@@ -696,7 +723,9 @@ class TDynamixel1(object):
   def MemorizeState(self):
     for address,(addr,size) in self.ADDR.items():
       if addr is None:  continue
-      self.state_memory[address]= self.Read(address)
+      value= self.Read(address)
+      if value is None:  continue
+      self.state_memory[address]= value
 
   def RecallState(self):
     port_handler,port_locker= self.port_handler()
@@ -709,6 +738,7 @@ class TDynamixel1(object):
         if address in self.state_memory:
           print('RecallState: {address}, {value}'.format(address=address,value=self.state_memory[address]))
           self.Write(address,self.state_memory[address])
+    self.is_error= False
 
   #Check the result of sending a command.
   #Print the error message if quiet is False.
@@ -722,6 +752,8 @@ class TDynamixel1(object):
       if self.dxl_err != 0:
         print(self.packet_handler.getRxPacketError(self.dxl_err))
     if not normal:
+      self.is_error= True
+      self.torque_enabled= False
       DxlPortHandler.MarkError(dev=self.DevName)
       if reopen:  DxlPortHandler.StartReopen()
     return normal
