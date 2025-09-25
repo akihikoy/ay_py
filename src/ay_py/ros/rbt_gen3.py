@@ -107,6 +107,13 @@ class TRobotGen3(TMultiArmRobot):
     if q in ('Gen3','Gen3_SIM'):  return True
     return super(TRobotGen3,self).Is(q)
 
+  #Check if the robot is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    if self.is_sim:  return True
+    print('FIXME: TRobotGen3.IsNormal is not implemented properly.')
+    if not all(gripper.IsNormal() for gripper in self.grippers):  return False
+    return True
+
   @property
   def NumArms(self):
     return 1

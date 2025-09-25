@@ -147,6 +147,7 @@ class TRobotUR(TMultiArmRobot):
   #Check if the robot is normal state (i.e. running properly without stopping).
   def IsNormal(self):
     if self.is_sim:  return True
+    if not all(gripper.IsNormal() for gripper in self.grippers):  return False
     with self.robot_mode_locker, self.safety_mode_locker, self.robot_program_running_locker:
       return all((self.robot_mode.mode==self.robot_mode.RUNNING, self.safety_mode.mode==self.safety_mode.NORMAL, self.robot_program_running))
 

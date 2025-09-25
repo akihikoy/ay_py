@@ -127,6 +127,7 @@ class TRobotMotoman(TMultiArmRobot):
   #Check if the robot is normal state (i.e. running properly without stopping).
   def IsNormal(self):
     if self.is_sim:  return True
+    if not all(gripper.IsNormal() for gripper in self.grippers):  return False
     with self.robot_status_locker:
       return all((self.robot_status.mode.val==industrial_msgs.msg.RobotMode.AUTO,
                   self.robot_status.e_stopped.val==industrial_msgs.msg.TriState.FALSE,

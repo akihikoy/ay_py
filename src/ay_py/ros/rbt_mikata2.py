@@ -8,6 +8,7 @@ import actionlib
 import control_msgs.msg
 import sensor_msgs.msg
 import trajectory_msgs.msg
+import ay_util_msgs.msg
 import ay_util_msgs.srv
 import copy
 
@@ -37,6 +38,10 @@ class TMikataGripper2(TDxlGripper):
 
   def Cleanup(self):
     pass
+
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    return self.mikata.IsNormal()
 
   '''Get current position.'''
   def Position(self):
@@ -206,6 +211,7 @@ class TRobotMikata2(TMultiArmRobot):
 
     self.q_curr= None
     self.dq_curr= None
+    self.state= False
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -224,6 +230,7 @@ class TRobotMikata2(TMultiArmRobot):
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
+    ra(self.AddSub('state', '/mikata_driver/state', ay_util_msgs.msg.SimpleRobotState, self.StateCallback))
 
     if not self.is_sim:
       self.mikata_gripper= TMikataGripper2()
@@ -256,6 +263,10 @@ class TRobotMikata2(TMultiArmRobot):
   def Is(self, q):
     if q in ('Mikata','Mikata2','Mikata_SIM'):  return True
     return super(TRobotMikata2,self).Is(q)
+
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    return self.state.is_normal
 
   @property
   def NumArms(self):
@@ -305,6 +316,9 @@ class TRobotMikata2(TMultiArmRobot):
       self.x_curr= msg
       self.q_curr= self.x_curr.position[:4]
       self.dq_curr= self.x_curr.velocity[:4]
+
+  def StateCallback(self, msg):
+    self.state= msg
 
   def State(self, arm=None):
     with self.sensor_locker:
@@ -416,6 +430,9 @@ class TRobotMikata2(TMultiArmRobot):
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None, stop_before_start=True):
     assert(len(q_traj)==len(t_traj))
     if arm is None:  arm= self.Arm
+
+    if not self.IsNormal():
+      raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
     if stop_before_start:
       self.StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.

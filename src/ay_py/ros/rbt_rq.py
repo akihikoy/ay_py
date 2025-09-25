@@ -69,6 +69,11 @@ class TRobotiq(TGripper2F1):
     if q in ('Robotiq',):  return True
     return super(TRobotiq,self).Is(q)
 
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    print('FIXME: TRobotiq.IsNormal is not implemented yet.')
+    return True
+
   '''Range of gripper position.'''
   def PosRange(self):
     return self.rqg_range

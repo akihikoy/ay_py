@@ -13,6 +13,7 @@ import importlib
 
 from .robot import TGripper2F1,TMultiArmRobot
 import sensor_msgs.msg
+import ay_util_msgs.msg
 import ay_util_msgs.srv
 
 
@@ -63,6 +64,7 @@ class TDxlGripper(TGripper2F1):
     self.q_curr= None
     self.dq_curr= None
     self.effort_curr= None
+    self.state= None
 
 
   '''Initialize (e.g. establish ROS connection).'''
@@ -75,6 +77,7 @@ class TDxlGripper(TGripper2F1):
     ra(self.AddSrvP('dxl_io', '/{0}/dxl_io'.format(self.node_name), ay_util_msgs.srv.DxlIO, persistent=False, time_out=3.0))
 
     ra(self.AddSub('joint_states', '/{0}/joint_states'.format(self.node_name), sensor_msgs.msg.JointState, self.JointStatesCallback))
+    ra(self.AddSub('state', '/{0}/state'.format(self.node_name), ay_util_msgs.msg.SimpleRobotState, self.StateCallback))
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
@@ -87,12 +90,19 @@ class TDxlGripper(TGripper2F1):
     if q==self.gripper_type:  return True
     return super(TDxlGripper,self).Is(q)
 
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    return self.state.is_normal
+
   def JointStatesCallback(self, msg):
     with self.sensor_locker:
       self.x_curr= msg
       self.q_curr= self.x_curr.position
       self.dq_curr= self.x_curr.velocity
       self.effort_curr= self.x_curr.effort
+
+  def StateCallback(self, msg):
+    self.state= msg
 
   '''Get current position.'''
   def Position(self):
@@ -257,6 +267,10 @@ class TRobotDxlGripper(TMultiArmRobot):
   def Is(self, q):
     if q in ('DxlGripper',):  return True
     return super(TRobotDxlGripper,self).Is(q)
+
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    return all(g.IsNormal() for g in self.grippers)
 
   @property
   def NumArms(self):

@@ -66,6 +66,7 @@ class TRobotMikata6(TRobotMikata2):
                     control_msgs.msg.FollowJointTrajectoryAction, time_out=3.0))
 
     ra(self.AddSub('joint_states', '/joint_states', sensor_msgs.msg.JointState, self.JointStatesCallback))
+    ra(self.AddSub('state', '/mikata6_driver/state', std_msgs.msg.Bool, self.StateCallback))
 
     if not self.is_sim:
       self.mikata_gripper= TMikata6Gripper()

@@ -112,6 +112,13 @@ class TRobotBaxter(TDualArmRobot):
     if q in ('Baxter','Baxter_SIM'):  return True
     return super(TRobotBaxter,self).Is(q)
 
+  #Check if the robot is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    if self.is_sim:  return True
+    print('FIXME: TRobotBaxter.IsNormal is not implemented properly.')
+    if not all(gripper.IsNormal() for gripper in self.grippers):  return False
+    return True
+
   @property
   def BaseFrame(self):
     return 'torso'
@@ -390,6 +397,11 @@ class TBaxterEPG(TGripper2F1):
   def Is(self, q):
     if q in ('BaxterEPG',):  return True
     return super(TBaxterEPG,self).Is(q)
+
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    print('FIXME: TBaxterEPG.IsNormal is not implemented yet.')
+    return True
 
   '''Range of gripper position.'''
   def PosRange(self):

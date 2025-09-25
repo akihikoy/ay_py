@@ -59,6 +59,11 @@ class TGEH6000ILGripper(TGripper2F1):
     if q in ('GEH6000IL',self.gripper_type):  return True
     return super(TGEH6000ILGripper,self).Is(q)
 
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    print('FIXME: TGEH6000ILGripper.IsNormal is not implemented yet.')
+    return True
+
   def JointStatesCallback(self, msg):
     with self.sensor_locker:
       self.x_curr= msg

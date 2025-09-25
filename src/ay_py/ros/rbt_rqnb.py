@@ -41,6 +41,11 @@ class TRobotRobotiqNB(TMultiArmRobot):
     if q in ('RobotiqNB',):  return True
     return super(TRobotRobotiqNB,self).Is(q)
 
+  #Check if the robot is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    if not all(gripper.IsNormal() for gripper in self.grippers):  return False
+    return True
+
   @property
   def BaseFrame(self):
     return 'world'

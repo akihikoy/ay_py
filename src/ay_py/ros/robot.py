@@ -65,6 +65,10 @@ class TMultiArmRobot(TROSUtil):
   def IsInitialized(self):
     return self._is_initialized
 
+  #Check if the robot is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    pass
+
   @property
   def Name(self):
     return self._name
@@ -321,6 +325,10 @@ class TGripper2F1(TROSUtil):
     if q in ('Gripper','Gripper2F1'):  return True
     return False
 
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    pass
+
   '''Range of gripper position.'''
   def PosRange(self):
     return None
@@ -381,6 +389,10 @@ class TGripper2FN(TGripper2F1):
   def Is(self, q):
     if q in ('Gripper','Gripper2FN',self.gripper_class):  return True
     return False
+
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    pass
 
   '''Range of gripper positions.'''
   def PosRange(self):
@@ -462,6 +474,10 @@ class TFakeGripper(TGripper2F1):
     if q in ('NoGripper'):  return True
     return False
 
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    return True
+
 
 '''Simulated 2 finger 1 DoF gripper'''
 class TSimGripper2F1(TGripper2F1):
@@ -483,6 +499,10 @@ class TSimGripper2F1(TGripper2F1):
     if q in ('SimGripper','SimGripper2F1'):  return True
     if q in ('sim','SIM'):  return True
     return super(TSimGripper2F1,self).Is(q)
+
+  #Check if the gripper is normal state (i.e. running properly without stopping).
+  def IsNormal(self):
+    return True
 
   '''Range of gripper position.'''
   def PosRange(self):
