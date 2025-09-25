@@ -92,6 +92,18 @@ class TMikata(object):
       for jname in self._joint_names(joint_names):
         self.dxl[jname].Reboot()
 
+  #Check if the devices are error state.
+  def IsError(self):
+    return any(dxl.IsError() for dxl in self.dxl.values())
+
+  #Check if the torques of all joint_names are enabled.
+  def TorqueEnabled(self,joint_names=None):
+    return all(self.dxl[jname].TorqueEnabled() for jname in self._joint_names(joint_names))
+
+  #Check if the joint_names devices are normal state and can move.
+  def IsNormal(self,joint_names=None):
+    return not self.IsError() and self.TorqueEnabled(joint_names)
+
   #Get current PWM.
   #  joint_names: Names of observing joints.
   #  as_dict: If True, the result is returned as a dictionary {joint_name:value}.

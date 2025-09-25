@@ -47,10 +47,10 @@ class TDxlGripperBase(object):
     self.GrpMax= None
 
     #Gripper command-position conversions.
-    self.gripper_cmd2pos= lambda cmd: min(self.GrpMax,max(self.GrpMin, self.GrpClose + (cmd-self.CmdClose)*(self.GrpOpen-self.GrpClose)/(self.CmdOpen-self.CmdClose) ))
-    self.gripper_pos2cmd= lambda pos: min(self.CmdMax,max(self.CmdMin, self.CmdClose + (pos-self.GrpClose)*(self.CmdOpen-self.CmdClose)/(self.GrpOpen-self.GrpClose) ))
-    self.gripper_cmd2vel= lambda cmd: (self.GrpOpen-self.GrpClose)/(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))*self.dxl.ConvVel(cmd)
-    self.gripper_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))/(self.GrpOpen-self.GrpClose))
+    self.gripper_cmd2pos= lambda cmd: min(self.GrpMax,max(self.GrpMin, self.GrpClose + (cmd-self.CmdClose)*(self.GrpOpen-self.GrpClose)/(self.CmdOpen-self.CmdClose) )) if cmd is not None else None
+    self.gripper_pos2cmd= lambda pos: min(self.CmdMax,max(self.CmdMin, self.CmdClose + (pos-self.GrpClose)*(self.CmdOpen-self.CmdClose)/(self.GrpOpen-self.GrpClose) )) if pos is not None else None
+    self.gripper_cmd2vel= lambda cmd: ((self.GrpOpen-self.GrpClose)/(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))*self.dxl.ConvVel(cmd)) if cmd is not None else None
+    self.gripper_vel2cmd= lambda vel: self.dxl.InvConvVel(vel*(self.dxl.ConvPos(self.CmdOpen)-self.dxl.ConvPos(self.CmdClose))/(self.GrpOpen-self.GrpClose)) if vel is not None else None
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -82,6 +82,18 @@ class TDxlGripperBase(object):
 
     #Check the thread lockers status:
     #print('Count of port_locker:',self.port_locker._is_owned())
+
+  #Check if the device is error state.
+  def IsError(self):
+    return self.dxl.IsError()
+
+  #Check if the torque is enabled.
+  def TorqueEnabled(self):
+    return self.dxl.TorqueEnabled()
+
+  #Check if the device is normal state and can move.
+  def IsNormal(self):
+    return not self.IsError() and self.TorqueEnabled()
 
   '''Range of gripper position.'''
   def PosRange(self):

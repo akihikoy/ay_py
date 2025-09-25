@@ -80,6 +80,18 @@ class TDxlO3(object):
     #Check the thread lockers status:
     #print('Count of port_locker:',self.port_locker._is_owned())
 
+  #Check if the devices are error state.
+  def IsError(self):
+    return any(dxl.IsError() for dxl in self.dxl)
+
+  #Check if the torques of all devices are enabled.
+  def TorqueEnabled(self):
+    return all(dxl.TorqueEnabled() for dxl in self.dxl)
+
+  #Check if the all devices are normal state and can move.
+  def IsNormal(self):
+    return not self.IsError() and TorqueEnabled()
+
   '''Range of gripper positions (return: lower, upper).'''
   def PosRange(self):
     return self.gripper_range[0],self.gripper_range[1]
