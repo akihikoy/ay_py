@@ -28,6 +28,14 @@ class TGripperSim(object):
     self.state_locker= threading.RLock()
     self.th= None
 
+  #Check if the device is error state.
+  def IsError(self):
+    return not self.is_initialized
+
+  #Check if the torque is enabled.
+  def TorqueEnabled(self):
+    return self.is_active
+
   def Init(self):
     self.EnableTorque()
     self.is_initialized= True
@@ -154,6 +162,19 @@ class TDxlGripperSim(object):
       self.Deactivate()
       self.sim_gripper.Quit()
       self._is_initialized= False
+
+
+  #Check if the device is error state.
+  def IsError(self):
+    return self.sim_gripper.IsError()
+
+  #Check if the torque is enabled.
+  def TorqueEnabled(self):
+    return self.sim_gripper.TorqueEnabled()
+
+  #Check if the device is normal state and can move.
+  def IsNormal(self):
+    return not self.IsError() and self.TorqueEnabled()
 
   '''Get current position.'''
   def Position(self):
