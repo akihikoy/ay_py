@@ -559,18 +559,24 @@ class Dumper_IndentPlus(yaml_Dumper):
   def increase_indent(self, flow=False, *args, **kwargs):
     return super(Dumper_IndentPlus,self).increase_indent(flow=flow, indentless=False)
 
-#Modify the YAML dumper to output a number 0123 as str '0123'.
 def quoted_str_representer(dumper, data):
   return dumper.represent_scalar('tag:yaml.org,2002:str', data, style="'")
 def is_digit_like_str(s):
   return isinstance(s, str) and re.fullmatch(r'0\d+', s) is not None
+def is_ip_like_str(s):
+  return isinstance(s, str) and re.fullmatch(r'(?:\d{1,3}\.){3}\d{1,3}', s)
 class Dumper_IndentPlusWithFix0Num(Dumper_IndentPlus):
   pass
 def custom_str_representer(dumper, data):
+  #Modify the YAML dumper to output an IP like str as str '192.168.1.1'.
+  if is_ip_like_str(data):
+    return quoted_str_representer(dumper, data)
+  #Modify the YAML dumper to output a number 0123 as str '0123'.
   if is_digit_like_str(data):
     return quoted_str_representer(dumper, data)
   return SafeRepresenter.represent_str(dumper, data)
 Dumper_IndentPlusWithFix0Num.add_representer(str, custom_str_representer)
+
 
 #Get an SHA-1 hash of a dictionary d.
 def GetSHA1HashOfDict(d):
