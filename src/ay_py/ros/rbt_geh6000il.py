@@ -12,6 +12,7 @@ import threading
 
 from .robot import TGripper2F1,TMultiArmRobot
 import sensor_msgs.msg
+import ay_util_msgs.msg
 import ay_util_msgs.srv
 
 
@@ -47,6 +48,7 @@ class TGEH6000ILGripper(TGripper2F1):
     ra(self.AddSrvP('move', '/{}/move'.format(self.node_name), ay_util_msgs.srv.DxlGMove, persistent=False, time_out=3.0))
 
     ra(self.AddSub('joint_states', '/{}/joint_states'.format(self.node_name), sensor_msgs.msg.JointState, self.JointStatesCallback))
+    ra(self.AddSub('state', '/{}/state'.format(self.node_name), ay_util_msgs.msg.SimpleRobotState, self.StateCallback))
 
     if False not in res:  self._is_initialized= True
     return self._is_initialized
@@ -61,8 +63,7 @@ class TGEH6000ILGripper(TGripper2F1):
 
   #Check if the gripper is normal state (i.e. running properly without stopping).
   def IsNormal(self):
-    print('FIXME: TGEH6000ILGripper.IsNormal is not implemented yet.')
-    return True
+    return self.state.is_normal
 
   def JointStatesCallback(self, msg):
     with self.sensor_locker:
@@ -70,6 +71,9 @@ class TGEH6000ILGripper(TGripper2F1):
       self.q_curr= self.x_curr.position
       self.dq_curr= self.x_curr.velocity
       self.effort_curr= self.x_curr.effort
+
+  def StateCallback(self, msg):
+    self.state= msg
 
   '''Get current position.'''
   def Position(self):
