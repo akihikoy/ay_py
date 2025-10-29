@@ -20,6 +20,22 @@ def AngleMod1(q):
 def AngleMod2(q):
   return Mod(q,math.pi*2.0)
 
+#Convert angle (radian) to the range according to mode:
+#  mode='positive': [0,pi]
+#  mode='symmetric': [-pi/2,pi/2]
+#  mode='' or None: No modification.
+def AngleModHalf(q, mode='symmetric'):
+  if mode=='symmetric':
+    # Normalize to [-pi/2, pi/2)
+    return (q + np.pi/2.0) % np.pi - np.pi/2.0
+  elif mode=='positive':
+    # Normalize to [0, π)
+    return q % np.pi
+  elif mode in (None, ''):
+    return q
+  else:
+    raise Exception(f'AngleModHalf: Invalid mode={angle_mode}')
+
 def DegToRad(q):
   conv= lambda x: float(x)/180.0*math.pi
   if type(q) in (float,int):
