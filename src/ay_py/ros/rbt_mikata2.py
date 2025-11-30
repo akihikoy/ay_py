@@ -211,7 +211,7 @@ class TRobotMikata2(TMultiArmRobot):
 
     self.q_curr= None
     self.dq_curr= None
-    self.state= False
+    self.state= None
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
