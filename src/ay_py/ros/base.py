@@ -72,9 +72,10 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
     if res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
       #CPrint(4,'BlockAction: act_client finished anomaly: [{}:{},{}].'.format(res.error_code,ACTC_RESULT_TO_STR[res.error_code],res.error_string))
       raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}:{},{}].'.format(res.error_code,ACTC_RESULT_TO_STR[res.error_code],res.error_string))
-    if act_client.get_state()!=actionlib_msgs.msg.GoalStatus.SUCCEEDED:
+    successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
+    if act_client.get_state() not in successful_status:
       #CPrint(4,'BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
-      raise ROSError('ctrl','BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
+      raise ROSError('ctrl','BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))    return
     return
   raise Exception('BlockAction: invalid blocking type: %r'%blocking)
 
