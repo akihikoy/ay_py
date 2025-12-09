@@ -358,9 +358,22 @@ class TRobotMotoman(TMultiArmRobot):
       else:
         break
 
-    with self.control_locker:
-      BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
-      if blocking!=False:
+    BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
+
+    successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
+    if blocking!=False and self.actc.traj.get_state() in successful_status:
+
+      dt_max_wait_stopping = 1.0
+      t_wait_start = rospy.Time.now()
+      while self.robot_status.in_motion.val == industrial_msgs.msg.TriState.TRUE and (rospy.Time.now()-t_wait_start).to_sec() < dt_max_wait_stopping:
+        rospy.sleep(0.001)
+
+      dt_max_wait_resetting = 0.1
+      t_wait_start = rospy.Time.now()
+      while self.robot_status.motion_possible.val == industrial_msgs.msg.TriState.FALSE and (rospy.Time.now()-t_wait_start).to_sec() < dt_max_wait_resetting:
+        rospy.sleep(0.001)
+
+      if self.actc.traj.get_state() == actionlib_msgs.msg.GoalStatus.SUCCEEDED:
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
         if np.max(np.abs(q_err)) > self.MotionTol:
