@@ -75,7 +75,7 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
     successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
     if act_client.get_state() not in successful_status:
       #CPrint(4,'BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
-      raise ROSError('ctrl','BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))    return
+      raise ROSError('ctrl','BlockAction: act_client state is not succeeded: [{}, {}].'.format(act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
     return
   raise Exception('BlockAction: invalid blocking type: %r'%blocking)
 
