@@ -37,6 +37,11 @@ class TRobotMotoman(TMultiArmRobot):
     #  NOTE: If trajectory abort error happens with the first point mismatch error (3011), increase this value.
     self.DtTrajActiveBeforeAbort= 0.5
 
+    #Maximum time [s] to wait for the 'in_motion' status to become False.
+    self.DtMaxWaitStopping = 1.0
+    #Maximum time [s] to wait for the 'motion_possible' status to become True.
+    self.DtMaxWaitResetting = 0.1
+
     #Motoman all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
@@ -75,7 +80,7 @@ class TRobotMotoman(TMultiArmRobot):
     self.dq_curr= None
     self.robot_status= None
 
-    self._stop_requrest = False
+    self._stop_request = False
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -127,48 +132,31 @@ class TRobotMotoman(TMultiArmRobot):
     return super(TRobotMotoman,self).Is(q)
 
   #Check if the robot is normal state (i.e. running properly without stopping).
-  def IsNormal(self):
+  #  check_motion_possible: If False, ignores the 'motion_possible' status (used during cancellation).
+  def IsNormal(self, check_motion_possible=True):
     if self.is_sim:  return True
     if not all(gripper.IsNormal() for gripper in self.grippers):
       print (f"IsNormal(): gripper state error, {[gripper.IsNormal() for gripper in self.grippers]}")
       return False
     with self.robot_status_locker:
-      state = (self.robot_status.mode.val==industrial_msgs.msg.RobotMode.AUTO,
-                  self.robot_status.e_stopped.val==industrial_msgs.msg.TriState.FALSE,
-                  self.robot_status.drives_powered.val==industrial_msgs.msg.TriState.TRUE,
-                  self.robot_status.motion_possible.val==industrial_msgs.msg.TriState.TRUE,
-                  self.robot_status.in_error.val==industrial_msgs.msg.TriState.FALSE,)
+      is_mode_auto = self.robot_status.mode.val==industrial_msgs.msg.RobotMode.AUTO
+      is_e_stopped_false = self.robot_status.e_stopped.val==industrial_msgs.msg.TriState.FALSE
+      is_drives_powered = self.robot_status.drives_powered.val==industrial_msgs.msg.TriState.TRUE
+      is_in_error_false = self.robot_status.in_error.val==industrial_msgs.msg.TriState.FALSE
+      is_motion_possible = True
+      if check_motion_possible:
+        is_motion_possible = self.robot_status.motion_possible.val==industrial_msgs.msg.TriState.TRUE
+      state = (is_mode_auto, is_e_stopped_false, is_drives_powered, is_motion_possible, is_in_error_false)
       data = (self.robot_status.mode.val,
-                  self.robot_status.e_stopped.val,
-                  self.robot_status.drives_powered.val,
-                  self.robot_status.motion_possible.val,
-                  self.robot_status.in_error.val,)
+              self.robot_status.e_stopped.val,
+              self.robot_status.drives_powered.val,
+              self.robot_status.motion_possible.val,
+              self.robot_status.in_error.val)
     if not all(state):
-      print (f"IsNormal(): arm state error, {state} {data}")
+      print(f"IsNormal(check_motion={check_motion_possible}): arm state error, {state} {data}")
       return False
     return True
-    
-  def _is_normal_without_motion_possible(self):
-    if self.is_sim:  return True
-    if not all(gripper.IsNormal() for gripper in self.grippers):
-      print (f"IsNormal(): gripper state error, {[gripper.IsNormal() for gripper in self.grippers]}")
-      return False
-    with self.robot_status_locker:
-      state = (self.robot_status.mode.val==industrial_msgs.msg.RobotMode.AUTO,
-                  self.robot_status.e_stopped.val==industrial_msgs.msg.TriState.FALSE,
-                  self.robot_status.drives_powered.val==industrial_msgs.msg.TriState.TRUE,
-                  #self.robot_status.motion_possible.val==industrial_msgs.msg.TriState.TRUE,
-                  self.robot_status.in_error.val==industrial_msgs.msg.TriState.FALSE,)
-      data = (self.robot_status.mode.val,
-                  self.robot_status.e_stopped.val,
-                  self.robot_status.drives_powered.val,
-                  #self.robot_status.motion_possible.val,
-                  self.robot_status.in_error.val,)
-    if not all(state):
-      print (f"IsNormal(): arm state error, {state} {data}")
-      return False
-    return True
-                  
+
 
   def PrintStatus(self):
     print('robot_status: {}'.format(self.robot_status))
@@ -335,10 +323,10 @@ class TRobotMotoman(TMultiArmRobot):
 
     with self.control_locker:
       if stop_before_start:
-        self._stop_requrest = True
+        self._stop_request = True
         self._StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
         self._wait_to_finish_stopping()
-      self._stop_requrest = False
+      self._stop_request = False
 
     #Insert current position to beginning.
     if t_traj[0]>1.0e-4:
@@ -377,13 +365,13 @@ class TRobotMotoman(TMultiArmRobot):
         while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ACTIVE:
           #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
           with self.control_locker:
-            stop_req = self._stop_requrest
+            stop_req = self._stop_request
           if not stop_req:
             if not self.IsNormal():
               self.PrintStatus()
               raise Exception('FollowQTraj: Stopped as the robot is not in normal state (1).')
           else:
-            if not self._is_normal_without_motion_possible():
+            if not self.IsNormal(check_motion_possible=False):
               self.PrintStatus()
               raise Exception('FollowQTraj: Stopped as the robot is not in normal state (1).')
           rospy.sleep(self.DtTrajActCStateMonitor)
@@ -396,13 +384,13 @@ class TRobotMotoman(TMultiArmRobot):
       #Retrying after updating the first point by the current position.
       if self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ABORTED:
         with self.control_locker:
-            stop_req = self._stop_requrest
+            stop_req = self._stop_request
         if not stop_req:
           if not self.IsNormal():
             self.PrintStatus()
             raise Exception('FollowQTraj: Stopped as the robot is not in normal state (2).')
         else:
-          if not self._is_normal_without_motion_possible():
+          if not self.IsNormal(check_motion_possible=False):
             self.PrintStatus()
             raise Exception('FollowQTraj: Stopped as the robot is not in normal state (2).')
         print('{}: Trajectory aborted. Retrying by updating the first point to the current joint angles ({}).'.format(self.Name, i_retry))
@@ -413,12 +401,12 @@ class TRobotMotoman(TMultiArmRobot):
 
     #with self.control_locker:
     BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
-    
+
     successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
     if blocking!=False and self.actc.traj.get_state() in successful_status:
 
       self._wait_to_finish_stopping()
-    
+
       if self.actc.traj.get_state() == actionlib_msgs.msg.GoalStatus.SUCCEEDED:
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
@@ -437,7 +425,7 @@ class TRobotMotoman(TMultiArmRobot):
     arm: arm id, or None (==currarm). '''
   def StopMotion(self, arm=None):
     with self.control_locker:
-      self._stop_requrest = True
+      self._stop_request = True
       self._StopMotion(arm=arm)
 
   def _StopMotion(self, arm):
@@ -449,17 +437,19 @@ class TRobotMotoman(TMultiArmRobot):
     except ROSError as e:
       #There will be an error when there is no goal. Ignoring.
       pass
-      
-  def _wait_to_finish_stopping(self):
-      dt_max_wait_stopping = 1.0
-      t_wait_start = rospy.Time.now()
-      while self.robot_status.in_motion.val == industrial_msgs.msg.TriState.TRUE and (rospy.Time.now()-t_wait_start).to_sec() < dt_max_wait_stopping:
-        rospy.sleep(0.001)
 
-      dt_max_wait_resetting = 0.1
-      t_wait_start = rospy.Time.now()
-      while self.robot_status.motion_possible.val == industrial_msgs.msg.TriState.FALSE and (rospy.Time.now()-t_wait_start).to_sec() < dt_max_wait_resetting:
-        rospy.sleep(0.001)
+  def _wait_to_finish_stopping(self):
+    if self.is_sim:  return
+    if self.robot_status is None:
+      raise Exception(f'_wait_to_finish_stopping is called but robot_status has not been received.')
+
+    t_wait_start = rospy.Time.now()
+    while self.robot_status.in_motion.val == industrial_msgs.msg.TriState.TRUE and (rospy.Time.now()-t_wait_start).to_sec() < self.DtMaxWaitStopping:
+      rospy.sleep(0.001)
+
+    t_wait_start = rospy.Time.now()
+    while self.robot_status.motion_possible.val == industrial_msgs.msg.TriState.FALSE and (rospy.Time.now()-t_wait_start).to_sec() < self.DtMaxWaitResetting:
+      rospy.sleep(0.001)
 
 
   '''Open a gripper.
