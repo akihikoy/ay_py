@@ -152,7 +152,7 @@ class TRobotMotoman(TMultiArmRobot):
       print (f"IsNormal(): arm state error, {state} {data}")
       return False
     return True
-    
+
   def _is_normal_without_motion_possible(self):
     if self.is_sim:  return True
     if not all(gripper.IsNormal() for gripper in self.grippers):
@@ -173,7 +173,6 @@ class TRobotMotoman(TMultiArmRobot):
       print (f"IsNormal(): arm state error, {state} {data}")
       return False
     return True
-                  
 
   def PrintStatus(self):
     print('robot_status: {}'.format(self.robot_status))
@@ -418,12 +417,12 @@ class TRobotMotoman(TMultiArmRobot):
 
     #with self.control_locker:
     BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
-    
+
     successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
     if blocking!=False and self.actc.traj.get_state() in successful_status:
 
       self._wait_to_finish_stopping()
-    
+
       if self.actc.traj.get_state() == actionlib_msgs.msg.GoalStatus.SUCCEEDED:
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
@@ -454,7 +453,7 @@ class TRobotMotoman(TMultiArmRobot):
     except ROSError as e:
       #There will be an error when there is no goal. Ignoring.
       pass
-      
+
   def _wait_to_finish_stopping(self):
     if self.is_sim:
       return
