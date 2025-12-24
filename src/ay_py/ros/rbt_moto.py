@@ -375,22 +375,24 @@ class TRobotMotoman(TMultiArmRobot):
 
           #Check if this motion is still valid or if a stop was requested.
           with self.control_locker:
-            #If the global counter has advanced, a new motion has started. We must abort.
+            #If the global counter has advanced, a new motion has started.
+            #We treat this as a successful preemption and exit quietly.
             if self._motion_counter != my_motion_id:
-              raise Exception('FollowQTraj: Aborted because a new motion has started.')
+              CPrint(3, f'FollowQTraj({my_motion_id}): Preempted by a new motion. Exiting.')
+              return
             stop_req = self._stop_request
 
           if not stop_req:
-            if not self.IsNormal():
+            if not self.IsNormal(check_motion_possible=False):
               self.PrintStatus()
-              raise Exception('FollowQTraj: Stopped as the robot is not in normal state (1.1).')
+              raise Exception(f'FollowQTraj({my_motion_id}): Stopped as the robot is not in normal state (1.1).')
           else:
             #If stopped by another thread, raise exception immediately.
             if not self.IsNormal(check_motion_possible=False):
               self.PrintStatus()
-              raise Exception('FollowQTraj: Stopped as the robot is not in normal state (1.2).')
+              raise Exception(f'FollowQTraj({my_motion_id}): Stopped as the robot is not in normal state (1.2).')
             #If we received a stop request, stop waiting.
-            raise Exception('FollowQTraj: Stopped by StopMotion request.')
+            raise Exception(f'FollowQTraj({my_motion_id}): Stopped by StopMotion request.')
 
           rospy.sleep(self.DtTrajActCStateMonitor)
           if (rospy.Time.now()-t_wait_state_start).to_sec()>self.DtTrajActiveBeforeAbort:
@@ -408,23 +410,25 @@ class TRobotMotoman(TMultiArmRobot):
         #Before retrying, verify that this motion is still the latest one.
         with self.control_locker:
           if self._motion_counter != my_motion_id:
-            raise Exception('FollowQTraj: Trajectory aborted by new motion. Not retrying.')
+            CPrint(3, f'FollowQTraj({my_motion_id}): Aborted by a new motion. Not retrying.')
+            return
           if self._stop_request:
-            raise Exception('FollowQTraj: Stopped by StopMotion request during retry wait.')
+            raise Exception(f'FollowQTraj({my_motion_id}): Stopped by StopMotion request during retry wait.')
 
         if not self.IsNormal():
           self.PrintStatus()
-          raise Exception('FollowQTraj: Stopped as the robot is not in normal state (2).')
+          raise Exception(f'FollowQTraj({my_motion_id}): Stopped as the robot is not in normal state (2).')
 
-        print('{}: Trajectory aborted. Retrying by updating the first point to the current joint angles ({}).'.format(self.Name, i_retry))
+        print(f'{self.Name}:FollowQTraj({my_motion_id}): Trajectory aborted. Retrying by updating the first point to the current joint angles (i_retry={i_retry}).')
         rospy.sleep(self.DtTrajCtrlRetry)
 
         #Retry sending needs to be atomic as well.
         with self.control_locker:
           if self._motion_counter != my_motion_id:
-            raise Exception('FollowQTraj: Aborted retry due to new motion.')
+            CPrint(3, f'FollowQTraj({my_motion_id}): Retry canceled by a new motion.')
+            return
           if self._stop_request:
-            raise Exception('FollowQTraj: Stopped by StopMotion request before retry.')
+            raise Exception(f'FollowQTraj({my_motion_id}): Stopped by StopMotion request before retry.')
           q_traj[0]= self.Q(arm=arm)
           goal.trajectory = ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
           self.actc.traj.send_goal(goal)
@@ -432,7 +436,16 @@ class TRobotMotoman(TMultiArmRobot):
         break
 
     #with self.control_locker:
-    BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
+    try:
+      BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
+    except ROSError as e:
+      state= self.actc.traj.get_state()
+      state_str = ACTC_STATE_TO_STR.get(state, 'UNKNOWN')
+      raise ROSError('ctrl', f'FollowQTraj({my_motion_id}): Exception at BlockAction: {e} [State: {state}/{state_str}]')
+    except Exception as e:
+      state= self.actc.traj.get_state()
+      state_str = ACTC_STATE_TO_STR.get(state, 'UNKNOWN')
+      raise Exception(f'FollowQTraj({my_motion_id}): Unexpected Exception at BlockAction: {e} [State: {state}/{state_str}]')
 
     successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
     if blocking!=False and self.actc.traj.get_state() in successful_status:
@@ -443,7 +456,7 @@ class TRobotMotoman(TMultiArmRobot):
         q_finished= self.Q(arm=arm)
         q_err= np.array(q_traj[-1])-q_finished
         if np.max(np.abs(q_err)) > self.MotionTol:
-          CPrint(4,'TRobotMotoman.FollowQTraj: Unacceptable error after movement')
+          CPrint(4,f'TRobotMotoman.FollowQTraj({my_motion_id}): Unacceptable error after movement')
           CPrint(4,'  Info:q_traj[-1]:',q_traj[-1])
           CPrint(4,'  Info:q_finished:',q_finished)
           CPrint(4,'  Info:q_err:',q_err.tolist())
@@ -451,7 +464,7 @@ class TRobotMotoman(TMultiArmRobot):
           CPrint(4,'  Info:t_traj:',t_traj)
           CPrint(4,'  Info:dq_traj:',dq_traj)
           CPrint(4,'Action client result:',self.actc.traj.get_result()),'(cf. control_msgs/FollowJointTrajectoryActionResult)'
-          raise ROSError('ctrl','TRobotMotoman.FollowQTraj: Unacceptable error after movement')
+          raise ROSError('ctrl',f'TRobotMotoman.FollowQTraj({my_motion_id}): Unacceptable error after movement')
 
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''
