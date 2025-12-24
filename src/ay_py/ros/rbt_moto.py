@@ -357,6 +357,8 @@ class TRobotMotoman(TMultiArmRobot):
       goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
       self.actc.traj.send_goal(goal)
 
+    is_motion_started = False  #Flag to check if the robot actually started.
+
     for i_retry in range(self.NumTrajCtrlRetry+1):
       # Wait for the change of self.actc.traj state:
       t_wait_state_start= rospy.Time.now()
@@ -364,10 +366,14 @@ class TRobotMotoman(TMultiArmRobot):
         #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
         rospy.sleep(self.DtTrajActCStateMonitor)
         if (rospy.Time.now()-t_wait_state_start).to_sec()>1.0:
-          print('Timeout. action_client_state is PENDING for a while.')
+          CPrint(4, f'FollowQTraj({my_motion_id}): Timeout waiting for ACTIVE state (stuck in PENDING).')
           break
       #Wait during the self.actc.traj state==ACTIVE:
       #  As this check takes time (self.DtTrajActiveBeforeAbort), it is done only when blocking!=False
+      current_state = self.actc.traj.get_state()
+      if current_state==actionlib_msgs.msg.GoalStatus.ACTIVE:
+        is_motion_started = True
+
       if blocking!=False:
         t_wait_state_start= rospy.Time.now()
         while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ACTIVE:
@@ -432,8 +438,21 @@ class TRobotMotoman(TMultiArmRobot):
           q_traj[0]= self.Q(arm=arm)
           goal.trajectory = ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
           self.actc.traj.send_goal(goal)
+          is_motion_started= False
       else:
         break
+
+    #Extra check of my_motion_id mismatch:
+    with self.control_locker:
+      if self._motion_counter != my_motion_id:
+        CPrint(3, f'FollowQTraj({my_motion_id}): Preempted (before final wait). Exiting.')
+        return
+
+    final_state = self.actc.traj.get_state()
+    successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
+
+    if not is_motion_started and final_state not in successful_status:
+      raise Exception(f'FollowQTraj({my_motion_id}): Failed to start motion. Robot ignored command or failed immediately. Final State: {final_state}')
 
     #with self.control_locker:
     try:
