@@ -37,6 +37,11 @@ class TRobotMotoman(TMultiArmRobot):
     #  NOTE: If trajectory abort error happens with the first point mismatch error (3011), increase this value.
     self.DtTrajActiveBeforeAbort= 0.5
 
+    #Maximum time [s] to wait for the 'in_motion' status to become False.
+    self.DtMaxWaitStopping = 1.0
+    #Maximum time [s] to wait for the 'motion_possible' status to become True.
+    self.DtMaxWaitResetting = 0.1
+
     #Motoman all link names:
     #obtained from ay_py/demo_ros/kdl1.py (URDF link names)
     self.links= {}
@@ -451,18 +456,16 @@ class TRobotMotoman(TMultiArmRobot):
       pass
       
   def _wait_to_finish_stopping(self):
-      if self.is_sim:
-        return
+    if self.is_sim:
+      return
 
-      dt_max_wait_stopping = 1.0
-      t_wait_start = rospy.Time.now()
-      while self.robot_status.in_motion.val == industrial_msgs.msg.TriState.TRUE and (rospy.Time.now()-t_wait_start).to_sec() < dt_max_wait_stopping:
-        rospy.sleep(0.001)
+    t_wait_start = rospy.Time.now()
+    while self.robot_status.in_motion.val == industrial_msgs.msg.TriState.TRUE and (rospy.Time.now()-t_wait_start).to_sec() < self.DtMaxWaitStopping:
+      rospy.sleep(0.001)
 
-      dt_max_wait_resetting = 0.1
-      t_wait_start = rospy.Time.now()
-      while self.robot_status.motion_possible.val == industrial_msgs.msg.TriState.FALSE and (rospy.Time.now()-t_wait_start).to_sec() < dt_max_wait_resetting:
-        rospy.sleep(0.001)
+    t_wait_start = rospy.Time.now()
+    while self.robot_status.motion_possible.val == industrial_msgs.msg.TriState.FALSE and (rospy.Time.now()-t_wait_start).to_sec() < self.DtMaxWaitResetting:
+      rospy.sleep(0.001)
 
 
   '''Open a gripper.
