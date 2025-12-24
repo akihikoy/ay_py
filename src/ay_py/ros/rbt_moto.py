@@ -80,7 +80,7 @@ class TRobotMotoman(TMultiArmRobot):
     self.dq_curr= None
     self.robot_status= None
 
-    self._stop_requrest = False
+    self._stop_request = False
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -340,10 +340,10 @@ class TRobotMotoman(TMultiArmRobot):
 
     with self.control_locker:
       if stop_before_start:
-        self._stop_requrest = True
+        self._stop_request = True
         self._StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
         self._wait_to_finish_stopping()
-      self._stop_requrest = False
+      self._stop_request = False
 
     #Insert current position to beginning.
     if t_traj[0]>1.0e-4:
@@ -382,7 +382,7 @@ class TRobotMotoman(TMultiArmRobot):
         while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ACTIVE:
           #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
           with self.control_locker:
-            stop_req = self._stop_requrest
+            stop_req = self._stop_request
           if not stop_req:
             if not self.IsNormal():
               self.PrintStatus()
@@ -401,7 +401,7 @@ class TRobotMotoman(TMultiArmRobot):
       #Retrying after updating the first point by the current position.
       if self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ABORTED:
         with self.control_locker:
-            stop_req = self._stop_requrest
+            stop_req = self._stop_request
         if not stop_req:
           if not self.IsNormal():
             self.PrintStatus()
@@ -442,7 +442,7 @@ class TRobotMotoman(TMultiArmRobot):
     arm: arm id, or None (==currarm). '''
   def StopMotion(self, arm=None):
     with self.control_locker:
-      self._stop_requrest = True
+      self._stop_request = True
       self._StopMotion(arm=arm)
 
   def _StopMotion(self, arm):
