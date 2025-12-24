@@ -451,6 +451,9 @@ class TRobotMotoman(TMultiArmRobot):
       pass
       
   def _wait_to_finish_stopping(self):
+      if self.is_sim:
+        return
+
       dt_max_wait_stopping = 1.0
       t_wait_start = rospy.Time.now()
       while self.robot_status.in_motion.val == industrial_msgs.msg.TriState.TRUE and (rospy.Time.now()-t_wait_start).to_sec() < dt_max_wait_stopping:
