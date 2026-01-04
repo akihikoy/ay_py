@@ -495,12 +495,21 @@ class TRobotMotoman(TMultiArmRobot):
   def _StopMotion(self, arm):
     if arm is None:  arm= self.Arm
 
-    self.actc.traj.cancel_goal()
-    try:
-      BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
-    except ROSError as e:
-      #There will be an error when there is no goal. Ignoring.
-      pass
+    # We send cancel_goal only when the current state is active or preparing.
+    current_state = self.actc.traj.get_state()
+    active_states = (
+        actionlib_msgs.msg.GoalStatus.PENDING,
+        actionlib_msgs.msg.GoalStatus.ACTIVE,
+        actionlib_msgs.msg.GoalStatus.PREEMPTING,
+        actionlib_msgs.msg.GoalStatus.RECALLING
+    )
+    if current_state in active_states:
+      self.actc.traj.cancel_goal()
+      try:
+        BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
+      except ROSError as e:
+        #There will be an error when there is no goal. Ignoring.
+        pass
 
   def _wait_to_finish_stopping(self):
     if self.is_sim:  return
