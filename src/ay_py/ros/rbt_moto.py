@@ -326,8 +326,13 @@ class TRobotMotoman(TMultiArmRobot):
       raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
     # Reset stop request
-    with self.stop_request_locker:
-      self._stop_request = False
+    if stop_before_start:
+      with self.stop_request_locker:
+        self._stop_request = False
+    else:
+      # Set None to run the process to stop the starting process
+      with self.stop_request_locker:
+        self._stop_request = None
 
     # Functions to release lock for the motion stopping process
     def _close_control_start():
@@ -363,20 +368,23 @@ class TRobotMotoman(TMultiArmRobot):
 
         successful_starting = False
         try:
+          with self.stop_request_locker:
+            stop_request = self._stop_request  # Store the stop request status from StopMotion()
+            self._stop_request = True
+
           if stop_before_start:
             # Stop the running motion before starting the new motion.
-            with self.stop_request_locker:
-              stop_request = self._stop_request  # Store the stop request status from StopMotion()
-              self._stop_request = True
-
             self._StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
             self._wait_to_finish_stopping()
-            self._stop_request = stop_request
           else:
             # Stop the events to wait for the previous motion stopping.
             # Imediately run the following process.
             _close_control_start()
             _close_control_run()
+
+          with self.stop_request_locker:
+            # Set False if stop_request is None for the situation when stop_before_start is False
+            self._stop_request = stop_request == True
 
           with self.control_state_locker:
             self._follow_q_traj_start_cancel_lock = threading.Event()
@@ -396,7 +404,7 @@ class TRobotMotoman(TMultiArmRobot):
           goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
 
           with self.stop_request_locker:
-            stop_request = self._stop_request
+            stop_request = self._stop_request != False
           if stop_request:
             CPrint(1, f'{self.Name}:FollowQTraj(): The motion was canceled before starting.')
             return
@@ -412,7 +420,7 @@ class TRobotMotoman(TMultiArmRobot):
             while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.PENDING:
 
               with self.stop_request_locker:
-                stop_request = self._stop_request
+                stop_request = self._stop_request != False
               if stop_request:
                 CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
                 return
@@ -432,7 +440,7 @@ class TRobotMotoman(TMultiArmRobot):
               t_wait_state_start= rospy.Time.now()
               while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ACTIVE:
                 with self.stop_request_locker:
-                  stop_request = self._stop_request
+                  stop_request = self._stop_request != False
                 if stop_request:
                   CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
                   return
@@ -455,7 +463,7 @@ class TRobotMotoman(TMultiArmRobot):
               goal.trajectory = ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
 
               with self.stop_request_locker:
-                stop_request = self._stop_request
+                stop_request = self._stop_request != False
               if stop_request:
                 CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
                 return
@@ -473,7 +481,7 @@ class TRobotMotoman(TMultiArmRobot):
               raise Exception(f'{self.Name}:FollowQTraj(): Failed to start motion. Robot ignored command or failed immediately. Final State: {final_state}')
 
             with self.stop_request_locker:
-              stop_request = self._stop_request
+              stop_request = self._stop_request != False
             if stop_request:
               CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
               return
