@@ -83,7 +83,6 @@ class TRobotMotoman(TMultiArmRobot):
     self.robot_status= None
 
     self._stop_request = False
-    self._follow_q_traj_start_cancel_lock = None
     self._follow_q_traj_block_action_lock = None
 
   '''Initialize (e.g. establish ROS connection).'''
@@ -334,13 +333,7 @@ class TRobotMotoman(TMultiArmRobot):
       with self.stop_request_locker:
         self._stop_request = None
 
-    # Functions to release lock for the motion stopping process
-    def _close_control_start():
-      with self.control_state_locker:
-        if self._follow_q_traj_start_cancel_lock is not None:
-          self._follow_q_traj_start_cancel_lock.set()
-          self._follow_q_traj_start_cancel_lock = None
-
+    # Function to release lock for the motion stopping process
     def _close_control_run():
       with self.control_state_locker:
         if self._follow_q_traj_block_action_lock is not None:
@@ -379,15 +372,11 @@ class TRobotMotoman(TMultiArmRobot):
           else:
             # Stop the events to wait for the previous motion stopping.
             # Imediately run the following process.
-            _close_control_start()
             _close_control_run()
 
           with self.stop_request_locker:
             # Set False if stop_request is None for the situation when stop_before_start is False
-            self._stop_request = stop_request == True
-
-          with self.control_state_locker:
-            self._follow_q_traj_start_cancel_lock = threading.Event()
+            self._stop_request = (stop_request == True)
 
           #Insert current position to beginning.
           if t_traj[0]>1.0e-4:
@@ -498,7 +487,6 @@ class TRobotMotoman(TMultiArmRobot):
               self._StopMotion(arm=arm)
               self._wait_to_finish_stopping()
           finally:
-            _close_control_start()
             self.control_locker.release()
 
     try:
@@ -549,15 +537,6 @@ class TRobotMotoman(TMultiArmRobot):
 
   def _StopMotion(self, arm):
     if arm is None:  arm= self.Arm
-
-    #print("b-")
-    #stopper = None
-    #with self.control_state_locker:
-    #  if self._follow_q_traj_start_cancel_lock is not None:
-    #    stopper = self._follow_q_traj_start_cancel_lock
-    #
-    #if stopper is not None:
-    #  stopper.wait()
 
     # We send cancel_goal only when the current state is active or preparing.
     current_state = self.actc.traj.get_state()
