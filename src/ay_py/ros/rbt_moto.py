@@ -327,10 +327,12 @@ class TRobotMotoman(TMultiArmRobot):
     # Reset stop request
     if stop_before_start:
       with self.stop_request_locker:
+        stop_request_start_state = self._stop_request
         self._stop_request = False
     else:
       # Set None to run the process to stop the starting process
       with self.stop_request_locker:
+        stop_request_start_state = self._stop_request
         self._stop_request = None
 
     # Function to release lock for the motion stopping process
@@ -359,7 +361,7 @@ class TRobotMotoman(TMultiArmRobot):
         goal.goal_time_tolerance= rospy.Time(0.1)
         goal.trajectory.joint_names= self.joint_names[arm]
 
-        successful_starting = False
+        successful_starting = None
         try:
           with self.stop_request_locker:
             stop_request = self._stop_request  # Store the stop request status from StopMotion()
@@ -400,6 +402,7 @@ class TRobotMotoman(TMultiArmRobot):
 
           #Send the first goal while holding the lock.
           self.actc.traj.send_goal(goal)
+          successful_starting = False
 
           is_motion_started = False  #Flag to check if the robot actually started.
 
@@ -476,14 +479,19 @@ class TRobotMotoman(TMultiArmRobot):
               return
 
           with self.control_state_locker:
+            assert self._follow_q_traj_block_action_lock is None
             self._follow_q_traj_block_action_lock = threading.Event()
 
           successful_starting = True
           break
 
+        except:
+          with self.stop_request_locker:
+            self._stop_request = stop_request_start_state
+
         finally:
           try:
-            if not successful_starting:
+            if successful_starting == False:
               self._StopMotion(arm=arm)
               self._wait_to_finish_stopping()
           finally:
