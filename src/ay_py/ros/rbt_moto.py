@@ -324,6 +324,11 @@ class TRobotMotoman(TMultiArmRobot):
       self.PrintStatus()
       raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
+    # Motomans do not accept stop_before_start==False
+    # because the controller does not support overriding the running trajectory.
+    if not stop_before_start:
+      raise ROSError("ctrl", f"The robot {self.Name} does not support FollowQTraj(stop_before_start=False)")
+
     # Reset stop request
     if stop_before_start:
       with self.stop_request_locker:
