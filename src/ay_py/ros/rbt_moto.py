@@ -493,6 +493,7 @@ class TRobotMotoman(TMultiArmRobot):
         except:
           with self.stop_request_locker:
             self._stop_request = stop_request_start_state
+          raise
 
         finally:
           try:
