@@ -77,9 +77,7 @@ def BlockAction(act_client, blocking, duration, accuracy=0.02, timeout_offset=1.
     if act_client.get_state()==actionlib_msgs.msg.GoalStatus.LOST:
       return
     res= act_client.get_result()
-    if res is None:
-      raise ROSError('ctrl','BlockAction: act_client.wait_for_result could not get a result within timeout (duration+timeout_offset={}s) [state:{}/{}].'.format(duration+timeout_offset, act_client.get_state(), ACTC_STATE_TO_STR[act_client.get_state()]))
-    if res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
+    if res is not None and res.error_code!=0:  #cf. control_msgs/FollowJointTrajectoryActionResult
       #CPrint(4,'BlockAction: act_client finished anomaly: [{}:{},{}].'.format(res.error_code,ACTC_RESULT_TO_STR[res.error_code],res.error_string))
       raise ROSError('ctrl','BlockAction: act_client finished anomaly: [{}:{},{}].'.format(res.error_code,ACTC_RESULT_TO_STR[res.error_code],res.error_string))
     successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)

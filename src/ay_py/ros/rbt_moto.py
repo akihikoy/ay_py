@@ -75,13 +75,15 @@ class TRobotMotoman(TMultiArmRobot):
 
     #Thread lockers for robot_status:
     self.robot_status_locker= threading.RLock()
+    self.control_state_locker= threading.RLock()
+    self.stop_request_locker= threading.RLock()
 
     self.q_curr= None
     self.dq_curr= None
     self.robot_status= None
 
     self._stop_request = False
-    self._motion_counter = 0  #Counter to identify the specific motion instance. Used to detect if a current motion is superseded by a new command or a stop request.
+    self._follow_q_traj_block_action_lock = None
 
   '''Initialize (e.g. establish ROS connection).'''
   def Init(self):
@@ -157,7 +159,6 @@ class TRobotMotoman(TMultiArmRobot):
       print(f"IsNormal(check_motion={check_motion_possible}): arm state error, {state} {data}")
       return False
     return True
-
 
   def PrintStatus(self):
     print('robot_status: {}'.format(self.robot_status))
@@ -315,6 +316,7 @@ class TRobotMotoman(TMultiArmRobot):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
     stop_before_start: if True, stop before starting the trajectory.'''
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None, stop_before_start=True):
+    assert t_traj
     assert(len(q_traj)==len(t_traj))
     if arm is None:  arm= self.Arm
 
@@ -322,175 +324,230 @@ class TRobotMotoman(TMultiArmRobot):
       self.PrintStatus()
       raise Exception('Cannot execute FollowQTraj as the robot is not normal state.')
 
-    #Goal initialization moved outside the loop to separate creation from sending.
-    goal= control_msgs.msg.FollowJointTrajectoryGoal()
-    goal.goal_time_tolerance= rospy.Time(0.1)
-    goal.trajectory.joint_names= self.joint_names[arm]
+    # Motomans do not accept stop_before_start==False
+    # because the controller does not support overriding the running trajectory.
+    if not stop_before_start:
+      raise ROSError("ctrl", f"The robot {self.Name} does not support FollowQTraj(stop_before_start=False)")
 
-    #We hold the lock from "stopping previous motion" through "preparing data" to "sending the first goal".
-    #This prevents StopMotion (or other threads) from interrupting the sequence.
-    with self.control_locker:
-      #Increment motion counter to identify this specific motion request.
-      #If a new motion starts later, this counter will increment, invalidating this instance.
-      self._motion_counter += 1
-      my_motion_id = self._motion_counter
+    # Reset stop request
+    if stop_before_start:
+      with self.stop_request_locker:
+        stop_request_start_state = self._stop_request
+        self._stop_request = False
+    else:
+      # Set None to run the process to stop the starting process
+      with self.stop_request_locker:
+        stop_request_start_state = self._stop_request
+        self._stop_request = None
 
-      if stop_before_start:
-        self._stop_request = True
-        self._StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
-        self._wait_to_finish_stopping()
-      self._stop_request = False
+    # Function to release lock for the motion stopping process
+    def _close_control_run():
+      with self.control_state_locker:
+        if self._follow_q_traj_block_action_lock is not None:
+          self._follow_q_traj_block_action_lock.set()
+          self._follow_q_traj_block_action_lock = None
 
-      #Insert current position to beginning.
-      if t_traj[0]>1.0e-4:
-        t_traj.insert(0,0.0)
-        q_traj.insert(0,self.Q(arm=arm))
-        if dq_traj is not None:
-          dq_traj.insert(0,[0.0]*self.DoF(arm))
+    t_start = rospy.Time.now()
+    while not rospy.is_shutdown():
 
-      if dq_traj is None:
-        dq_traj= QTrajToDQTraj(q_traj, t_traj)
+      if not self.control_locker.acquire(blocking=(blocking==True)):
+        if blocking == "time":
+          dt = (rospy.Time.now() - t_start).to_sec()
+          if dt < t_traj[-1]:
+            rospy.sleep(0.01)
+            continue
+        raise Exception(f'{self.Name}:FollowQTraj(): The motion cannot start because another FollowQTraj() process is still running.')
+
       else:
-        assert(len(q_traj)==len(dq_traj))
+        # Keep holding the lock until the motion starts successfully
 
-      #Send the first goal while holding the lock.
-      goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
-      self.actc.traj.send_goal(goal)
+        #Goal initialization moved outside the loop to separate creation from sending.
+        goal= control_msgs.msg.FollowJointTrajectoryGoal()
+        goal.goal_time_tolerance= rospy.Time(0.1)
+        goal.trajectory.joint_names= self.joint_names[arm]
 
-    is_motion_started = False  #Flag to check if the robot actually started.
+        successful_starting = None
+        try:
+          with self.stop_request_locker:
+            stop_request = self._stop_request  # Store the stop request status from StopMotion()
+            self._stop_request = True
 
-    for i_retry in range(self.NumTrajCtrlRetry+1):
-      # Wait for the change of self.actc.traj state:
-      t_wait_state_start= rospy.Time.now()
-      while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.PENDING:
-        #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
-        rospy.sleep(self.DtTrajActCStateMonitor)
-        if (rospy.Time.now()-t_wait_state_start).to_sec()>1.0:
-          CPrint(4, f'FollowQTraj({my_motion_id}): Timeout waiting for ACTIVE state (stuck in PENDING).')
-          break
-      #Wait during the self.actc.traj state==ACTIVE:
-      #  As this check takes time (self.DtTrajActiveBeforeAbort), it is done only when blocking!=False
-      current_state = self.actc.traj.get_state()
-      if current_state==actionlib_msgs.msg.GoalStatus.ACTIVE:
-        is_motion_started = True
-
-      if blocking!=False:
-        t_wait_state_start= rospy.Time.now()
-        while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ACTIVE:
-          #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
-
-          #Check if this motion is still valid or if a stop was requested.
-          with self.control_locker:
-            #If the global counter has advanced, a new motion has started.
-            #We treat this as a successful preemption and exit quietly.
-            if self._motion_counter != my_motion_id:
-              CPrint(3, f'FollowQTraj({my_motion_id}): Preempted by a new motion. Exiting.')
-              return
-            stop_req = self._stop_request
-
-          if not stop_req:
-            if not self.IsNormal(check_motion_possible=False):
-              self.PrintStatus()
-              raise Exception(f'FollowQTraj({my_motion_id}): Stopped as the robot is not in normal state (1.1).')
+          if stop_before_start:
+            # Stop the running motion before starting the new motion.
+            self._StopMotion(arm=arm)  #Ensure to cancel the ongoing goal.
+            self._wait_to_finish_stopping()
           else:
-            #If stopped by another thread, raise exception immediately.
-            if not self.IsNormal(check_motion_possible=False):
-              self.PrintStatus()
-              raise Exception(f'FollowQTraj({my_motion_id}): Stopped as the robot is not in normal state (1.2).')
-            #If we received a stop request, stop waiting.
-            raise Exception(f'FollowQTraj({my_motion_id}): Stopped by StopMotion request.')
+            # Stop the events to wait for the previous motion stopping.
+            # Imediately run the following process.
+            _close_control_run()
 
-          rospy.sleep(self.DtTrajActCStateMonitor)
-          if (rospy.Time.now()-t_wait_state_start).to_sec()>self.DtTrajActiveBeforeAbort:
-            #print 'DEBUG: Stop ACTIVE waiting.'
-            break
-        #print 'DEBUG: Waited during ACTIVE for {}s'.format((rospy.Time.now()-t_wait_state_start).to_sec())
-      #print 'DEBUG: Trial {}: action_client_state: {}, {}'.format(i_retry, self.actc.traj.get_state(), ACTC_STATE_TO_STR[self.actc.traj.get_state()])
+          with self.stop_request_locker:
+            # Set False if stop_request is None for the situation when stop_before_start is False
+            self._stop_request = (stop_request == True)
 
-      #In case the trajectory aborted, it can be guessed as the first position mismatch.
-      #Retrying after updating the first point by the current position.
-      if self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ABORTED:
-        if i_retry == self.NumTrajCtrlRetry:
+          #Insert current position to beginning.
+          if t_traj[0]>1.0e-4:
+            t_traj.insert(0,0.0)
+            q_traj.insert(0,self.Q(arm=arm))
+            if dq_traj is not None:
+              dq_traj.insert(0,[0.0]*self.DoF(arm))
+
+          if dq_traj is None:
+            dq_traj= QTrajToDQTraj(q_traj, t_traj)
+          else:
+            assert(len(q_traj)==len(dq_traj))
+
+          goal.trajectory= ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
+
+          with self.stop_request_locker:
+            stop_request = self._stop_request != False
+          if stop_request:
+            CPrint(1, f'{self.Name}:FollowQTraj(): The motion was canceled before starting.')
+            return
+
+          #Send the first goal while holding the lock.
+          self.actc.traj.send_goal(goal)
+          successful_starting = False
+
+          is_motion_started = False  #Flag to check if the robot actually started.
+
+          for i_retry in range(self.NumTrajCtrlRetry+1):
+            # Wait for the change of self.actc.traj state:
+            t_wait_state_start= rospy.Time.now()
+            while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.PENDING:
+
+              with self.stop_request_locker:
+                stop_request = self._stop_request != False
+              if stop_request:
+                CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
+                return
+
+              rospy.sleep(self.DtTrajActCStateMonitor)
+              if (rospy.Time.now()-t_wait_state_start).to_sec()>1.0:
+                CPrint(4, f'{self.Name}:FollowQTraj(): Timeout waiting for ACTIVE state (stuck in PENDING).')
+                break
+
+            #Wait during the self.actc.traj state==ACTIVE:
+            #  As this check takes time (self.DtTrajActiveBeforeAbort), it is done only when blocking!=False
+            current_state = self.actc.traj.get_state()
+            if current_state==actionlib_msgs.msg.GoalStatus.ACTIVE:
+              is_motion_started = True
+
+            if blocking!=False:
+              t_wait_state_start= rospy.Time.now()
+              while self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ACTIVE:
+                with self.stop_request_locker:
+                  stop_request = self._stop_request != False
+                if stop_request:
+                  CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
+                  return
+
+                if not self.IsNormal(check_motion_possible=False):
+                  self.PrintStatus()
+                  raise Exception('FollowQTraj(): Stopped as the robot is not in normal state (1).')
+
+                rospy.sleep(self.DtTrajActCStateMonitor)
+                if (rospy.Time.now()-t_wait_state_start).to_sec()>self.DtTrajActiveBeforeAbort:
+                  break
+
+            #In case the trajectory aborted, it can be guessed as the first position mismatch.
+            #Retrying after updating the first point by the current position.
+            if self.actc.traj.get_state()==actionlib_msgs.msg.GoalStatus.ABORTED:
+              print(f'{self.Name}:FollowQTraj(): Trajectory aborted. Retrying by updating the first point to the current joint angles (i_retry={i_retry}).')
+              rospy.sleep(self.DtTrajCtrlRetry)
+
+              q_traj[0]= self.Q(arm=arm)
+              goal.trajectory = ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
+
+              with self.stop_request_locker:
+                stop_request = self._stop_request != False
+              if stop_request:
+                CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
+                return
+
+              self.actc.traj.send_goal(goal)
+              is_motion_started= False
+            else:
+              break
+
+          final_state = self.actc.traj.get_state()
+          successful_termination_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
+
+          if final_state not in successful_termination_status:
+            if not is_motion_started:
+              raise Exception(f'{self.Name}:FollowQTraj(): Failed to start motion. Robot ignored command or failed immediately. Final State: {final_state}')
+
+            with self.stop_request_locker:
+              stop_request = self._stop_request != False
+            if stop_request:
+              CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
+              return
+
+          with self.control_state_locker:
+            assert self._follow_q_traj_block_action_lock is None
+            self._follow_q_traj_block_action_lock = threading.Event()
+
+          successful_starting = True
           break
 
-        #Before retrying, verify that this motion is still the latest one.
-        with self.control_locker:
-          if self._motion_counter != my_motion_id:
-            CPrint(3, f'FollowQTraj({my_motion_id}): Aborted by a new motion. Not retrying.')
-            return
-          if self._stop_request:
-            raise Exception(f'FollowQTraj({my_motion_id}): Stopped by StopMotion request during retry wait.')
+        except:
+          with self.stop_request_locker:
+            self._stop_request = stop_request_start_state
+          raise
 
-        if not self.IsNormal():
-          self.PrintStatus()
-          raise Exception(f'FollowQTraj({my_motion_id}): Stopped as the robot is not in normal state (2).')
+        finally:
+          try:
+            if successful_starting == False:
+              self._StopMotion(arm=arm)
+              self._wait_to_finish_stopping()
+          finally:
+            self.control_locker.release()
 
-        print(f'{self.Name}:FollowQTraj({my_motion_id}): Trajectory aborted. Retrying by updating the first point to the current joint angles (i_retry={i_retry}).')
-        rospy.sleep(self.DtTrajCtrlRetry)
-
-        #Retry sending needs to be atomic as well.
-        with self.control_locker:
-          if self._motion_counter != my_motion_id:
-            CPrint(3, f'FollowQTraj({my_motion_id}): Retry canceled by a new motion.')
-            return
-          if self._stop_request:
-            raise Exception(f'FollowQTraj({my_motion_id}): Stopped by StopMotion request before retry.')
-          q_traj[0]= self.Q(arm=arm)
-          goal.trajectory = ToROSTrajectory(self.JointNames(arm), q_traj, t_traj, dq_traj)
-          self.actc.traj.send_goal(goal)
-          is_motion_started= False
-      else:
-        break
-
-    #Extra check of my_motion_id mismatch:
-    with self.control_locker:
-      if self._motion_counter != my_motion_id:
-        CPrint(3, f'FollowQTraj({my_motion_id}): Preempted (before final wait). Exiting.')
-        return
-
-    final_state = self.actc.traj.get_state()
-    successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
-
-    if not is_motion_started and final_state not in successful_status:
-      raise Exception(f'FollowQTraj({my_motion_id}): Failed to start motion. Robot ignored command or failed immediately. Final State: {final_state}')
-
-    #with self.control_locker:
     try:
-      BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
-    except ROSError as e:
-      state= self.actc.traj.get_state()
-      state_str = ACTC_STATE_TO_STR.get(state, 'UNKNOWN')
-      raise ROSError('ctrl', f'FollowQTraj({my_motion_id}): Exception at BlockAction: {e} [State: {state}/{state_str}]')
-    except Exception as e:
-      state= self.actc.traj.get_state()
-      state_str = ACTC_STATE_TO_STR.get(state, 'UNKNOWN')
-      raise Exception(f'FollowQTraj({my_motion_id}): Unexpected Exception at BlockAction: {e} [State: {state}/{state_str}]')
+      try:
+        BlockAction(self.actc.traj, blocking=blocking, duration=t_traj[-1])
+      except ROSError as e:
+        state= self.actc.traj.get_state()
+        state_str = ACTC_STATE_TO_STR.get(state, 'UNKNOWN')
+        raise ROSError('ctrl', f'FollowQTraj(): Exception at BlockAction: {e} [State: {state}/{state_str}]')
+      except Exception as e:
+        state= self.actc.traj.get_state()
+        state_str = ACTC_STATE_TO_STR.get(state, 'UNKNOWN')
+        raise Exception(f'FollowQTraj(): Unexpected Exception at BlockAction: {e} [State: {state}/{state_str}]')
 
-    successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
-    if blocking!=False and self.actc.traj.get_state() in successful_status:
+      successful_status = (actionlib_msgs.msg.GoalStatus.SUCCEEDED, actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED)
+      if blocking!=False and self.actc.traj.get_state() in successful_status:
 
-      self._wait_to_finish_stopping()
+        self._wait_to_finish_stopping()
 
-      if self.actc.traj.get_state() == actionlib_msgs.msg.GoalStatus.SUCCEEDED:
-        q_finished= self.Q(arm=arm)
-        q_err= np.array(q_traj[-1])-q_finished
-        if np.max(np.abs(q_err)) > self.MotionTol:
-          CPrint(4,f'TRobotMotoman.FollowQTraj({my_motion_id}): Unacceptable error after movement')
-          CPrint(4,'  Info:q_traj[-1]:',q_traj[-1])
-          CPrint(4,'  Info:q_finished:',q_finished)
-          CPrint(4,'  Info:q_err:',q_err.tolist())
-          CPrint(4,'  Info:q_traj:',q_traj)
-          CPrint(4,'  Info:t_traj:',t_traj)
-          CPrint(4,'  Info:dq_traj:',dq_traj)
-          CPrint(4,'Action client result:',self.actc.traj.get_result()),'(cf. control_msgs/FollowJointTrajectoryActionResult)'
-          raise ROSError('ctrl',f'TRobotMotoman.FollowQTraj({my_motion_id}): Unacceptable error after movement')
+        if self.actc.traj.get_state() == actionlib_msgs.msg.GoalStatus.SUCCEEDED:
+          q_finished= self.Q(arm=arm)
+          q_err= np.array(q_traj[-1])-q_finished
+          if np.max(np.abs(q_err)) > self.MotionTol:
+            CPrint(4,f'TRobotMotoman.FollowQTraj(): Unacceptable error after movement')
+            CPrint(4,'  Info:q_traj[-1]:',q_traj[-1])
+            CPrint(4,'  Info:q_finished:',q_finished)
+            CPrint(4,'  Info:q_err:',q_err.tolist())
+            CPrint(4,'  Info:q_traj:',q_traj)
+            CPrint(4,'  Info:t_traj:',t_traj)
+            CPrint(4,'  Info:dq_traj:',dq_traj)
+            CPrint(4,'Action client result:',self.actc.traj.get_result())  # '(cf. control_msgs/FollowJointTrajectoryActionResult)'
+            raise ROSError('ctrl',f'TRobotMotoman.FollowQTraj(): Unacceptable error after movement')
+          elif self.actc.traj.get_state() in (actionlib_msgs.msg.GoalStatus.PREEMPTED, actionlib_msgs.msg.GoalStatus.RECALLED):
+            CPrint(1, f'{self.Name}:FollowQTraj(): The motion was stopped.')
+    finally:
+      _close_control_run()
 
   '''Stop motion such as FollowQTraj.
     arm: arm id, or None (==currarm). '''
   def StopMotion(self, arm=None):
-    with self.control_locker:
+
+    with self.stop_request_locker:
       self._stop_request = True
+
+    with self.control_locker:
       self._StopMotion(arm=arm)
+      self._wait_to_finish_stopping()
 
   def _StopMotion(self, arm):
     if arm is None:  arm= self.Arm
@@ -503,23 +560,30 @@ class TRobotMotoman(TMultiArmRobot):
         actionlib_msgs.msg.GoalStatus.PREEMPTING,
         actionlib_msgs.msg.GoalStatus.RECALLING
     )
+
     if current_state in active_states:
       self.actc.traj.cancel_goal()
-      try:
-        BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
-      except ROSError as e:
-        #There will be an error when there is no goal. Ignoring.
-        pass
+
+    # Wait until finishing FollowQTraj()
+    stopper = None
+    with self.control_state_locker:
+      if self._follow_q_traj_block_action_lock is not None:
+        stopper = self._follow_q_traj_block_action_lock
+
+    if stopper is not None:
+      stopper.wait()
+
+    current_state = self.actc.traj.get_state()
+    if current_state in active_states:
+      BlockAction(self.actc.traj, blocking=True, duration=10.0)  #duration does not matter.
 
   def _wait_to_finish_stopping(self):
-    if self.is_sim:  return
-    if self.robot_status is None:
-      raise Exception(f'_wait_to_finish_stopping is called but robot_status has not been received.')
+    if self.is_sim:
+      return
 
     t_wait_start = rospy.Time.now()
     while self.robot_status.in_motion.val == industrial_msgs.msg.TriState.TRUE and (rospy.Time.now()-t_wait_start).to_sec() < self.DtMaxWaitStopping:
       rospy.sleep(0.001)
-
     t_wait_start = rospy.Time.now()
     while self.robot_status.motion_possible.val == industrial_msgs.msg.TriState.FALSE and (rospy.Time.now()-t_wait_start).to_sec() < self.DtMaxWaitResetting:
       rospy.sleep(0.001)
