@@ -54,6 +54,9 @@
 
 import dynamixel_sdk as dynamixel  #Using Dynamixel SDK
 import math, time, threading
+import serial
+import fcntl
+import termios
 
 '''Dynamixel port hander class.
 + It provides a function to automatically reopen a port.
@@ -127,24 +130,52 @@ class TDynamixelPortHandler(object):
         # Get methods and members of PortHandlerLinux or PortHandlerWindows
         port_handler= dynamixel.PortHandler(dev)
 
-        #Open port
-        if port_handler.openPort():
-          print('DxlPortHandler: Opened a port:', dev, port_handler)
-        else:
-          print('DxlPortHandler: Failed to open a port:', dev, port_handler)
-          port_handler.closePort()
-          time.sleep(self.time_to_sleep_after_closing_port)
+        #Open port with Exception Handling
+        try:
+          if port_handler.openPort():
+            print('DxlPortHandler: Opened a port:', dev, port_handler)
+          else:
+            print('DxlPortHandler: Failed to open a port:', dev, port_handler)
+            try: port_handler.closePort()
+            except: pass
+            time.sleep(self.time_to_sleep_after_closing_port)
+            return None
+        except serial.SerialException as e:
+          if e.errno == 16: # Device busy
+             print('DxlPortHandler: Port {dev} is busy (locked by another process).'.format(dev=dev))
+          else:
+             print('DxlPortHandler: SerialException while opening port {dev}: {err}'.format(dev=dev, err=e))
+          try: port_handler.closePort()
+          except: pass
+          return None
+        except Exception as e:
+          print('DxlPortHandler: Unknown error while opening port {dev}: {err}'.format(dev=dev, err=e))
           return None
         info['port']= port_handler
 
       if (baudrate is not None and info['baudrate']!=baudrate) or set_baudrate:
-        #Set port baudrate
-        if port_handler.setBaudRate(int(baudrate)):
-          print('DxlPortHandler: Changed the baud rate:', dev, port_handler, baudrate)
-        else:
-          print('DxlPortHandler: Failed to change the baud rate to:', dev, port_handler, baudrate)
+        try:
+          #Set port baudrate
+          if port_handler.setBaudRate(int(baudrate)):
+            print('DxlPortHandler: Changed the baud rate:', dev, port_handler, baudrate)
+          else:
+            print('DxlPortHandler: Failed to change the baud rate to:', dev, port_handler, baudrate)
+            return None
+          info['baudrate']= baudrate
+        except serial.SerialException as e:
+          print('DxlPortHandler: Failed to set baudrate (Busy?):', e)
+          if set_baudrate:
+            port_handler.closePort()
+            info['port']= None
           return None
-        info['baudrate']= baudrate
+
+      #Trying to set the exclusive mode to the serial port.
+      #  port_handler.ser is a pyserial object, and .fileno() is the file descriptor.
+      try:
+        fcntl.ioctl(port_handler.ser.fileno(), termios.TIOCEXCL)
+        print('DxlPortHandler: Set exclusive lock on port:', dev)
+      except Exception as e:
+        print('DxlPortHandler: WARNING: Failed to set exclusive mode:', e)
 
     return port_handler
 
@@ -587,6 +618,8 @@ class TDynamixel1(object):
 
     self.GoalThreshold= 20
 
+    self.ReopenAtSerialError= True  #Policy to decide if starting the reopen process of the serial port at serial error.
+
     # Status variables
     self.port_handler= lambda self=self:DxlPortHandler.Port(self.DevName)
     self.packet_handler= None
@@ -677,8 +710,15 @@ class TDynamixel1(object):
     if addr is None:
       print('{address} is not available with this Dynamixel.'.format(address=address))
       return
-    with port_locker:
-      self.dxl_result,self.dxl_err= self.WriteFuncs[size](port_handler, self.Id, addr, value)
+    try:
+      with port_locker:
+        self.dxl_result,self.dxl_err= self.WriteFuncs[size](port_handler, self.Id, addr, value)
+    except (serial.SerialException, Exception) as e:
+      print('TDynamixel1.Write: Exception occurred: {}'.format(e))
+      self.is_error= True
+      DxlPortHandler.MarkError(dev=self.DevName)
+      if self.ReopenAtSerialError:  DxlPortHandler.StartReopen()
+      return
     self.state_memory[address]= value
     if address=='TORQUE_ENABLE':  self.torque_enabled= value==self.TORQUE_ENABLE
 
@@ -691,9 +731,16 @@ class TDynamixel1(object):
     if addr is None:
       print('{address} is not available with this Dynamixel.'.format(address=address))
       return None
-    with port_locker:
-      port_handler.setPacketTimeoutMillis(200)
-      value,self.dxl_result,self.dxl_err= self.ReadFuncs[size](port_handler, self.Id, addr)
+    try:
+      with port_locker:
+        port_handler.setPacketTimeoutMillis(200)
+        value,self.dxl_result,self.dxl_err= self.ReadFuncs[size](port_handler, self.Id, addr)
+    except (serial.SerialException, Exception) as e:
+      print('TDynamixel1.Read: Exception occurred: {}'.format(e))
+      self.is_error= True
+      DxlPortHandler.MarkError(dev=self.DevName)
+      if self.ReopenAtSerialError:  DxlPortHandler.StartReopen()
+      return None
     if size==2:
       #value= value & 255
       #if value>127:  value= -(256-value)
@@ -881,10 +928,20 @@ class TDynamixel1(object):
   def Reboot(self):
     port_handler,port_locker= self.port_handler()
     if port_handler is None:
-      print('TDynamixel1.Reboot: Port {dev} is closed.'.format(dev=self.DevName))
+      print('TDynamixel1.Reboot: Port {dev} is closed. Attempting to reopen...'.format(dev=self.DevName))
+      DxlPortHandler.Open(dev=self.DevName, baudrate=self.Baudrate, reopen=True)
+      port_handler,port_locker= self.port_handler()
+    if port_handler is None:
+      print('TDynamixel1.Reboot: Failed to open port {dev}.'.format(dev=self.DevName))
+      return
     with port_locker:
       self.dxl_result,self.dxl_err= self.packet_handler.reboot(port_handler, self.Id)
-    self.CheckTxRxResult()
+    #self.CheckTxRxResult()
+    print('TDynamixel1.Reboot: Device rebooted. Force closing port to prevent sync errors.')
+    self.is_error= True
+    self.torque_enabled= False
+    DxlPortHandler.MarkError(dev=self.DevName)
+    DxlPortHandler.StartReopen()
 
   #Factory-reset Dynamixel
   #mode: 0xFF : reset all values (ID to 1, baudrate to 57600).
@@ -893,10 +950,20 @@ class TDynamixel1(object):
   def FactoryReset(self, mode=0x02):
     port_handler,port_locker= self.port_handler()
     if port_handler is None:
-      print('TDynamixel1.FactoryReset: Port {dev} is closed.'.format(dev=self.DevName))
+      print('TDynamixel1.FactoryReset: Port {dev} is closed. Attempting to reopen...'.format(dev=self.DevName))
+      DxlPortHandler.Open(dev=self.DevName, baudrate=self.Baudrate, reopen=True)
+      port_handler,port_locker= self.port_handler()
+    if port_handler is None:
+      print('TDynamixel1.FactoryReset: Failed to open port {dev}.'.format(dev=self.DevName))
+      return
     with port_locker:
       self.dxl_result,self.dxl_err= self.packet_handler.factoryReset(port_handler, self.Id, mode)
-    self.CheckTxRxResult()
+    #self.CheckTxRxResult()
+    print('TDynamixel1.FactoryReset: Device reset. Force closing port to prevent sync errors.')
+    self.is_error= True
+    self.torque_enabled= False
+    DxlPortHandler.MarkError(dev=self.DevName)
+    DxlPortHandler.StartReopen()
 
   #Move the position to a given value.
   #  target: Target position, should be in [self.MIN_POSITION, self.MAX_POSITION]
