@@ -105,9 +105,10 @@ class TDynamixelPortHandler(object):
 
   #Open the device dev and set the baudrate if baudrate is not None.
   #If baudrate is None, reopen is True, and baudrate is saved in self.opened, it is set again.
+  #If exclusive is True, an exclusive mode is set to the port.
   #Return the port number if succeeded, and None if failrue.
   #This will do nothing if the device is already opened (just returns the port number).
-  def Open(self, dev='/dev/ttyUSB0', baudrate=None, reopen=False):
+  def Open(self, dev='/dev/ttyUSB0', baudrate=None, reopen=False, exclusive=True):
     set_baudrate= False
     try:
       #Check if dev is already opened.
@@ -171,11 +172,12 @@ class TDynamixelPortHandler(object):
 
       #Trying to set the exclusive mode to the serial port.
       #  port_handler.ser is a pyserial object, and .fileno() is the file descriptor.
-      try:
-        fcntl.ioctl(port_handler.ser.fileno(), termios.TIOCEXCL)
-        print('DxlPortHandler: Set exclusive lock on port:', dev)
-      except Exception as e:
-        print('DxlPortHandler: WARNING: Failed to set exclusive mode:', e)
+      if exclusive:
+        try:
+          fcntl.ioctl(port_handler.ser.fileno(), termios.TIOCEXCL)
+          print('DxlPortHandler: Set exclusive lock on port:', dev)
+        except Exception as e:
+          print('DxlPortHandler: WARNING: Failed to set exclusive mode:', e)
 
     return port_handler
 
@@ -929,7 +931,7 @@ class TDynamixel1(object):
     port_handler,port_locker= self.port_handler()
     if port_handler is None:
       print('TDynamixel1.Reboot: Port {dev} is closed. Attempting to reopen...'.format(dev=self.DevName))
-      DxlPortHandler.Open(dev=self.DevName, baudrate=self.Baudrate, reopen=True)
+      DxlPortHandler.Open(dev=self.DevName, baudrate=self.Baudrate, reopen=True, exclusive=False)
       port_handler,port_locker= self.port_handler()
     if port_handler is None:
       print('TDynamixel1.Reboot: Failed to open port {dev}.'.format(dev=self.DevName))
@@ -941,7 +943,6 @@ class TDynamixel1(object):
     self.is_error= True
     self.torque_enabled= False
     DxlPortHandler.MarkError(dev=self.DevName)
-    DxlPortHandler.StartReopen()
 
   #Factory-reset Dynamixel
   #mode: 0xFF : reset all values (ID to 1, baudrate to 57600).
@@ -951,7 +952,7 @@ class TDynamixel1(object):
     port_handler,port_locker= self.port_handler()
     if port_handler is None:
       print('TDynamixel1.FactoryReset: Port {dev} is closed. Attempting to reopen...'.format(dev=self.DevName))
-      DxlPortHandler.Open(dev=self.DevName, baudrate=self.Baudrate, reopen=True)
+      DxlPortHandler.Open(dev=self.DevName, baudrate=self.Baudrate, reopen=True, exclusive=False)
       port_handler,port_locker= self.port_handler()
     if port_handler is None:
       print('TDynamixel1.FactoryReset: Failed to open port {dev}.'.format(dev=self.DevName))
@@ -963,7 +964,6 @@ class TDynamixel1(object):
     self.is_error= True
     self.torque_enabled= False
     DxlPortHandler.MarkError(dev=self.DevName)
-    DxlPortHandler.StartReopen()
 
   #Move the position to a given value.
   #  target: Target position, should be in [self.MIN_POSITION, self.MAX_POSITION]
