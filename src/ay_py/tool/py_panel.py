@@ -11,25 +11,37 @@
 
 import os, sys, copy, math
 
-if 'PYQT_VERSION' not in os.environ:
-  os.environ['PYQT_VERSION']= '5'
-if str(os.environ['PYQT_VERSION'])=='4':
-  from PyQt4 import QtCore,QtGui,QtTest
-elif str(os.environ['PYQT_VERSION'])=='5':
-  from PyQt5 import QtCore,QtWidgets,QtTest
-  import PyQt5.QtGui as PyQt5QtGui
-  QtGui= QtWidgets
-  for component in ('QFont', 'QFontMetrics', 'QIntValidator', 'QDoubleValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter'):
-    setattr(QtGui,component, getattr(PyQt5QtGui,component))
+if 'QT_API' not in os.environ:
+  os.environ['QT_API'] = 'pyside2'
+if os.environ['QT_API'] == 'pyside2':
+  try:
+    from PySide2 import QtCore, QtWidgets, QtTest
+    import PySide2.QtGui as PySide2QtGui
+    QtGui = QtWidgets
+    components = ('QFont', 'QFontMetrics', 'QIntValidator', 'QDoubleValidator',
+                  'QPalette', 'QColor', 'QLinearGradient', 'QPainter')
+    for component in components:
+      if hasattr(PySide2QtGui, component):
+        setattr(QtGui, component, getattr(PySide2QtGui, component))
+    if not hasattr(QtTest.QTest, 'qWait'):
+      def qWait(msec):
+          loop = QtCore.QEventLoop()
+          QtCore.QTimer.singleShot(msec, loop.quit)
+          loop.exec_()
+      setattr(QtTest.QTest, 'qWait', staticmethod(qWait))
+    QtCore.pyqtSignal = QtCore.Signal
+    QtCore.pyqtSlot = QtCore.Slot
+  except ImportError:
+    raise Exception('Failed to import PySide2. Install: $ sudo apt-get install python3-pyside2.qtcore python3-pyside2.qtwidgets python3-pyside2.qtgui python3-pyside2.qttest')
 else:
-  raise Exception('Failed to import the requested version of PyQt:',os.environ['PYQT_VERSION'])
+  raise Exception('Unsupported QT_API version:', os.environ.get('QT_API'))
 
-try:
-  import roslib
-  roslib.load_manifest('rviz')
-  from rviz import bindings as rviz
-except:
-  print('Failed to import rviz')
+#try:
+  #import roslib
+  #roslib.load_manifest('rviz')
+  #from rviz import bindings as rviz
+#except:
+  #print('Failed to import rviz')
 
 def _disp_float(value):
   return str(round(value, 8))
@@ -55,7 +67,7 @@ def AskGenDialog(parent, message, sub_message=None, title='Inquiry', buttons=['Y
     flag= 0
     for name in buttons:
       if hasattr(QtGui.QMessageBox, name) and isinstance(getattr(QtGui.QMessageBox, name), QtGui.QMessageBox.StandardButton):
-        flag|= getattr(QtGui.QMessageBox, name)
+        flag|= int(getattr(QtGui.QMessageBox, name))
       else:
         raise ValueError(f'AskGenDialog: Unknown button name: {name}')
     return flag
@@ -63,17 +75,17 @@ def AskGenDialog(parent, message, sub_message=None, title='Inquiry', buttons=['Y
   def result_to_str(result, buttons):
     for name in buttons:
       value= getattr(QtGui.QMessageBox, name)
-      if result==value:  return name
+      if int(result)==int(value):  return name
     return f"Unknown({result})"
 
   tr= parent.tr if hasattr(parent,'tr') else (lambda text: text)
-  msg_box= QtGui.QMessageBox(parent)
+  msg_box= QtGui.QMessageBox(None)
   msg_box.setIcon(QtGui.QMessageBox.Question)
   msg_box.setWindowTitle(tr(title))
   msg_box.setText(tr(message))
   if sub_message is not None:  msg_box.setInformativeText(tr(sub_message))
 
-  msg_box.setStandardButtons(buttons_to_flags(buttons))
+  msg_box.setStandardButtons(QtGui.QMessageBox.StandardButtons(buttons_to_flags(buttons)))
 
   #Translate button name with tr:
   for name in buttons:
@@ -96,10 +108,10 @@ def AskGenDialog(parent, message, sub_message=None, title='Inquiry', buttons=['Y
 
   # Explicitly set the size by directly manipulating the internal layout
   if width or height:
-    layout= msg_box.layout()
-    spacer= QtGui.QSpacerItem(width if width else 0, height if height else 0,
-                              QtGui.QSizePolicy.MinimumExpanding, QtGui.QSizePolicy.MinimumExpanding)
-    layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
+    w = width if width else msg_box.width()
+    h = height if height else msg_box.height()
+    msg_box.resize(w, h)
+    msg_box.setMinimumSize(w, h)
 
   result= msg_box.exec_()
   return result_to_str(result, buttons)
@@ -756,7 +768,7 @@ class TSimplePanel(QtGui.QWidget):
     btn.setFocusPolicy(QtCore.Qt.NoFocus)
     #btn.setFlat(True)
     #btn.setToolTip('Click to make something happen')
-    if param['onclick']:  btn.clicked.connect(lambda checked=False,btn=btn: param['onclick'](self,btn))
+    if param['onclick']:  btn.clicked.connect(lambda *args,btn=btn: param['onclick'](self,btn))
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(100, 150)
@@ -774,9 +786,9 @@ class TSimplePanel(QtGui.QWidget):
     btn.setFocusPolicy(QtCore.Qt.NoFocus)
     btn.setCheckable(True)
     btn.setChecked(param['checked'])
-    if param['onclick']:  btn.clicked.connect(lambda checked=False,bnt=btn: (param['onclick'][0](self,btn) if param['onclick'][0] else None) if btn.isChecked() else (param['onclick'][1](self,btn) if param['onclick'][1] else None) )
-    if param['ontoggled']:  btn.toggled.connect(lambda checked=False,bnt=btn: (param['ontoggled'][0](self,btn) if param['ontoggled'][0] else None, btn.setText(self.tr(param['text'][1]))) if btn.isChecked() else (param['ontoggled'][1](self,btn) if param['ontoggled'][1] else None, btn.setText(self.tr(param['text'][0]))) )
-    else:  btn.toggled.connect(lambda checked=False,bnt=btn: btn.setText(self.tr(param['text'][1])) if btn.isChecked() else btn.setText(self.tr(param['text'][0])) )
+    if param['onclick']:  btn.clicked.connect(lambda *args,bnt=btn: (param['onclick'][0](self,btn) if param['onclick'][0] else None) if btn.isChecked() else (param['onclick'][1](self,btn) if param['onclick'][1] else None) )
+    if param['ontoggled']:  btn.toggled.connect(lambda *args,bnt=btn: (param['ontoggled'][0](self,btn) if param['ontoggled'][0] else None, btn.setText(self.tr(param['text'][1]))) if btn.isChecked() else (param['ontoggled'][1](self,btn) if param['ontoggled'][1] else None, btn.setText(self.tr(param['text'][0]))) )
+    else:  btn.toggled.connect(lambda *args,bnt=btn: btn.setText(self.tr(param['text'][1])) if btn.isChecked() else btn.setText(self.tr(param['text'][0])) )
     #btn.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     btn.resize(btn.sizeHint())
     #btn.move(220, 100)
@@ -792,7 +804,7 @@ class TSimplePanel(QtGui.QWidget):
     chkbx= QtGui.QCheckBox(self.tr(param['text']), self)
     chkbx.setChecked(param['checked'])
     chkbx.setFocusPolicy(QtCore.Qt.NoFocus)
-    if param['onclick']:  chkbx.clicked.connect(lambda checked=False,chkbx=chkbx: param['onclick'](self,chkbx))
+    if param['onclick']:  chkbx.clicked.connect(lambda *args,chkbx=chkbx: param['onclick'](self,chkbx))
     self.ApplyCommonWidgetConfig(chkbx, param)
     return chkbx
 
@@ -818,8 +830,8 @@ class TSimplePanel(QtGui.QWidget):
                'first_content': QtGui.QComboBox.AdjustToContentsOnFirstShow,
                'min_content':   QtGui.QComboBox.AdjustToMinimumContentsLengthWithIcon}[param['size_adjust_policy']]
       cmbbx.setSizeAdjustPolicy(policy)
-    if param['onactivated']:  cmbbx.activated[str].connect(lambda _,cmbbx=cmbbx:param['onactivated'](self,cmbbx))
-    if param['ontextchanged']:  cmbbx.editTextChanged.connect(lambda _,cmbbx=cmbbx:param['ontextchanged'](self,cmbbx))
+    if param['onactivated']:  cmbbx.activated[str].connect(lambda *args,cmbbx=cmbbx:param['onactivated'](self,cmbbx))
+    if param['ontextchanged']:  cmbbx.editTextChanged.connect(lambda *args,cmbbx=cmbbx:param['ontextchanged'](self,cmbbx))
     #cmbbx.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Expanding)
     cmbbx.resize(cmbbx.sizeHint())
     #cmbbx.move(10, 60)
@@ -837,7 +849,7 @@ class TSimplePanel(QtGui.QWidget):
     if param['text'] is not None:  edit.setText(self.tr(param['text']))
     if param['validator']=='int':    edit.setValidator(QtGui.QIntValidator())
     if param['validator']=='float':  edit.setValidator(QtGui.QDoubleValidator())
-    if param['ontextchanged']:  edit.textChanged.connect(lambda _,edit=edit:param['ontextchanged'](self,edit))
+    if param['ontextchanged']:  edit.textChanged.connect(lambda *args,edit=edit:param['ontextchanged'](self,edit))
     edit.setMinimumHeight(10)
     edit.setMinimumWidth(10)
     #edit.setSizePolicy(QtGui.QSizePolicy.Expanding, QtGui.QSizePolicy.Fixed)
@@ -854,7 +866,7 @@ class TSimplePanel(QtGui.QWidget):
       'onclick': None,
       }, w_param)
     radiobox= TRadioBox(self)
-    if param['onclick']:  clicked= lambda _,radiobox=radiobox:param['onclick'](self,radiobox)
+    if param['onclick']:  clicked= lambda *args,radiobox=radiobox:param['onclick'](self,radiobox)
     else:  clicked= None
     radiobox.Construct(param['layout'], map(self.tr,param['options']), index=param['index'], onclick=clicked)
     self.ApplyCommonWidgetConfig(radiobox, param)
@@ -869,7 +881,7 @@ class TSimplePanel(QtGui.QWidget):
       'onvaluechange': None,
       }, w_param)
     slider= TSlider(self)
-    if param['onvaluechange']:  onvaluechange= lambda _,slider=slider:param['onvaluechange'](self,slider)
+    if param['onvaluechange']:  onvaluechange= lambda *args,slider=slider:param['onvaluechange'](self,slider)
     else:  onvaluechange= None
     slider.Construct(param['range'], n_labels=param['n_labels'], slider_style=param['slider_style'], onvaluechange=onvaluechange)
     if param['value'] is not None:  slider.setValue(param['value'])

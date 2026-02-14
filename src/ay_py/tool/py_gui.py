@@ -18,18 +18,30 @@ import signal
 import subprocess
 import yaml
 
-if 'PYQT_VERSION' not in os.environ:
-  os.environ['PYQT_VERSION']= '5'
-if str(os.environ['PYQT_VERSION'])=='4':
-  from PyQt4 import QtCore,QtGui,QtTest
-elif str(os.environ['PYQT_VERSION'])=='5':
-  from PyQt5 import QtCore,QtWidgets,QtTest
-  import PyQt5.QtGui as PyQt5QtGui
-  QtGui= QtWidgets
-  for component in ('QFont', 'QFontMetrics', 'QIntValidator', 'QDoubleValidator', 'QPalette', 'QColor', 'QLinearGradient', 'QPainter'):
-    setattr(QtGui,component, getattr(PyQt5QtGui,component))
+if 'QT_API' not in os.environ:
+  os.environ['QT_API'] = 'pyside2'
+if os.environ['QT_API'] == 'pyside2':
+  try:
+    from PySide2 import QtCore, QtWidgets, QtTest
+    import PySide2.QtGui as PySide2QtGui
+    QtGui = QtWidgets
+    components = ('QFont', 'QFontMetrics', 'QIntValidator', 'QDoubleValidator',
+                  'QPalette', 'QColor', 'QLinearGradient', 'QPainter')
+    for component in components:
+      if hasattr(PySide2QtGui, component):
+        setattr(QtGui, component, getattr(PySide2QtGui, component))
+    if not hasattr(QtTest.QTest, 'qWait'):
+      def qWait(msec):
+          loop = QtCore.QEventLoop()
+          QtCore.QTimer.singleShot(msec, loop.quit)
+          loop.exec_()
+      setattr(QtTest.QTest, 'qWait', staticmethod(qWait))
+    QtCore.pyqtSignal = QtCore.Signal
+    QtCore.pyqtSlot = QtCore.Slot
+  except ImportError:
+    raise Exception('Failed to import PySide2. Install: $ sudo apt-get install python3-pyside2.qtcore python3-pyside2.qtwidgets python3-pyside2.qtgui python3-pyside2.qttest')
 else:
-  raise Exception('Failed to import the requested version of PyQt:',os.environ['PYQT_VERSION'])
+  raise Exception('Unsupported QT_API version:', os.environ.get('QT_API'))
 
 
 class TTerminalTab(QtGui.QWidget):
@@ -198,7 +210,7 @@ class TTerminalTab(QtGui.QWidget):
         else:
           raise Exception(f'In {name}, the options should be a list/tuple, or a function to return list/tuple.')
         cmbbx= self.CreateComboBox(f_options, cmbbx=None)
-        btn0.clicked.connect(lambda clicked,f_options=f_options,cmbbx=cmbbx:self.CreateComboBox(f_options,cmbbx=cmbbx))
+        btn0.clicked.connect(lambda *args,f_options=f_options,cmbbx=cmbbx:self.CreateComboBox(f_options,cmbbx=cmbbx))
         add_widget(btn0)
         add_widget(cmbbx)
         self.Objects[name]= {}
@@ -211,7 +223,7 @@ class TTerminalTab(QtGui.QWidget):
         btn0.setFlat(True)
         btn0.setStyleSheet('QPushButton { text-decoration: underline; }')
         if no_focus:  btn0.setFocusPolicy(QtCore.Qt.NoFocus)
-        btn0.clicked.connect(lambda clicked,term=term:self.ShowTermTab(term))
+        btn0.clicked.connect(lambda *args,term=term:self.ShowTermTab(term))
         add_widget(btn0)
         self.Objects[term]= {}
         self.Objects[term]['label']= btn0
@@ -224,7 +236,7 @@ class TTerminalTab(QtGui.QWidget):
             btn.setStyleSheet('padding:5px 10px 5px 10px')
             btn.setCheckable(True)
             if no_focus:  btn.setFocusPolicy(QtCore.Qt.NoFocus)
-            btn.clicked.connect(lambda b,btn=btn,name1=name1,f1=f1,name2=name2,f2=f2:
+            btn.clicked.connect(lambda *args,btn=btn,name1=name1,f1=f1,name2=name2,f2=f2:
                                   (f1(),btn.setText(name2)) if btn.isChecked() else (f2(),btn.setText(name1)))
             add_widget(btn)
             self.Objects[term]['buttons'][name1]= btn
