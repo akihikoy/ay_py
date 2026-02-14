@@ -12,6 +12,8 @@ Acknowledgment
 ==================
 CMA-ES (src/ay_py/thirdp/cma.py) is implemented by Nikolaus Hansen.  Read src/ay_py/thirdp/CMA1.0.09-README.txt for more information.
 
+The content of src/ay_py/core/_rostf.py is copied from tf.transformations.
+
 
 Requirements
 ==================
