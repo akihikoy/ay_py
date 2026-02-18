@@ -316,8 +316,11 @@ class TRobotMotoman(TMultiArmRobot):
     blocking: False: move background, True: wait until motion ends, 'time': wait until tN.
     stop_before_start: if True, stop before starting the trajectory.'''
   def FollowQTraj(self, q_traj, t_traj, arm=None, blocking=False, dq_traj=None, stop_before_start=True):
-    assert t_traj
-    assert(len(q_traj)==len(t_traj))
+    if t_traj is not None:   t_traj = np.array(t_traj).tolist()
+    if q_traj is not None:   q_traj = np.array(q_traj).tolist()
+    if dq_traj is not None:  dq_traj = np.array(dq_traj).tolist()
+    assert len(t_traj) > 0
+    assert len(q_traj) == len(t_traj)
     if arm is None:  arm= self.Arm
 
     if not self.IsNormal():
